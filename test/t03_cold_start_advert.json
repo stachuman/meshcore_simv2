@@ -1,0 +1,36 @@
+{
+  "_name": "t03_cold_start_advert",
+  "_desc": "Cold start: explicit adverts, verify multi-hop discovery through relay",
+  "simulation": {
+    "duration_ms": 60000,
+    "step_ms": 5,
+    "warmup_ms": 5000
+  },
+  "nodes": [
+    { "name": "alice", "role": "companion" },
+    { "name": "relay1", "role": "repeater" },
+    { "name": "relay2", "role": "repeater" },
+    { "name": "bob", "role": "companion" }
+  ],
+  "topology": {
+    "links": [
+      { "from": "alice", "to": "relay1", "snr": 8.0, "rssi": -80.0, "bidir": true },
+      { "from": "relay1", "to": "relay2", "snr": 5.0, "rssi": -90.0, "bidir": true },
+      { "from": "relay2", "to": "bob", "snr": 8.0, "rssi": -80.0, "bidir": true }
+    ]
+  },
+  "commands": [
+    { "at_ms": 6000, "node": "alice", "command": "advert" },
+    { "at_ms": 15000, "node": "relay1", "command": "advert" },
+    { "at_ms": 15000, "node": "relay2", "command": "advert" },
+    { "at_ms": 25000, "node": "bob", "command": "advert" },
+    { "at_ms": 50000, "node": "alice", "command": "neighbors" },
+    { "at_ms": 50000, "node": "bob", "command": "neighbors" }
+  ],
+  "expect": [
+    { "type": "cmd_reply_contains", "node": "alice", "command": "neighbors", "value": "bob" },
+    { "type": "cmd_reply_contains", "node": "alice", "command": "neighbors", "value": "relay1" },
+    { "type": "cmd_reply_contains", "node": "bob", "command": "neighbors", "value": "alice" },
+    { "type": "cmd_reply_contains", "node": "bob", "command": "neighbors", "value": "relay2" }
+  ]
+}

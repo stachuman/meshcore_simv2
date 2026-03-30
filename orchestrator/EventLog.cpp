@@ -1,0 +1,153 @@
+#include "EventLog.h"
+#include <cstring>
+
+static const char HEX[] = "0123456789abcdef";
+static void to_hex(char* out, const uint8_t* in, int len) {
+    for (int i = 0; i < len; i++) {
+        out[i*2]     = HEX[in[i] >> 4];
+        out[i*2 + 1] = HEX[in[i] & 0x0F];
+    }
+    out[len*2] = '\0';
+}
+
+static void json_escape(char* out, size_t out_sz, const char* in) {
+    char* dp = out;
+    char* end = out + out_sz - 1;
+    for (const char* sp = in; *sp && dp < end; sp++) {
+        if (*sp == '"' || *sp == '\\') {
+            if (dp + 1 >= end) break;
+            *dp++ = '\\';
+            *dp++ = *sp;
+        } else if (*sp == '\n') {
+            if (dp + 1 >= end) break;
+            *dp++ = '\\'; *dp++ = 'n';
+        } else if (*sp == '\t') {
+            if (dp + 1 >= end) break;
+            *dp++ = '\\'; *dp++ = 't';
+        } else {
+            *dp++ = *sp;
+        }
+    }
+    *dp = '\0';
+}
+
+namespace EventLog {
+
+void packetHashHex(char out[9], const uint8_t* data, int len) {
+    // FNV-1a 32-bit hash
+    uint32_t h = 0x811c9dc5u;
+    for (int i = 0; i < len; i++) {
+        h ^= data[i];
+        h *= 0x01000193u;
+    }
+    for (int i = 7; i >= 0; i--) {
+        out[i] = HEX[h & 0x0F];
+        h >>= 4;
+    }
+    out[8] = '\0';
+}
+
+void simStart(unsigned long time_ms, int n_nodes, int step_ms) {
+    fprintf(stdout, "{\"type\":\"sim_start\",\"time_ms\":%lu,\"n_nodes\":%d,\"step_ms\":%d}\n",
+            time_ms, n_nodes, step_ms);
+}
+
+void simEnd(unsigned long time_ms) {
+    fprintf(stdout, "{\"type\":\"sim_end\",\"time_ms\":%lu}\n", time_ms);
+}
+
+void nodeReady(unsigned long time_ms, const char* node, const uint8_t* pub_key, int key_len,
+               bool has_location, double lat, double lon) {
+    char hex[128];
+    to_hex(hex, pub_key, key_len);
+    if (has_location) {
+        fprintf(stdout, "{\"type\":\"node_ready\",\"time_ms\":%lu,\"node\":\"%s\",\"pub\":\"%s\",\"lat\":%.6f,\"lon\":%.6f}\n",
+                time_ms, node, hex, lat, lon);
+    } else {
+        fprintf(stdout, "{\"type\":\"node_ready\",\"time_ms\":%lu,\"node\":\"%s\",\"pub\":\"%s\"}\n",
+                time_ms, node, hex);
+    }
+}
+
+void tx(unsigned long time_ms, const char* node, const uint8_t* data, int len, uint32_t airtime_ms) {
+    char hex[512 * 2 + 1];
+    char pkt[9];
+    if (len > 512) len = 512;
+    to_hex(hex, data, len);
+    packetHashHex(pkt, data, len);
+    fprintf(stdout, "{\"type\":\"tx\",\"time_ms\":%lu,\"node\":\"%s\",\"pkt\":\"%s\",\"hex\":\"%s\",\"airtime_ms\":%u}\n",
+            time_ms, node, pkt, hex, (unsigned)airtime_ms);
+}
+
+void rx(unsigned long time_ms, const char* from, const char* to, float snr, float rssi,
+        const uint8_t* data, int len) {
+    char pkt[9];
+    packetHashHex(pkt, data, len);
+    fprintf(stdout, "{\"type\":\"rx\",\"time_ms\":%lu,\"from\":\"%s\",\"to\":\"%s\",\"snr\":%.1f,\"rssi\":%.1f,\"pkt\":\"%s\"}\n",
+            time_ms, from, to, snr, rssi, pkt);
+}
+
+void cmdReply(unsigned long time_ms, const char* node, const char* command, const char* reply) {
+    char esc_cmd[512], esc_reply[1024];
+    json_escape(esc_cmd, sizeof(esc_cmd), command);
+    json_escape(esc_reply, sizeof(esc_reply), reply);
+    fprintf(stdout, "{\"type\":\"cmd_reply\",\"time_ms\":%lu,\"node\":\"%s\",\"command\":\"%s\",\"reply\":\"%s\"}\n",
+            time_ms, node, esc_cmd, esc_reply);
+}
+
+void collision(unsigned long time_ms, const char* from, const char* to, float snr, float rssi,
+               const uint8_t* data, int len) {
+    char pkt[9];
+    packetHashHex(pkt, data, len);
+    fprintf(stdout, "{\"type\":\"collision\",\"time_ms\":%lu,\"from\":\"%s\",\"to\":\"%s\",\"snr\":%.1f,\"rssi\":%.1f,\"pkt\":\"%s\"}\n",
+            time_ms, from, to, snr, rssi, pkt);
+}
+
+void dropHalfDuplex(unsigned long time_ms, const char* from, const char* to,
+                    const uint8_t* data, int len) {
+    char pkt[9];
+    packetHashHex(pkt, data, len);
+    fprintf(stdout, "{\"type\":\"drop_halfduplex\",\"time_ms\":%lu,\"from\":\"%s\",\"to\":\"%s\",\"pkt\":\"%s\"}\n",
+            time_ms, from, to, pkt);
+}
+
+void dropWeak(unsigned long time_ms, const char* from, const char* to, float snr, float threshold,
+              const uint8_t* data, int len) {
+    char pkt[9];
+    packetHashHex(pkt, data, len);
+    fprintf(stdout, "{\"type\":\"drop_weak\",\"time_ms\":%lu,\"from\":\"%s\",\"to\":\"%s\",\"snr\":%.1f,\"threshold\":%.1f,\"pkt\":\"%s\"}\n",
+            time_ms, from, to, snr, threshold, pkt);
+}
+
+void dropLoss(unsigned long time_ms, const char* from, const char* to, float loss_prob,
+              const uint8_t* data, int len) {
+    char pkt[9];
+    packetHashHex(pkt, data, len);
+    fprintf(stdout, "{\"type\":\"drop_loss\",\"time_ms\":%lu,\"from\":\"%s\",\"to\":\"%s\",\"loss\":%.3f,\"pkt\":\"%s\"}\n",
+            time_ms, from, to, loss_prob, pkt);
+}
+
+void adversarialDrop(unsigned long time_ms, const char* node, const uint8_t* data, int len) {
+    char pkt[9];
+    packetHashHex(pkt, data, len);
+    fprintf(stdout, "{\"type\":\"adversarial_drop\",\"time_ms\":%lu,\"node\":\"%s\",\"pkt\":\"%s\"}\n",
+            time_ms, node, pkt);
+}
+
+void adversarialCorrupt(unsigned long time_ms, const char* node, const uint8_t* data, int len,
+                        int bits_flipped) {
+    char pkt[9];
+    packetHashHex(pkt, data, len);
+    fprintf(stdout, "{\"type\":\"adversarial_corrupt\",\"time_ms\":%lu,\"node\":\"%s\",\"pkt\":\"%s\",\"bits_flipped\":%d}\n",
+            time_ms, node, pkt, bits_flipped);
+}
+
+void adversarialReplay(unsigned long time_ms, const char* node, const uint8_t* data, int len,
+                       unsigned long delay_ms) {
+    char pkt[9];
+    packetHashHex(pkt, data, len);
+    fprintf(stdout, "{\"type\":\"adversarial_replay\",\"time_ms\":%lu,\"node\":\"%s\",\"pkt\":\"%s\",\"delay_ms\":%lu}\n",
+            time_ms, node, pkt, delay_ms);
+}
+
+} // namespace EventLog

@@ -1,0 +1,28 @@
+{
+  "_name": "t04_no_link_isolated",
+  "_desc": "No link between alice and bob: adverts don't propagate, nodes stay isolated",
+  "simulation": {
+    "duration_ms": 30000,
+    "step_ms": 5,
+    "warmup_ms": 5000
+  },
+  "nodes": [
+    { "name": "alice", "role": "companion" },
+    { "name": "bob", "role": "companion" }
+  ],
+  "topology": {
+    "links": []
+  },
+  "commands": [
+    { "at_ms": 6000, "node": "alice", "command": "advert" },
+    { "at_ms": 10000, "node": "bob", "command": "advert" },
+    { "at_ms": 25000, "node": "alice", "command": "neighbors" },
+    { "at_ms": 25000, "node": "bob", "command": "neighbors" }
+  ],
+  "expect": [
+    { "type": "cmd_reply_contains", "node": "alice", "command": "neighbors", "value": "no contacts" },
+    { "type": "cmd_reply_contains", "node": "bob", "command": "neighbors", "value": "no contacts" },
+    { "type": "event_count_min", "value": "tx", "count": 2 },
+    { "type": "event_count_min", "value": "rx", "count": 0 }
+  ]
+}

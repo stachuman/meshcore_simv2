@@ -1,0 +1,29 @@
+{
+  "_name": "t05_direct_link_no_relay",
+  "_desc": "Two companions with direct link: discover each other and exchange messages without relay",
+  "simulation": {
+    "duration_ms": 30000,
+    "step_ms": 5,
+    "warmup_ms": 5000,
+    "hot_start": true
+  },
+  "nodes": [
+    { "name": "alice", "role": "companion" },
+    { "name": "bob", "role": "companion" }
+  ],
+  "topology": {
+    "links": [
+      { "from": "alice", "to": "bob", "snr": 10.0, "rssi": -70.0, "bidir": true }
+    ]
+  },
+  "commands": [
+    { "at_ms": 6000, "node": "alice", "command": "neighbors" },
+    { "at_ms": 6000, "node": "bob", "command": "neighbors" },
+    { "at_ms": 10000, "node": "alice", "command": "msg bob hey direct" }
+  ],
+  "expect": [
+    { "type": "cmd_reply_contains", "node": "alice", "command": "neighbors", "value": "bob" },
+    { "type": "cmd_reply_contains", "node": "bob", "command": "neighbors", "value": "alice" },
+    { "type": "cmd_reply_contains", "node": "alice", "command": "msg bob", "value": "msg sent to bob" }
+  ]
+}

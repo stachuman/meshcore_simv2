@@ -1,0 +1,139 @@
+#include "SimRadio.h"
+#include <stdio.h>
+#include <string.h>
+#include <algorithm>
+#include <cmath>
+
+SimRadio::SimRadio(mesh::MillisecondClock& ms, int sf, int bw_hz, int cr)
+    : _sf(sf), _bw_hz(bw_hz), _cr(cr), _ms(ms)
+{
+    if (_bw_hz <= 0) {
+        fprintf(stderr, "SimRadio: bw_hz=%d invalid, defaulting to 125000\n", _bw_hz);
+        _bw_hz = 125000;
+    }
+    if (_sf < 7 || _sf > 12) {
+        fprintf(stderr, "SimRadio: sf=%d out of range [7,12], clamping\n", _sf);
+        _sf = (_sf < 7) ? 7 : 12;
+    }
+}
+
+static const char HEX[] = "0123456789abcdef";
+static void bytes_to_hex(char* out, const uint8_t* in, int len) {
+    for (int i = 0; i < len; i++) {
+        out[i*2]     = HEX[in[i] >> 4];
+        out[i*2 + 1] = HEX[in[i] & 0x0F];
+    }
+    out[len*2] = '\0';
+}
+
+void SimRadio::notifyRxStart(uint32_t duration_ms) {
+    unsigned long new_until = _ms.getMillis() + duration_ms;
+    if (new_until > _rx_active_until) {
+        _rx_active_until = new_until;
+    }
+}
+
+void SimRadio::notifyChannelBusy(unsigned long from_ms, unsigned long until_ms) {
+    _lbt_windows.push_back({from_ms, until_ms});
+}
+
+uint32_t SimRadio::getPreambleDetectMs() const {
+    return (uint32_t)(5.0 * getSymbolMs());
+}
+
+bool SimRadio::isReceiving() {
+    if (_tx_pending) return false;
+    unsigned long now = _ms.getMillis();
+    if (now < _rx_active_until) return true;
+
+    // Check LBT windows (preamble-delayed channel activity)
+    bool busy = false;
+    auto it = _lbt_windows.begin();
+    while (it != _lbt_windows.end()) {
+        if (now >= it->until_ms) {
+            it = _lbt_windows.erase(it);  // expired, clean up
+        } else {
+            if (now >= it->from_ms) busy = true;
+            ++it;
+        }
+    }
+    if (busy) return true;
+
+    return !_rx_queue.empty();
+}
+
+void SimRadio::enqueue(const uint8_t* data, int len, float snr, float rssi) {
+    IncomingPacket pkt;
+    pkt.data.assign(data, data + len);
+    pkt.snr  = snr;
+    pkt.rssi = rssi;
+    _rx_queue.push(std::move(pkt));
+}
+
+int SimRadio::recvRaw(uint8_t* bytes, int sz) {
+    if (_rx_queue.empty()) return 0;
+    IncomingPacket& front = _rx_queue.front();
+    int len = (int)std::min((size_t)sz, front.data.size());
+    memcpy(bytes, front.data.data(), len);
+    _last_snr  = front.snr;
+    _last_rssi = front.rssi;
+    _rx_queue.pop();
+    _packets_recv++;
+    return len;
+}
+
+uint32_t SimRadio::getEstAirtimeFor(int len_bytes) {
+    // Semtech AN1200.13 -- LoRa on-air time in milliseconds.
+    double t_sym = getSymbolMs();
+    double t_pre = (8 + 4.25) * t_sym;
+
+    int de = (t_sym >= 16.0) ? 1 : 0;
+    double num = 8.0 * len_bytes - 4.0 * _sf + 44;
+    double den = 4.0 * (_sf - 2 * de);
+    int pay_sym = 8 + (int)std::max(std::ceil(num / den) * (_cr + 4), 0.0);
+
+    return (uint32_t)(t_pre + pay_sym * t_sym);
+}
+
+float SimRadio::getSnrThreshold() const {
+    static const float snr_threshold[] = {
+        -7.5f, -10.0f, -12.5f, -15.0f, -17.5f, -20.0f
+    };
+    if (_sf < 7 || _sf > 12) return -7.5f;
+    return snr_threshold[_sf - 7];
+}
+
+float SimRadio::packetScore(float snr, int packet_len) {
+    if (_sf < 7) return 0.0f;
+    float thr = getSnrThreshold();
+    if (snr < thr) return 0.0f;
+    float snr_part = (snr - thr) / 10.0f;
+    float len_part = 1.0f - (packet_len / 256.0f);
+    float score = snr_part * len_part;
+    return score < 0.0f ? 0.0f : (score > 1.0f ? 1.0f : score);
+}
+
+bool SimRadio::startSendRaw(const uint8_t* bytes, int len) {
+    uint32_t airtime = getEstAirtimeFor(len);
+#ifdef ORCHESTRATOR_BUILD
+    if (_tx_callback) {
+        _tx_callback(bytes, len, airtime);
+    }
+#else
+    static char hex_buf[MAX_TRANS_UNIT * 2 + 1];
+    bytes_to_hex(hex_buf, bytes, len);
+    fprintf(stdout, "{\"type\":\"tx\",\"hex\":\"%s\",\"airtime_ms\":%u}\n", hex_buf, (unsigned)airtime);
+    fflush(stdout);
+#endif
+    _tx_pending = true;
+    _tx_done_at = _ms.getMillis() + airtime;
+    _packets_sent++;
+    return true;
+}
+
+bool SimRadio::isSendComplete() {
+    if (!_tx_pending) return false;
+    if (_ms.getMillis() < _tx_done_at) return false;
+    _tx_pending = false;
+    return true;
+}

@@ -1,0 +1,9 @@
+build/
+__pycache__/
+*.pyc
+*.o
+*.a
+
+# Generated simulation outputs
+simulation/real_network.json
+*.ndjson

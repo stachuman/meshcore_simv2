@@ -1,0 +1,37 @@
+{
+  "_name": "t06_msg_stats",
+  "_desc": "Message stats: multiple messages both directions, verify per-sender receive counts",
+  "simulation": {
+    "duration_ms": 60000,
+    "step_ms": 5,
+    "warmup_ms": 5000,
+    "hot_start": true
+  },
+  "nodes": [
+    { "name": "alice", "role": "companion" },
+    { "name": "relay1", "role": "repeater" },
+    { "name": "bob", "role": "companion" }
+  ],
+  "topology": {
+    "links": [
+      { "from": "alice", "to": "relay1", "snr": 8.0, "rssi": -80.0, "bidir": true },
+      { "from": "relay1", "to": "bob", "snr": 8.0, "rssi": -80.0, "bidir": true }
+    ]
+  },
+  "commands": [
+    { "at_ms": 6000, "node": "alice", "command": "msg bob hello from alice" },
+    { "at_ms": 15000, "node": "bob", "command": "msg alice reply from bob" },
+    { "at_ms": 25000, "node": "alice", "command": "msg bob second msg" },
+    { "at_ms": 45000, "node": "alice", "command": "stats" },
+    { "at_ms": 45000, "node": "bob", "command": "stats" }
+  ],
+  "expect": [
+    { "type": "cmd_reply_contains", "node": "alice", "command": "msg bob hello", "value": "msg sent to bob" },
+    { "type": "cmd_reply_contains", "node": "bob", "command": "msg alice", "value": "msg sent to alice" },
+    { "type": "cmd_reply_contains", "node": "alice", "command": "stats", "value": "sent: 1 flood, 1 direct" },
+    { "type": "cmd_reply_contains", "node": "bob", "command": "stats", "value": "recv: 2 direct" },
+    { "type": "cmd_reply_contains", "node": "bob", "command": "stats", "value": "alice:2" },
+    { "type": "cmd_reply_contains", "node": "alice", "command": "stats", "value": "recv: 1 direct" },
+    { "type": "cmd_reply_contains", "node": "alice", "command": "stats", "value": "bob:1" }
+  ]
+}
