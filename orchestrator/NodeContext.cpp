@@ -12,9 +12,10 @@ std::unique_ptr<MeshWrapper> createRepeaterMesh(NodeContext& ctx);
 std::unique_ptr<MeshWrapper> createCompanionMesh(NodeContext& ctx);
 
 NodeContext::NodeContext(const std::string& name, NodeRole role,
-                         VirtualClock& clk,
+                         uint32_t epoch_base,
                          int sf, int bw, int cr)
-    : name(name), role(role), radio(clk, sf, bw, cr), clock(&clk)
+    : name(name), role(role), own_clock(epoch_base),
+      radio(own_clock, sf, bw, cr)
 {
     // Capture outgoing packets for orchestrator routing
     radio.setTxCallback([this](const uint8_t* data, int len, uint32_t airtime_ms) {
@@ -32,11 +33,12 @@ NodeContext::~NodeContext() = default;
 
 void NodeContext::activate() {
     _ctx_radio   = &radio;
-    _ctx_rtc     = clock;
+    _ctx_rtc     = &own_clock;
     _ctx_serial  = &serial;
     _ctx_fs      = &filesystem;
     board._target   = &node_board;
     sensors._target = &sensors_obj;
+    sim_clock_set_global(&own_clock);  // millis() returns this node's time
 }
 
 void NodeContext::initMesh() {

@@ -16,8 +16,8 @@ body { font-family: 'SF Mono', 'Consolas', 'Menlo', monospace; font-size: 12px; 
 #toolbar button.active { background: #4a4a7e; border-color: #88f; color: #fff; }
 #main { display: flex; flex: 1; overflow: hidden; }
 #sidebar { width: 0; background: #16213e; border-left: 1px solid #333; overflow-y: auto; transition: width 0.2s; flex-shrink: 0; }
-#sidebar.open { width: 340px; }
-#sidebar-content { padding: 10px; width: 340px; }
+#sidebar.open { width: 480px; }
+#sidebar-content { padding: 10px; width: 480px; }
 #sidebar h3 { color: #aaf; margin: 8px 0 4px; font-size: 12px; }
 #sidebar .field { margin: 2px 0; }
 #sidebar .field .key { color: #888; }
@@ -31,8 +31,17 @@ body { font-family: 'SF Mono', 'Consolas', 'Menlo', monospace; font-size: 12px; 
 #canvas-wrap { flex: 1; position: relative; overflow: hidden; }
 canvas { display: block; }
 #tooltip { position: absolute; display: none; background: #222244ee; border: 1px solid #555; padding: 6px 10px; border-radius: 4px; font-size: 11px; pointer-events: none; z-index: 20; max-width: 400px; white-space: pre-wrap; }
-#time-display { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); background: #222244cc; padding: 4px 12px; border-radius: 4px; font-size: 13px; color: #aaf; z-index: 5; pointer-events: none; }
+#time-display { position: absolute; bottom: 34px; left: 50%; transform: translateX(-50%); background: #222244cc; padding: 4px 12px; border-radius: 4px; font-size: 13px; color: #aaf; z-index: 5; pointer-events: none; }
 #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #666; font-size: 16px; }
+#scrollbar { display: flex; align-items: center; gap: 6px; padding: 4px 12px; background: #16213e; border-top: 1px solid #333; flex-shrink: 0; }
+#scrollbar input[type=range] { flex: 1; height: 16px; -webkit-appearance: none; appearance: none; background: transparent; cursor: pointer; }
+#scrollbar input[type=range]::-webkit-slider-runnable-track { height: 6px; background: #2a2a44; border-radius: 3px; }
+#scrollbar input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; background: #5566aa; border-radius: 50%; margin-top: -6px; border: 2px solid #7788cc; }
+#scrollbar input[type=range]::-moz-range-track { height: 6px; background: #2a2a44; border-radius: 3px; border: 0; }
+#scrollbar input[type=range]::-moz-range-thumb { width: 14px; height: 14px; background: #5566aa; border-radius: 50%; border: 2px solid #7788cc; }
+#scrollbar button { background: #2a2a4e; color: #ccc; border: 1px solid #444; padding: 2px 8px; font-size: 12px; font-family: inherit; border-radius: 3px; cursor: pointer; min-width: 28px; }
+#scrollbar button:hover { background: #3a3a5e; }
+#scrollbar .scroll-time { color: #6a6aaa; font-size: 11px; min-width: 80px; text-align: center; }
 </style>
 </head>
 <body>
@@ -51,6 +60,7 @@ canvas { display: block; }
     <div class="sep"></div>
     <button id="btn-zoom-fit" title="Fit all">Fit</button>
     <button id="btn-trace-mode" title="Click packets to trace">Trace</button>
+    <button id="btn-rays" title="Show TX→RX propagation lines">Rays</button>
     <div class="sep"></div>
     <span id="info-text" class="info"></span>
     <span style="flex:1"></span>
@@ -67,6 +77,13 @@ canvas { display: block; }
     <div id="sidebar">
         <div id="sidebar-content"></div>
     </div>
+</div>
+<div id="scrollbar">
+    <button id="btn-zoom-in" title="Zoom in">+</button>
+    <button id="btn-zoom-out" title="Zoom out">&minus;</button>
+    <span class="scroll-time" id="scroll-from"></span>
+    <input type="range" id="time-slider" min="0" max="1000" value="0">
+    <span class="scroll-time" id="scroll-to"></span>
 </div>
 
 <script>
@@ -87,11 +104,18 @@ const S = {
     labelW: 160,
     headerH: 30,
 
+    // Vertical scroll (node lanes)
+    scrollY: 0,          // pixels scrolled down
+    maxScrollY: 0,       // computed from node count vs canvas height
+
     // Interaction
     dragging: false,
     dragStartX: 0,
+    dragStartY: 0,
     dragViewFrom: 0,
+    dragScrollY: 0,
     traceMode: false,
+    raysMode: false,
     tracePkt: null,
     traceEvents: [],
     hoveredEvent: null,
@@ -225,6 +249,7 @@ function resize() {
     const wrap = document.getElementById('canvas-wrap');
     canvas.width = wrap.clientWidth;
     canvas.height = wrap.clientHeight;
+    updateMaxScrollY();
 }
 
 function msToX(ms) {
@@ -238,7 +263,14 @@ function xToMs(x) {
 function nodeToY(name) {
     const idx = S.nodeIndex[name];
     if (idx === undefined) return -1;
-    return S.headerH + idx * S.laneH;
+    return S.headerH + idx * S.laneH - S.scrollY;
+}
+
+function updateMaxScrollY() {
+    const totalH = S.nodes.length * S.laneH;
+    const visibleH = canvas.height - S.headerH;
+    S.maxScrollY = Math.max(0, totalH - visibleH);
+    S.scrollY = Math.min(S.scrollY, S.maxScrollY);
 }
 
 function render() {
@@ -249,12 +281,21 @@ function render() {
     ctx.fillStyle = '#1a1a2e';
     ctx.fillRect(0, 0, w, h);
 
+    updateMaxScrollY();
+
     const nNodes = S.nodes.length;
     const contentW = w - S.labelW;
 
-    // Draw lanes
+    // Clip content area below header
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, S.headerH, w, h - S.headerH);
+    ctx.clip();
+
+    // Draw lanes (with scrollY offset)
     for (let i = 0; i < nNodes; i++) {
-        const y = S.headerH + i * S.laneH;
+        const y = S.headerH + i * S.laneH - S.scrollY;
+        if (y + S.laneH < S.headerH) continue;
         if (y > h) break;
         ctx.fillStyle = i % 2 === 0 ? COLORS.lane_bg : COLORS.lane_bg_alt;
         ctx.fillRect(S.labelW, y, contentW, S.laneH);
@@ -265,27 +306,25 @@ function render() {
         ctx.moveTo(S.labelW, y + S.laneH);
         ctx.lineTo(w, y + S.laneH);
         ctx.stroke();
-
-        // Node label
-        const node = S.nodes[i];
-        const isCompanion = node.role === 'companion';
-        ctx.fillStyle = isCompanion ? '#88ccff' : '#889';
-        ctx.font = '11px monospace';
-        ctx.textAlign = 'right';
-        ctx.textBaseline = 'middle';
-        const label = node.name.length > 20 ? node.name.slice(0, 19) + '\u2026' : node.name;
-        ctx.fillText(label, S.labelW - 6, y + S.laneH / 2);
     }
 
-    // Time axis
-    drawTimeAxis(contentW);
+    // Time grid lines in content area
+    drawTimeGrid(contentW, h);
 
-    // Label column background
+    ctx.restore();
+
+    // Label column background (over clipped content)
     ctx.fillStyle = '#16213e';
-    ctx.fillRect(0, 0, S.labelW, h);
-    // Redraw labels on top
+    ctx.fillRect(0, S.headerH, S.labelW, h - S.headerH);
+
+    // Draw labels (clipped to below header)
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, S.headerH, S.labelW, h - S.headerH);
+    ctx.clip();
     for (let i = 0; i < nNodes; i++) {
-        const y = S.headerH + i * S.laneH;
+        const y = S.headerH + i * S.laneH - S.scrollY;
+        if (y + S.laneH < S.headerH) continue;
         if (y > h) break;
         const node = S.nodes[i];
         const isCompanion = node.role === 'companion';
@@ -296,13 +335,19 @@ function render() {
         const label = node.name.length > 20 ? node.name.slice(0, 19) + '\u2026' : node.name;
         ctx.fillText(label, S.labelW - 6, y + S.laneH / 2);
     }
+    ctx.restore();
 
-    // Header background
+    // Header background + time axis
     ctx.fillStyle = '#16213e';
     ctx.fillRect(0, 0, w, S.headerH);
     drawTimeAxis(contentW);
 
-    // Draw events
+    // Draw events (clipped to content area)
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(S.labelW, S.headerH, w - S.labelW, h - S.headerH);
+    ctx.clip();
+
     if (S.densityCache) {
         drawDensity();
     } else {
@@ -314,6 +359,8 @@ function render() {
         drawTrace();
     }
 
+    ctx.restore();
+
     // Time display
     const centerMs = (S.viewFrom + S.viewTo) / 2;
     const spanMs = S.viewTo - S.viewFrom;
@@ -322,17 +369,47 @@ function render() {
     // Viewport info
     document.getElementById('viewport-info').textContent =
         S.densityCache ? 'density mode' : `${S.cachedEvents.length} events in cache`;
+
+    // Vertical scrollbar indicator (right edge)
+    if (S.maxScrollY > 0) {
+        const trackH = h - S.headerH;
+        const totalH = S.nodes.length * S.laneH;
+        const thumbH = Math.max(20, trackH * trackH / totalH);
+        const thumbY = S.headerH + (S.scrollY / S.maxScrollY) * (trackH - thumbH);
+        ctx.fillStyle = '#5566aa44';
+        ctx.fillRect(w - 6, S.headerH, 6, trackH);
+        ctx.fillStyle = '#5566aaaa';
+        ctx.fillRect(w - 6, thumbY, 6, thumbH);
+    }
+
+    syncScrollbar();
 }
 
-function drawTimeAxis(contentW) {
+function timeTickInterval(contentW) {
     const span = S.viewTo - S.viewFrom;
-    // Choose nice tick interval
     const targetTicks = contentW / 100;
     const rawInterval = span / targetTicks;
     const niceIntervals = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000,
                            10000, 20000, 30000, 60000, 120000, 300000, 600000, 1800000, 3600000];
-    let interval = niceIntervals.find(n => n >= rawInterval) || rawInterval;
+    return niceIntervals.find(n => n >= rawInterval) || rawInterval;
+}
 
+function drawTimeGrid(contentW, h) {
+    const interval = timeTickInterval(contentW);
+    const firstTick = Math.ceil(S.viewFrom / interval) * interval;
+    for (let t = firstTick; t <= S.viewTo; t += interval) {
+        const x = msToX(t);
+        if (x < S.labelW) continue;
+        ctx.strokeStyle = COLORS.time_grid;
+        ctx.beginPath();
+        ctx.moveTo(x, S.headerH);
+        ctx.lineTo(x, h);
+        ctx.stroke();
+    }
+}
+
+function drawTimeAxis(contentW) {
+    const interval = timeTickInterval(contentW);
     const firstTick = Math.ceil(S.viewFrom / interval) * interval;
     ctx.font = '10px monospace';
     ctx.textAlign = 'center';
@@ -341,15 +418,6 @@ function drawTimeAxis(contentW) {
     for (let t = firstTick; t <= S.viewTo; t += interval) {
         const x = msToX(t);
         if (x < S.labelW) continue;
-
-        // Grid line
-        ctx.strokeStyle = COLORS.time_grid;
-        ctx.beginPath();
-        ctx.moveTo(x, S.headerH);
-        ctx.lineTo(x, canvas.height);
-        ctx.stroke();
-
-        // Label
         ctx.fillStyle = COLORS.time_text;
         ctx.fillText(formatTime(t), x, 4);
     }
@@ -391,11 +459,16 @@ function drawDensity() {
 
 function drawEvents() {
     const events = S.cachedEvents;
-    const traceSet = new Set(S.traceEvents.map(e => e.time_ms + ':' + e.type + ':' + (e.pkt || '')));
+    const span = S.viewTo - S.viewFrom;
+    // Pixel per ms — determines label visibility
+    const pxPerMs = (canvas.width - S.labelW) / span;
+    const showLabels = pxPerMs > 0.15;  // ~150px per second
+    const showSnr = pxPerMs > 0.05;     // ~50px per second
 
     for (const ev of events) {
         const t = ev.time_ms;
-        if (t < S.viewFrom || t > S.viewTo) continue;
+        const t_end = t + (ev.airtime_ms || 0);
+        if (t_end < S.viewFrom || t > S.viewTo) continue;
 
         const etype = ev.type;
         const x = msToX(t);
@@ -406,36 +479,71 @@ function drawEvents() {
             const airtime = ev.airtime_ms || 50;
             const x2 = msToX(t + airtime);
             const boxW = Math.max(2, x2 - x);
+            const boxH = S.laneH / 2 - 2;
 
-            const isTraced = S.tracePkt && ev.pkt === S.tracePkt;
+            const isTraced = S.tracePkts && S.tracePkts.has(ev.pkt);
             ctx.fillStyle = isTraced ? COLORS.trace_highlight : COLORS.tx;
             ctx.globalAlpha = isTraced ? 0.9 : 0.7;
-            ctx.fillRect(x, y + 2, boxW, S.laneH / 2 - 2);
+            ctx.fillRect(x, y + 2, boxW, boxH);
             ctx.globalAlpha = 1;
 
             // Border
             if (isTraced) {
                 ctx.strokeStyle = '#ffcc00';
                 ctx.lineWidth = 1.5;
-                ctx.strokeRect(x, y + 2, boxW, S.laneH / 2 - 2);
+                ctx.strokeRect(x, y + 2, boxW, boxH);
                 ctx.lineWidth = 1;
+            }
+
+            // Label on TX bar: pkt_type + route (or pkt hash if no room)
+            if (showLabels && boxW > 20) {
+                ctx.font = '9px monospace';
+                ctx.fillStyle = '#000';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+                const maxChars = Math.floor(boxW / 5.5);
+                let label;
+                if (ev.pkt_type && maxChars >= 3) {
+                    label = ev.pkt_type;
+                    if (ev.route && maxChars >= label.length + 2) label += '/' + ev.route;
+                } else if (ev.pkt) {
+                    label = ev.pkt.slice(0, Math.min(8, maxChars));
+                } else {
+                    label = '';
+                }
+                if (label) ctx.fillText(label, x + 2, y + 2 + boxH / 2);
             }
         } else if (etype === 'rx') {
             const y = nodeToY(ev.to);
             if (y < 0) continue;
-            const isTraced = S.tracePkt && ev.pkt === S.tracePkt;
-            ctx.fillStyle = isTraced ? COLORS.trace_highlight : COLORS.rx;
-            ctx.globalAlpha = isTraced ? 0.9 : 0.6;
+            const isTraced = S.tracePkts && S.tracePkts.has(ev.pkt);
+            const airtime = ev.airtime_ms || 50;
+            const x2 = msToX(t + airtime);
+            const boxW = Math.max(2, x2 - x);
+            const boxH = S.laneH / 2 - 2;
+            const boxY = y + S.laneH / 2;
 
-            // Small triangle
-            const sz = 4;
-            ctx.beginPath();
-            ctx.moveTo(x, y + S.laneH / 2);
-            ctx.lineTo(x - sz, y + S.laneH / 2 + sz);
-            ctx.lineTo(x + sz, y + S.laneH / 2 + sz);
-            ctx.closePath();
-            ctx.fill();
+            // Hollow (stroked) bar in lower half of lane
+            ctx.strokeStyle = isTraced ? COLORS.trace_highlight : COLORS.rx;
+            ctx.lineWidth = isTraced ? 2 : 1.5;
+            ctx.globalAlpha = isTraced ? 0.9 : 0.7;
+            ctx.strokeRect(x, boxY, boxW, boxH);
+
+            // Light fill for visibility
+            ctx.fillStyle = isTraced ? COLORS.trace_highlight : COLORS.rx;
+            ctx.globalAlpha = isTraced ? 0.15 : 0.1;
+            ctx.fillRect(x, boxY, boxW, boxH);
             ctx.globalAlpha = 1;
+            ctx.lineWidth = 1;
+
+            // SNR label next to RX bar
+            if (showSnr && ev.snr !== undefined) {
+                ctx.font = '8px monospace';
+                ctx.fillStyle = '#8c8';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'top';
+                ctx.fillText(ev.snr.toFixed(1), x + boxW + 2, boxY);
+            }
 
             // Draw arrow from sender to receiver if both visible
             if (isTraced) {
@@ -453,32 +561,90 @@ function drawEvents() {
         } else if (etype === 'collision') {
             const y = nodeToY(ev.to);
             if (y < 0) continue;
-            const isTraced = S.tracePkt && ev.pkt === S.tracePkt;
-            ctx.strokeStyle = isTraced ? '#ff0000' : COLORS.collision;
-            ctx.lineWidth = isTraced ? 2 : 1.5;
-            ctx.globalAlpha = isTraced ? 1 : 0.7;
-            const sz = 5;
+            const isTraced = S.tracePkts && S.tracePkts.has(ev.pkt);
+            const sz = isTraced ? 8 : 5;
             const cy = y + S.laneH / 2 + 2;
+
+            if (isTraced) {
+                // Bright glow circle behind the X
+                ctx.fillStyle = '#ff000044';
+                ctx.beginPath();
+                ctx.arc(x, cy, sz + 4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#ff000022';
+                ctx.beginPath();
+                ctx.arc(x, cy, sz + 8, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.strokeStyle = isTraced ? '#ff2222' : COLORS.collision;
+            ctx.lineWidth = isTraced ? 3 : 1.5;
+            ctx.globalAlpha = isTraced ? 1 : 0.7;
             ctx.beginPath();
             ctx.moveTo(x - sz, cy - sz); ctx.lineTo(x + sz, cy + sz);
             ctx.moveTo(x + sz, cy - sz); ctx.lineTo(x - sz, cy + sz);
             ctx.stroke();
             ctx.lineWidth = 1;
             ctx.globalAlpha = 1;
+
+            // SNR label for collision
+            if (showSnr && ev.snr !== undefined) {
+                ctx.font = isTraced ? '10px monospace' : '8px monospace';
+                ctx.fillStyle = isTraced ? '#ff4444' : '#f66';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'top';
+                ctx.fillText(ev.snr.toFixed(1), x + sz + 2, cy - sz);
+            }
         } else if (etype === 'drop_halfduplex') {
             const y = nodeToY(ev.to);
             if (y < 0) continue;
-            ctx.fillStyle = COLORS.drop_halfduplex;
-            ctx.globalAlpha = 0.6;
-            ctx.fillRect(x - 2, y + S.laneH - 6, 4, 4);
+            const isTraced = S.tracePkts && S.tracePkts.has(ev.pkt);
+            const airtime = ev.airtime_ms || 50;
+            const x2 = msToX(t + airtime);
+            const boxW = Math.max(2, x2 - x);
+            const boxH = S.laneH / 2 - 2;
+            const boxY = y + S.laneH / 2;
+
+            // Solid red fill — clearly "failed"
+            ctx.fillStyle = isTraced ? '#ff4400' : '#cc3322';
+            ctx.globalAlpha = isTraced ? 0.5 : 0.35;
+            ctx.fillRect(x, boxY, boxW, boxH);
+
+            // Diagonal hatch lines across the bar
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(x, boxY, boxW, boxH);
+            ctx.clip();
+            ctx.strokeStyle = isTraced ? '#ff4400' : '#cc3322';
+            ctx.lineWidth = 1;
+            ctx.globalAlpha = isTraced ? 0.8 : 0.6;
+            const step = 6;
+            for (let lx = x - boxH; lx < x + boxW + boxH; lx += step) {
+                ctx.beginPath();
+                ctx.moveTo(lx, boxY + boxH);
+                ctx.lineTo(lx + boxH, boxY);
+                ctx.stroke();
+            }
+            ctx.restore();
             ctx.globalAlpha = 1;
+            ctx.lineWidth = 1;
         } else if (etype === 'drop_weak' || etype === 'drop_loss') {
             const y = nodeToY(ev.to);
             if (y < 0) continue;
-            ctx.fillStyle = COLORS[etype] || '#886644';
-            ctx.globalAlpha = 0.5;
-            ctx.fillRect(x - 1, y + S.laneH - 5, 3, 3);
-            ctx.globalAlpha = 1;
+            const isTraced = S.tracePkts && S.tracePkts.has(ev.pkt);
+            if (isTraced) {
+                ctx.fillStyle = (COLORS[etype] || '#886644') + '44';
+                ctx.beginPath();
+                ctx.arc(x, y + S.laneH - 4, 8, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = COLORS[etype] || '#886644';
+                ctx.fillRect(x - 3, y + S.laneH - 7, 6, 6);
+            } else {
+                ctx.fillStyle = COLORS[etype] || '#886644';
+                ctx.globalAlpha = 0.5;
+                ctx.fillRect(x - 1, y + S.laneH - 5, 3, 3);
+                ctx.globalAlpha = 1;
+            }
         } else if (etype === 'cmd_reply') {
             const y = nodeToY(ev.node);
             if (y < 0) continue;
@@ -500,19 +666,26 @@ function drawEvents() {
 }
 
 function drawTrace() {
-    // Draw connecting lines between trace events
     if (!S.traceEvents.length) return;
+    if (!S.raysMode) return;
 
     // Sort by time
     const sorted = [...S.traceEvents].sort((a, b) => a.time_ms - b.time_ms);
 
-    // Find TX→RX chains
-    const txEvents = sorted.filter(e => e.type === 'tx');
-    const rxEvents = sorted.filter(e => e.type === 'rx');
+    // Index TX events by (pkt, node) for matching to RX
+    const txByPktNode = {};
+    for (const ev of sorted) {
+        if (ev.type === 'tx') {
+            const key = (ev.pkt || '') + ':' + ev.node;
+            txByPktNode[key] = ev;
+        }
+    }
 
-    for (const rx of rxEvents) {
-        // Find the TX that this RX came from (same pkt, from same sender, earlier time)
-        const tx = txEvents.find(t => t.node === rx.from && t.time_ms <= rx.time_ms);
+    // Draw rays: TX end → RX marker for each (pkt, from) match
+    for (const rx of sorted) {
+        if (rx.type !== 'rx') continue;
+        const key = (rx.pkt || '') + ':' + rx.from;
+        const tx = txByPktNode[key];
         if (!tx) continue;
 
         const x1 = msToX(tx.time_ms + (tx.airtime_ms || 50));
@@ -522,13 +695,90 @@ function drawTrace() {
 
         if (y1 < 0 || y2 < 0) continue;
 
-        ctx.strokeStyle = '#ffcc0044';
-        ctx.lineWidth = 1;
+        const cy1 = y1 + S.laneH / 4;
+        const cy2 = y2 + S.laneH / 2;
+
+        // Ray line
+        ctx.strokeStyle = '#ffcc00aa';
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.moveTo(x1, y1 + S.laneH / 4);
-        ctx.lineTo(x2, y2 + S.laneH / 2);
+        ctx.moveTo(x1, cy1);
+        ctx.lineTo(x2, cy2);
         ctx.stroke();
+
+        // Arrowhead
+        const dx = x2 - x1, dy = cy2 - cy1;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        if (len > 8) {
+            const ax = dx / len, ay = dy / len;
+            const sz = 5;
+            ctx.fillStyle = '#ffcc00aa';
+            ctx.beginPath();
+            ctx.moveTo(x2, cy2);
+            ctx.lineTo(x2 - sz * ax + sz * 0.4 * ay, cy2 - sz * ay - sz * 0.4 * ax);
+            ctx.lineTo(x2 - sz * ax - sz * 0.4 * ay, cy2 - sz * ay + sz * 0.4 * ax);
+            ctx.closePath();
+            ctx.fill();
+        }
     }
+
+    // Also draw relay links: if a RX is followed by a TX from the same node
+    // with a different pkt (relay), draw a small connector
+    for (const hop of (S.deepTrace ? S.deepTrace.hops : [])) {
+        if (!hop.relay_from) continue;
+        // Find the RX that triggered this relay
+        const parentHop = (S.deepTrace.hops || []).find(h => h.pkt === hop.relay_from);
+        if (!parentHop) continue;
+        const relayTx = hop.events.find(e => e.type === 'tx');
+        if (!relayTx) continue;
+        // Find the RX in parent hop that was received by the relay node
+        const triggerRx = parentHop.events.find(e => e.type === 'rx' && e.to === relayTx.node);
+        if (!triggerRx) continue;
+
+        const x1 = msToX(triggerRx.time_ms);
+        const y = nodeToY(relayTx.node);
+        const x2 = msToX(relayTx.time_ms);
+        if (y < 0) continue;
+
+        // Horizontal connector within same lane: RX → relay TX
+        const cy = y + S.laneH / 2;
+        ctx.strokeStyle = '#aaaaff66';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([2, 2]);
+        ctx.beginPath();
+        ctx.moveTo(x1, cy);
+        ctx.lineTo(x2, cy - S.laneH / 4);
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
+    // Draw response connectors (companion response TXs) in green
+    for (const hop of (S.deepTrace ? S.deepTrace.hops : [])) {
+        if (!hop.response_from) continue;
+        const parentHop = (S.deepTrace.hops || []).find(h => h.pkt === hop.response_from);
+        if (!parentHop) continue;
+        const respTx = hop.events.find(e => e.type === 'tx');
+        if (!respTx) continue;
+        const triggerRx = parentHop.events.find(e => e.type === 'rx' && e.to === respTx.node);
+        if (!triggerRx) continue;
+
+        const x1 = msToX(triggerRx.time_ms);
+        const y = nodeToY(respTx.node);
+        const x2 = msToX(respTx.time_ms);
+        if (y < 0) continue;
+
+        const cy = y + S.laneH / 2;
+        ctx.strokeStyle = '#99dd9966';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(x1, cy);
+        ctx.lineTo(x2, cy - S.laneH / 4);
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
+    ctx.lineWidth = 1;
 }
 
 // ── Time formatting ────────────────────────────────────────────
@@ -549,29 +799,35 @@ function formatDuration(ms) {
 // ── Interaction ────────────────────────────────────────────────
 canvas.addEventListener('wheel', async (e) => {
     e.preventDefault();
-    const mouseX = e.offsetX;
-    const mouseMs = xToMs(mouseX);
     const span = S.viewTo - S.viewFrom;
 
-    const factor = e.deltaY > 0 ? 1.3 : 1 / 1.3;
-    const newSpan = Math.max(100, Math.min(S.meta.time_max - S.meta.time_min, span * factor));
-
-    // Zoom centered on mouse
-    const ratio = (mouseMs - S.viewFrom) / span;
-    S.viewFrom = mouseMs - ratio * newSpan;
-    S.viewTo = mouseMs + (1 - ratio) * newSpan;
-
-    // Clamp
-    if (S.viewFrom < S.meta.time_min) {
-        S.viewFrom = S.meta.time_min;
-        S.viewTo = S.viewFrom + newSpan;
+    if (e.ctrlKey || e.metaKey) {
+        // Ctrl+wheel: zoom in/out (centered on mouse)
+        const mouseMs = xToMs(e.offsetX);
+        const factor = e.deltaY > 0 ? 1.3 : 1 / 1.3;
+        const newSpan = Math.max(100, Math.min(S.meta.time_max - S.meta.time_min, span * factor));
+        const ratio = (mouseMs - S.viewFrom) / span;
+        S.viewFrom = mouseMs - ratio * newSpan;
+        S.viewTo = mouseMs + (1 - ratio) * newSpan;
+        if (S.viewFrom < S.meta.time_min) { S.viewFrom = S.meta.time_min; S.viewTo = S.viewFrom + newSpan; }
+        if (S.viewTo > S.meta.time_max) { S.viewTo = S.meta.time_max; S.viewFrom = S.viewTo - newSpan; }
+        await loadViewport();
+    } else if (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+        // Shift+wheel or horizontal scroll: move time window left/right
+        const delta = (e.shiftKey ? e.deltaY : e.deltaX);
+        const dMs = delta / (canvas.width - S.labelW) * span * 2;
+        S.viewFrom += dMs;
+        S.viewTo += dMs;
+        if (S.viewFrom < S.meta.time_min) { S.viewFrom = S.meta.time_min; S.viewTo = S.viewFrom + span; }
+        if (S.viewTo > S.meta.time_max) { S.viewTo = S.meta.time_max; S.viewFrom = S.viewTo - span; }
+        await loadViewport();
+    } else {
+        // Vertical scroll: scroll node lanes up/down
+        S.scrollY += e.deltaY;
+        updateMaxScrollY();
+        S.scrollY = Math.max(0, Math.min(S.scrollY, S.maxScrollY));
     }
-    if (S.viewTo > S.meta.time_max) {
-        S.viewTo = S.meta.time_max;
-        S.viewFrom = S.viewTo - newSpan;
-    }
 
-    await loadViewport();
     render();
 }, { passive: false });
 
@@ -579,19 +835,24 @@ canvas.addEventListener('mousedown', (e) => {
     if (e.offsetX < S.labelW) return;
     S.dragging = true;
     S.dragStartX = e.offsetX;
+    S.dragStartY = e.offsetY;
     S.dragViewFrom = S.viewFrom;
+    S.dragScrollY = S.scrollY;
     canvas.style.cursor = 'grabbing';
 });
 
 canvas.addEventListener('mousemove', async (e) => {
     if (S.dragging) {
         const dx = e.offsetX - S.dragStartX;
+        const dy = e.offsetY - S.dragStartY;
         const span = S.viewTo - S.viewFrom;
+
+        // Horizontal: pan time
         const dMs = -dx / (canvas.width - S.labelW) * span;
         S.viewFrom = S.dragViewFrom + dMs;
         S.viewTo = S.viewFrom + span;
 
-        // Clamp
+        // Clamp horizontal
         if (S.viewFrom < S.meta.time_min) {
             S.viewFrom = S.meta.time_min;
             S.viewTo = S.viewFrom + span;
@@ -600,6 +861,11 @@ canvas.addEventListener('mousemove', async (e) => {
             S.viewTo = S.meta.time_max;
             S.viewFrom = S.viewTo - span;
         }
+
+        // Vertical: scroll nodes
+        S.scrollY = S.dragScrollY - dy;
+        updateMaxScrollY();
+        S.scrollY = Math.max(0, Math.min(S.scrollY, S.maxScrollY));
 
         await loadViewport();
         render();
@@ -624,7 +890,7 @@ canvas.addEventListener('mouseleave', () => {
 canvas.addEventListener('click', async (e) => {
     if (e.offsetX < S.labelW) {
         // Clicked on node label
-        const laneIdx = Math.floor((e.offsetY - S.headerH) / S.laneH);
+        const laneIdx = Math.floor((e.offsetY - S.headerH + S.scrollY) / S.laneH);
         if (laneIdx >= 0 && laneIdx < S.nodes.length) {
             showNodeDetail(S.nodes[laneIdx].name);
         }
@@ -643,28 +909,41 @@ canvas.addEventListener('click', async (e) => {
 
 function findEventAt(mx, my) {
     if (S.densityCache) return null;
+    if (my < S.headerH) return null;
 
     const ms = xToMs(mx);
-    const laneIdx = Math.floor((my - S.headerH) / S.laneH);
+    const laneIdx = Math.floor((my - S.headerH + S.scrollY) / S.laneH);
     if (laneIdx < 0 || laneIdx >= S.nodes.length) return null;
     const targetNode = S.nodes[laneIdx].name;
 
-    // Search nearby events
+    // Search nearby events — TX bars match over their full airtime width
     let best = null;
     let bestDist = Infinity;
     const span = S.viewTo - S.viewFrom;
-    const tolerance = span * 0.005; // 0.5% of viewport
+    const tolerance = span * 0.008; // 0.8% of viewport for point events
 
     for (const ev of S.cachedEvents) {
-        if (ev.time_ms < ms - tolerance || ev.time_ms > ms + tolerance) continue;
-
         let evNode = ev.node || ev.to || ev.from;
         if (ev.type === 'rx' || ev.type === 'collision' || ev.type.startsWith('drop')) {
             evNode = ev.to;
         }
         if (evNode !== targetNode) continue;
 
-        const dist = Math.abs(ev.time_ms - ms);
+        let dist;
+        if (ev.type === 'tx' || ev.type === 'rx' || ev.type === 'drop_halfduplex') {
+            // TX/RX bar spans [time_ms, time_ms + airtime_ms]
+            const end = ev.time_ms + (ev.airtime_ms || 50);
+            if (ms >= ev.time_ms - tolerance && ms <= end + tolerance) {
+                // Distance = 0 if inside bar, otherwise distance to nearest edge
+                dist = (ms >= ev.time_ms && ms <= end) ? 0 : Math.min(Math.abs(ms - ev.time_ms), Math.abs(ms - end));
+            } else {
+                continue;
+            }
+        } else {
+            dist = Math.abs(ev.time_ms - ms);
+            if (dist > tolerance) continue;
+        }
+
         if (dist < bestDist) {
             bestDist = dist;
             best = ev;
@@ -680,17 +959,34 @@ function updateHover(mx, my) {
         return;
     }
 
-    let text = `${hit.type} @ ${formatTime(hit.time_ms)}`;
+    // Find event index for reference
+    const evIdx = S.cachedEvents.indexOf(hit);
+    const idxStr = evIdx >= 0 ? ` #${S.cachedFrom > 0 ? '~' : ''}${evIdx}` : '';
+
+    let text = `${hit.type}${idxStr} @ ${formatTime(hit.time_ms)}`;
     if (hit.node) text += `\nnode: ${hit.node}`;
     if (hit.from) text += `\nfrom: ${hit.from}`;
     if (hit.to) text += `\nto: ${hit.to}`;
     if (hit.pkt) text += `\npkt: ${hit.pkt}`;
+    if (hit.pkt_type) text += `\npkt_type: ${hit.pkt_type}`;
+    if (hit.route) text += `\nroute: ${hit.route}`;
+    if (hit.hex) {
+        const ep = decodeMsgEndpoints(hit.hex);
+        if (ep) {
+            const pkMap = buildPubKeyMap();
+            const src = resolveHash(ep.srcHash, pkMap);
+            const dst = resolveHash(ep.dstHash, pkMap);
+            if (src) text += `\nmsg_src: ${src}`;
+            if (dst) text += `\nmsg_dst: ${dst}`;
+        }
+    }
     if (hit.snr !== undefined) text += `\nsnr: ${hit.snr.toFixed(1)} dB`;
     if (hit.rssi !== undefined) text += `\nrssi: ${hit.rssi.toFixed(1)} dBm`;
     if (hit.airtime_ms) text += `\nairtime: ${hit.airtime_ms}ms`;
     if (hit.command) text += `\ncmd: ${hit.command}`;
     if (hit.reply) text += `\nreply: ${hit.reply.slice(0, 80)}`;
     if (hit.threshold) text += `\nthreshold: ${hit.threshold.toFixed(1)} dB`;
+    if (hit.loss !== undefined) text += `\nloss prob: ${hit.loss.toFixed(2)}`;
 
     tooltip.textContent = text;
     tooltip.style.display = 'block';
@@ -698,19 +994,119 @@ function updateHover(mx, my) {
     tooltip.style.top = (my + 12) + 'px';
 }
 
+// ── Packet hex decoder ─────────────────────────────────────────
+// Decode msg sender/recipient from raw packet hex (TX events carry full bytes)
+// MeshCore packet: byte 0 = header, then optional transport (4B), then path, then payload
+// Payload for msg/req/resp/path: byte 0 = dst_hash, byte 1 = src_hash (1 byte each)
+function decodeMsgEndpoints(hexStr) {
+    if (!hexStr || hexStr.length < 4) return null;
+    const bytes = [];
+    for (let i = 0; i < hexStr.length; i += 2) bytes.push(parseInt(hexStr.substr(i, 2), 16));
+    if (bytes.length < 3) return null;
+
+    const header = bytes[0];
+    const routeType = header & 0x03;
+    const payloadType = (header >> 2) & 0x0F;
+
+    // Only certain types have dst/src hashes
+    const HAS_HASHES = new Set([0x00, 0x01, 0x02, 0x08]); // req, resp, msg, path
+    const IS_ANON = payloadType === 0x07; // anon_req: dst_hash + full 32-byte pub key
+
+    if (!HAS_HASHES.has(payloadType) && !IS_ANON) return null;
+
+    // Skip header
+    let off = 1;
+    // Transport codes: route 0 (t_flood) or 3 (t_direct) have 4 extra bytes
+    if (routeType === 0x00 || routeType === 0x03) off += 4;
+
+    if (off >= bytes.length) return null;
+
+    // Path encoding: upper 2 bits = hash_size_code, lower 6 = count
+    // MeshCore: hash_size = (code >> 6) + 1, so code 0→1B, 1→2B, 2→3B
+    const pathByte = bytes[off++];
+    const hashSizeCode = (pathByte >> 6) & 0x03;
+    const pathCount = pathByte & 0x3F;
+    const hashSize = hashSizeCode + 1;
+    off += hashSize * pathCount;
+
+    if (off + 2 > bytes.length) return null;
+
+    const dstHash = bytes[off];
+    const srcHash = IS_ANON ? null : bytes[off + 1];
+
+    return { dstHash, srcHash };
+}
+
+// Build pub key prefix → node name map (handles collisions by listing all matches)
+function buildPubKeyMap() {
+    const map = {}; // first byte (int) → [node names]
+    if (!S.meta || !S.meta.nodes) return map;
+    for (const n of S.meta.nodes) {
+        if (!n.pub || n.pub.length < 2) continue;
+        const prefix = parseInt(n.pub.substr(0, 2), 16);
+        if (!map[prefix]) map[prefix] = [];
+        map[prefix].push(n.name);
+    }
+    return map;
+}
+
+function resolveHash(hash, pkMap) {
+    if (hash === null || hash === undefined) return null;
+    const matches = pkMap[hash];
+    if (!matches || matches.length === 0) return `0x${hash.toString(16).padStart(2,'0')}`;
+    return matches.join('/');
+}
+
 // ── Trace mode ─────────────────────────────────────────────────
 async function tracePkt(pkt) {
     S.tracePkt = pkt;
-    const data = await fetchJSON(`/api/trace/${pkt}`);
-    S.traceEvents = data.events;
+    const data = await fetchJSON(`/api/deep_trace/${pkt}`);
+    S.deepTrace = data;  // {root_pkt, hops: [{pkt, events, relay_from?}]}
 
-    showTraceDetail(pkt, data.events);
+    // Collect all events across all hops for canvas highlight
+    const allEvents = [];
+    const allPkts = new Set();
+    for (const hop of data.hops) {
+        allEvents.push(...hop.events);
+        allPkts.add(hop.pkt);
+    }
+    S.traceEvents = allEvents;
+    S.tracePkts = allPkts;  // all pkt hashes in the relay chain
+
+    showDeepTraceDetail(data);
     render();
 }
 
 function clearTrace() {
     S.tracePkt = null;
     S.traceEvents = [];
+    S.tracePkts = null;
+    S.deepTrace = null;
+    render();
+}
+
+// ── Navigation helpers ─────────────────────────────────────────
+async function jumpToEvent(nodeName, timeMs) {
+    // Ensure node is visible vertically
+    const idx = S.nodeIndex[nodeName];
+    if (idx !== undefined) {
+        const targetY = idx * S.laneH;
+        const visibleH = canvas.height - S.headerH;
+        if (targetY < S.scrollY || targetY + S.laneH > S.scrollY + visibleH) {
+            S.scrollY = Math.max(0, targetY - visibleH / 2);
+            updateMaxScrollY();
+            S.scrollY = Math.min(S.scrollY, S.maxScrollY);
+        }
+    }
+
+    // Center time window on event
+    const span = S.viewTo - S.viewFrom;
+    S.viewFrom = timeMs - span * 0.3;
+    S.viewTo = S.viewFrom + span;
+    if (S.viewFrom < S.meta.time_min) { S.viewFrom = S.meta.time_min; S.viewTo = S.viewFrom + span; }
+    if (S.viewTo > S.meta.time_max) { S.viewTo = S.meta.time_max; S.viewFrom = S.viewTo - span; }
+
+    await loadViewport();
     render();
 }
 
@@ -741,6 +1137,18 @@ function showEventDetail(ev) {
         }
     }
 
+    // Decode msg endpoints from hex
+    if (ev.hex) {
+        const ep = decodeMsgEndpoints(ev.hex);
+        if (ep) {
+            const pkMap = buildPubKeyMap();
+            const dst = resolveHash(ep.dstHash, pkMap);
+            const src = resolveHash(ep.srcHash, pkMap);
+            if (dst) html += `<div class="field"><span class="key">msg_dst: </span><span class="val">${escHtml(dst)}</span></div>`;
+            if (src) html += `<div class="field"><span class="key">msg_src: </span><span class="val">${escHtml(src)}</span></div>`;
+        }
+    }
+
     // If this is a cmd_reply for a msg, offer to find the TX
     if (ev.type === 'cmd_reply' && ev.command && ev.command.startsWith('msg ')) {
         html += `<div style="margin-top:8px"><button onclick="findMsgTx('${ev.node}', ${ev.time_ms})">Find TX packet</button></div>`;
@@ -749,92 +1157,217 @@ function showEventDetail(ev) {
     sidebarContent.innerHTML = html;
 }
 
-function showTraceDetail(pkt, events) {
+function showDeepTraceDetail(data) {
     openSidebar();
-    let html = `<h3>Packet trace: ${pkt}</h3>`;
+    const pkMap = buildPubKeyMap();
+    const rootPkt = data.root_pkt;
+    const hops = data.hops;
+
+    // Collect all events across all hops
+    const allEvents = [];
+    for (const hop of hops) allEvents.push(...hop.events);
+    const sorted = allEvents.sort((a, b) => a.time_ms - b.time_ms);
+
+    let html = `<h3>Trace: ${rootPkt}</h3>`;
     html += `<div style="margin-bottom:6px"><button onclick="clearTrace(); closeSidebar();">Clear trace</button></div>`;
 
-    const sorted = [...events].sort((a, b) => a.time_ms - b.time_ms);
+    // Show pkt_type/route
+    const firstTyped = sorted.find(e => e.pkt_type);
+    if (firstTyped) {
+        html += `<div class="field"><span class="key">pkt_type: </span><span class="val">${firstTyped.pkt_type}</span></div>`;
+        html += `<div class="field"><span class="key">route: </span><span class="val">${firstTyped.route || '?'}</span></div>`;
+    }
 
+    // Decode msg source/destination from root hop's first TX hex
+    const rootHop = hops.find(h => h.pkt === rootPkt);
+    if (rootHop) {
+        const firstTx = rootHop.events.find(e => e.type === 'tx' && e.hex);
+        if (firstTx) {
+            const ep = decodeMsgEndpoints(firstTx.hex);
+            if (ep) {
+                const dst = resolveHash(ep.dstHash, pkMap);
+                const src = resolveHash(ep.srcHash, pkMap);
+                if (src) html += `<div class="field"><span class="key">msg from: </span><span class="val">${escHtml(src)}</span></div>`;
+                if (dst) html += `<div class="field"><span class="key">msg to: </span><span class="val">${escHtml(dst)}</span></div>`;
+            }
+        }
+    }
+
+    // Summary
+    const counts = {};
+    for (const ev of sorted) { counts[ev.type] = (counts[ev.type] || 0) + 1; }
+    html += `<div class="field" style="margin-top:4px"><span class="key">hops: </span><span class="val">${hops.length}</span></div>`;
+    html += `<div class="field"><span class="key">events: </span><span class="val">`;
+    html += Object.entries(counts).map(([t,c]) => `${c} ${t}`).join(', ');
+    html += `</span></div>`;
+
+    // Event table with clickable nodes
     html += '<table><tr><th>Time</th><th>Type</th><th>Node</th><th>Detail</th></tr>';
     for (const ev of sorted) {
-        const node = ev.node || ev.to || '';
+        const evNode = ev.node || ev.to || '';
         let detail = '';
-        if (ev.from) detail += ev.from + '\u2192' + (ev.to || '');
+        if (ev.from && ev.to) detail += `${ev.from}\u2192${ev.to}`;
+        else if (ev.from) detail += ev.from;
         if (ev.snr !== undefined) detail += ` snr=${ev.snr.toFixed(1)}`;
         if (ev.airtime_ms) detail += ` ${ev.airtime_ms}ms`;
         if (ev.threshold) detail += ` thr=${ev.threshold.toFixed(1)}`;
 
         const color = COLORS[ev.type] || '#999';
-        html += `<tr style="color:${color}"><td>${formatTime(ev.time_ms)}</td><td>${ev.type}</td><td>${node}</td><td>${escHtml(detail)}</td></tr>`;
+        const nodeHtml = evNode ? `<span class="pkt-link" data-jump-node="${escHtml(evNode)}" data-jump-time="${ev.time_ms}">${escHtml(evNode)}</span>` : '';
+        html += `<tr style="color:${color}"><td>${formatTime(ev.time_ms)}</td><td>${ev.type}</td><td>${nodeHtml}</td><td>${escHtml(detail)}</td></tr>`;
     }
     html += '</table>';
 
-    // Build spread tree
+    // Build multi-hop spread tree
     html += '<h3>Spread tree</h3>';
-    html += '<pre style="font-size:10px; color:#ccc; overflow-x:auto;">' + buildSpreadTree(sorted) + '</pre>';
+    html += '<div style="font-size:10px; font-family:monospace; overflow-x:auto;">' + buildDeepSpreadTree(hops) + '</div>';
 
     sidebarContent.innerHTML = html;
+
+    // Attach click handlers for jump links
+    sidebarContent.querySelectorAll('[data-jump-node]').forEach(el => {
+        el.addEventListener('click', () => {
+            jumpToEvent(el.dataset.jumpNode, parseFloat(el.dataset.jumpTime));
+        });
+    });
 }
 
-function buildSpreadTree(events) {
-    // Build tree from TX→RX relationships
-    const txEvents = events.filter(e => e.type === 'tx');
-    const rxEvents = events.filter(e => e.type === 'rx');
-    const collisions = events.filter(e => e.type === 'collision');
-    const drops = events.filter(e => e.type.startsWith('drop'));
+function buildDeepSpreadTree(hops) {
+    if (!hops.length) return '<span style="color:#666">(no events)</span>';
 
-    if (!txEvents.length) return '(no TX events)';
+    // Index hops by pkt hash and build relay_from map
+    const hopByPkt = {};
+    for (const hop of hops) hopByPkt[hop.pkt] = hop;
 
-    let lines = [];
+    // For each hop, index events by type
+    function hopData(hop) {
+        return {
+            tx: hop.events.filter(e => e.type === 'tx'),
+            rx: hop.events.filter(e => e.type === 'rx'),
+            collisions: hop.events.filter(e => e.type === 'collision'),
+            drops: hop.events.filter(e => e.type.startsWith('drop')),
+        };
+    }
 
-    for (let ti = 0; ti < txEvents.length; ti++) {
-        const tx = txEvents[ti];
-        const isFirst = ti === 0;
-        const prefix = isFirst ? '' : '\n';
-        lines.push(`${prefix}${tx.node} TX@${formatTime(tx.time_ms)} (${tx.airtime_ms || '?'}ms airtime)`);
+    // For a given hop, find which receiver relayed → which next hop pkt
+    // We look for hops where relay_from === this hop's pkt
+    function findRelayHop(receiverNode, currentPkt) {
+        for (const hop of hops) {
+            if (hop.relay_from !== currentPkt) continue;
+            // Check if this hop's TX is from the receiver
+            const tx = hop.events.find(e => e.type === 'tx' && e.node === receiverNode);
+            if (tx) return { hop, tx };
+        }
+        return null;
+    }
 
-        // Find all RX, collisions, drops for this TX
+    // Find response hops: companion TXs triggered by receiving this packet
+    function findResponseHops(receiverNode, currentPkt) {
+        const results = [];
+        for (const hop of hops) {
+            if (hop.response_from !== currentPkt) continue;
+            const tx = hop.events.find(e => e.type === 'tx' && e.node === receiverNode);
+            if (tx) results.push({ hop, tx });
+        }
+        return results;
+    }
+
+    const visitedHops = new Set();
+
+    function renderHop(hop, indent) {
+        if (visitedHops.has(hop.pkt)) return '';
+        visitedHops.add(hop.pkt);
+
+        const d = hopData(hop);
+        if (!d.tx.length) return '';
+
+        const tx = d.tx[0];  // There should be exactly one TX per hop
+        let html = '';
+        const pad = '\u00a0'.repeat(indent);
+        const nodeSpan = `<span class="pkt-link" data-jump-node="${escHtml(tx.node)}" data-jump-time="${tx.time_ms}" style="color:${COLORS.tx}">${escHtml(tx.node)}</span>`;
+        html += `<div>${pad}${nodeSpan} <span style="color:#888">TX@${formatTime(tx.time_ms)} (${tx.airtime_ms || '?'}ms)</span></div>`;
+
+        // Collect children: RX, collisions, drops for this TX
+        const txEnd = tx.time_ms + (tx.airtime_ms || 50);
         const children = [];
-        for (const rx of rxEvents) {
-            if (rx.from === tx.node && rx.time_ms >= tx.time_ms) {
-                children.push({ type: 'rx', ev: rx, sort: rx.time_ms });
+
+        for (const rx of d.rx) {
+            if (rx.from === tx.node) {
+                children.push({ kind: 'rx', ev: rx });
             }
         }
-        for (const c of collisions) {
-            if (c.from === tx.node && c.time_ms >= tx.time_ms) {
-                children.push({ type: 'collision', ev: c, sort: c.time_ms });
+        for (const c of d.collisions) {
+            if (c.from === tx.node) {
+                children.push({ kind: 'collision', ev: c });
             }
         }
-        for (const d of drops) {
-            if (d.from === tx.node && d.time_ms >= tx.time_ms) {
-                children.push({ type: d.type, ev: d, sort: d.time_ms });
+        for (const dr of d.drops) {
+            if (dr.from === tx.node || dr.node === tx.node) {
+                children.push({ kind: dr.type, ev: dr });
             }
         }
 
-        children.sort((a, b) => a.sort - b.sort);
+        children.sort((a, b) => a.ev.time_ms - b.ev.time_ms);
 
         for (let ci = 0; ci < children.length; ci++) {
             const child = children[ci];
             const isLast = ci === children.length - 1;
             const branch = isLast ? '\u2514\u2500 ' : '\u251c\u2500 ';
 
-            if (child.type === 'rx') {
+            if (child.kind === 'rx') {
                 const rx = child.ev;
-                const isRelay = txEvents.some(t => t.node === rx.to && t.time_ms > rx.time_ms);
-                const marker = isRelay ? ' \u2192 relay' : '';
-                lines.push(`  ${branch}${rx.to} RX@${formatTime(rx.time_ms)} (snr=${rx.snr.toFixed(1)})${marker}`);
-            } else if (child.type === 'collision') {
-                lines.push(`  ${branch}${child.ev.to} COLLISION@${formatTime(child.ev.time_ms)}`);
+                const relay = findRelayHop(rx.to, hop.pkt);
+                const responses = findResponseHops(rx.to, hop.pkt);
+                const rxNodeSpan = `<span class="pkt-link" data-jump-node="${escHtml(rx.to)}" data-jump-time="${rx.time_ms}" style="color:${COLORS.rx}">${escHtml(rx.to)}</span>`;
+                const relayMarker = relay ? ' <span style="color:#aaf">\u2192 relay</span>' : '';
+                html += `<div>${pad}${branch}${rxNodeSpan} <span style="color:#888">RX@${formatTime(rx.time_ms)} snr=${rx.snr.toFixed(1)}</span>${relayMarker}</div>`;
+
+                // Recurse into relay hop
+                if (relay) {
+                    html += renderHop(relay.hop, indent + 3);
+                }
+
+                // Show companion response TXs
+                for (const resp of responses) {
+                    const rt = resp.tx.route || '?';
+                    const pt = resp.tx.pkt_type || '?';
+                    const respPad = '\u00a0'.repeat(indent + 3);
+                    html += `<div>${respPad}<span style="color:#9d9">\u21b3 response</span> <span style="color:#888">${pt}\u2192${rt} @${formatTime(resp.tx.time_ms)}</span></div>`;
+                    html += renderHop(resp.hop, indent + 6);
+                }
+            } else if (child.kind === 'collision') {
+                const c = child.ev;
+                const cNodeSpan = `<span class="pkt-link" data-jump-node="${escHtml(c.to)}" data-jump-time="${c.time_ms}" style="color:${COLORS.collision}">${escHtml(c.to)}</span>`;
+                html += `<div>${pad}${branch}${cNodeSpan} <span style="color:#f44">COLLISION@${formatTime(c.time_ms)}</span></div>`;
             } else {
-                const reason = child.type.replace('drop_', '');
-                const node = child.ev.to || child.ev.node || '?';
-                lines.push(`  ${branch}${node} DROP(${reason})@${formatTime(child.ev.time_ms)}`);
+                const d = child.ev;
+                const reason = child.kind.replace('drop_', '');
+                const dNode = d.to || d.node || '?';
+                const dNodeSpan = `<span class="pkt-link" data-jump-node="${escHtml(dNode)}" data-jump-time="${d.time_ms}" style="color:${COLORS[child.kind] || '#886'}">${escHtml(dNode)}</span>`;
+                html += `<div>${pad}${branch}${dNodeSpan} <span style="color:#886">DROP(${reason})@${formatTime(d.time_ms)}</span></div>`;
             }
+        }
+
+        return html;
+    }
+
+    // Find root hop (no relay_from and no response_from)
+    let rootHops = hops.filter(h => !h.relay_from && !h.response_from);
+    if (rootHops.length === 0) rootHops = [hops[0]];
+
+    let html = '';
+    for (const root of rootHops) {
+        html += renderHop(root, 0);
+    }
+
+    // Render any orphan hops not yet visited
+    for (const hop of hops) {
+        if (!visitedHops.has(hop.pkt)) {
+            html += renderHop(hop, 0);
         }
     }
 
-    return escHtml(lines.join('\n'));
+    return html || '<span style="color:#666">(no TX events)</span>';
 }
 
 function showNodeDetail(name) {
@@ -906,7 +1439,70 @@ document.getElementById('btn-trace-mode').addEventListener('click', () => {
     if (!S.traceMode) clearTrace();
 });
 
+document.getElementById('btn-rays').addEventListener('click', () => {
+    S.raysMode = !S.raysMode;
+    document.getElementById('btn-rays').classList.toggle('active', S.raysMode);
+    render();
+});
+
 window.addEventListener('resize', () => { resize(); render(); });
+
+// ── Scrollbar ──────────────────────────────────────────────────
+const timeSlider = document.getElementById('time-slider');
+const scrollFrom = document.getElementById('scroll-from');
+const scrollTo = document.getElementById('scroll-to');
+
+function syncScrollbar() {
+    if (!S.meta) return;
+    const totalSpan = S.meta.time_max - S.meta.time_min;
+    if (totalSpan <= 0) return;
+    const viewSpan = S.viewTo - S.viewFrom;
+    // Slider represents the center of the viewport as fraction of total range
+    const center = (S.viewFrom + S.viewTo) / 2;
+    const fraction = (center - S.meta.time_min) / totalSpan;
+    timeSlider.value = Math.round(fraction * 1000);
+    scrollFrom.textContent = formatTime(S.viewFrom);
+    scrollTo.textContent = formatTime(S.viewTo);
+}
+
+let sliderDragging = false;
+timeSlider.addEventListener('input', async () => {
+    sliderDragging = true;
+    const fraction = timeSlider.value / 1000;
+    const totalSpan = S.meta.time_max - S.meta.time_min;
+    const viewSpan = S.viewTo - S.viewFrom;
+    const center = S.meta.time_min + fraction * totalSpan;
+    S.viewFrom = center - viewSpan / 2;
+    S.viewTo = center + viewSpan / 2;
+    // Clamp
+    if (S.viewFrom < S.meta.time_min) { S.viewFrom = S.meta.time_min; S.viewTo = S.viewFrom + viewSpan; }
+    if (S.viewTo > S.meta.time_max) { S.viewTo = S.meta.time_max; S.viewFrom = S.viewTo - viewSpan; }
+    await loadViewport();
+    render();
+});
+timeSlider.addEventListener('mouseup', () => { sliderDragging = false; });
+timeSlider.addEventListener('touchend', () => { sliderDragging = false; });
+
+document.getElementById('btn-zoom-in').addEventListener('click', async () => {
+    const center = (S.viewFrom + S.viewTo) / 2;
+    const newSpan = Math.max(100, (S.viewTo - S.viewFrom) / 2);
+    S.viewFrom = center - newSpan / 2;
+    S.viewTo = center + newSpan / 2;
+    await loadViewport();
+    render();
+});
+
+document.getElementById('btn-zoom-out').addEventListener('click', async () => {
+    const center = (S.viewFrom + S.viewTo) / 2;
+    const totalSpan = S.meta.time_max - S.meta.time_min;
+    const newSpan = Math.min(totalSpan, (S.viewTo - S.viewFrom) * 2);
+    S.viewFrom = center - newSpan / 2;
+    S.viewTo = center + newSpan / 2;
+    if (S.viewFrom < S.meta.time_min) { S.viewFrom = S.meta.time_min; S.viewTo = S.viewFrom + newSpan; }
+    if (S.viewTo > S.meta.time_max) { S.viewTo = S.meta.time_max; S.viewFrom = S.viewTo - newSpan; }
+    await loadViewport();
+    render();
+});
 
 // ── Keyboard shortcuts ─────────────────────────────────────────
 document.addEventListener('keydown', async (e) => {
@@ -935,6 +1531,10 @@ document.addEventListener('keydown', async (e) => {
         S.traceMode = !S.traceMode;
         document.getElementById('btn-trace-mode').classList.toggle('active', S.traceMode);
         if (!S.traceMode) clearTrace();
+    } else if (e.key === 'r') {
+        S.raysMode = !S.raysMode;
+        document.getElementById('btn-rays').classList.toggle('active', S.raysMode);
+        render();
     }
 });
 

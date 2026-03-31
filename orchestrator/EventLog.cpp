@@ -31,6 +31,39 @@ static void json_escape(char* out, size_t out_sz, const char* in) {
     *dp = '\0';
 }
 
+// Decode MeshCore packet header byte into short type label + route label
+// Header byte: bits 1-0 = route type, bits 5-2 = payload type, bits 7-6 = version
+static const char* decodePayloadType(uint8_t header) {
+    uint8_t ptype = (header >> 2) & 0x0F;
+    switch (ptype) {
+        case 0x00: return "req";
+        case 0x01: return "resp";
+        case 0x02: return "msg";
+        case 0x03: return "ack";
+        case 0x04: return "advert";
+        case 0x05: return "grp_msg";
+        case 0x06: return "grp_data";
+        case 0x07: return "anon_req";
+        case 0x08: return "path";
+        case 0x09: return "trace";
+        case 0x0A: return "multipart";
+        case 0x0B: return "control";
+        case 0x0F: return "raw";
+        default:   return "?";
+    }
+}
+
+static const char* decodeRouteType(uint8_t header) {
+    uint8_t rtype = header & 0x03;
+    switch (rtype) {
+        case 0x00: return "t_flood";
+        case 0x01: return "flood";
+        case 0x02: return "direct";
+        case 0x03: return "t_direct";
+        default:   return "?";
+    }
+}
+
 namespace EventLog {
 
 void packetHashHex(char out[9], const uint8_t* data, int len) {
@@ -75,16 +108,25 @@ void tx(unsigned long time_ms, const char* node, const uint8_t* data, int len, u
     if (len > 512) len = 512;
     to_hex(hex, data, len);
     packetHashHex(pkt, data, len);
-    fprintf(stdout, "{\"type\":\"tx\",\"time_ms\":%lu,\"node\":\"%s\",\"pkt\":\"%s\",\"hex\":\"%s\",\"airtime_ms\":%u}\n",
-            time_ms, node, pkt, hex, (unsigned)airtime_ms);
+    const char* pt = len > 0 ? decodePayloadType(data[0]) : "?";
+    const char* rt = len > 0 ? decodeRouteType(data[0]) : "?";
+    fprintf(stdout, "{\"type\":\"tx\",\"time_ms\":%lu,\"node\":\"%s\",\"pkt\":\"%s\",\"pkt_type\":\"%s\",\"route\":\"%s\",\"hex\":\"%s\",\"airtime_ms\":%u}\n",
+            time_ms, node, pkt, pt, rt, hex, (unsigned)airtime_ms);
 }
 
 void rx(unsigned long time_ms, const char* from, const char* to, float snr, float rssi,
-        const uint8_t* data, int len) {
+        const uint8_t* data, int len, uint32_t airtime_ms) {
     char pkt[9];
     packetHashHex(pkt, data, len);
-    fprintf(stdout, "{\"type\":\"rx\",\"time_ms\":%lu,\"from\":\"%s\",\"to\":\"%s\",\"snr\":%.1f,\"rssi\":%.1f,\"pkt\":\"%s\"}\n",
-            time_ms, from, to, snr, rssi, pkt);
+    const char* pt = len > 0 ? decodePayloadType(data[0]) : "?";
+    const char* rt = len > 0 ? decodeRouteType(data[0]) : "?";
+    if (airtime_ms > 0) {
+        fprintf(stdout, "{\"type\":\"rx\",\"time_ms\":%lu,\"from\":\"%s\",\"to\":\"%s\",\"snr\":%.1f,\"rssi\":%.1f,\"pkt\":\"%s\",\"pkt_type\":\"%s\",\"route\":\"%s\",\"airtime_ms\":%u}\n",
+                time_ms, from, to, snr, rssi, pkt, pt, rt, (unsigned)airtime_ms);
+    } else {
+        fprintf(stdout, "{\"type\":\"rx\",\"time_ms\":%lu,\"from\":\"%s\",\"to\":\"%s\",\"snr\":%.1f,\"rssi\":%.1f,\"pkt\":\"%s\",\"pkt_type\":\"%s\",\"route\":\"%s\"}\n",
+                time_ms, from, to, snr, rssi, pkt, pt, rt);
+    }
 }
 
 void cmdReply(unsigned long time_ms, const char* node, const char* command, const char* reply) {
@@ -99,55 +141,74 @@ void collision(unsigned long time_ms, const char* from, const char* to, float sn
                const uint8_t* data, int len) {
     char pkt[9];
     packetHashHex(pkt, data, len);
-    fprintf(stdout, "{\"type\":\"collision\",\"time_ms\":%lu,\"from\":\"%s\",\"to\":\"%s\",\"snr\":%.1f,\"rssi\":%.1f,\"pkt\":\"%s\"}\n",
-            time_ms, from, to, snr, rssi, pkt);
+    const char* pt = len > 0 ? decodePayloadType(data[0]) : "?";
+    const char* rt = len > 0 ? decodeRouteType(data[0]) : "?";
+    fprintf(stdout, "{\"type\":\"collision\",\"time_ms\":%lu,\"from\":\"%s\",\"to\":\"%s\",\"snr\":%.1f,\"rssi\":%.1f,\"pkt\":\"%s\",\"pkt_type\":\"%s\",\"route\":\"%s\"}\n",
+            time_ms, from, to, snr, rssi, pkt, pt, rt);
 }
 
 void dropHalfDuplex(unsigned long time_ms, const char* from, const char* to,
-                    const uint8_t* data, int len) {
+                    const uint8_t* data, int len, uint32_t airtime_ms) {
     char pkt[9];
     packetHashHex(pkt, data, len);
-    fprintf(stdout, "{\"type\":\"drop_halfduplex\",\"time_ms\":%lu,\"from\":\"%s\",\"to\":\"%s\",\"pkt\":\"%s\"}\n",
-            time_ms, from, to, pkt);
+    const char* pt = len > 0 ? decodePayloadType(data[0]) : "?";
+    const char* rt = len > 0 ? decodeRouteType(data[0]) : "?";
+    if (airtime_ms > 0) {
+        fprintf(stdout, "{\"type\":\"drop_halfduplex\",\"time_ms\":%lu,\"from\":\"%s\",\"to\":\"%s\",\"pkt\":\"%s\",\"pkt_type\":\"%s\",\"route\":\"%s\",\"airtime_ms\":%u}\n",
+                time_ms, from, to, pkt, pt, rt, (unsigned)airtime_ms);
+    } else {
+        fprintf(stdout, "{\"type\":\"drop_halfduplex\",\"time_ms\":%lu,\"from\":\"%s\",\"to\":\"%s\",\"pkt\":\"%s\",\"pkt_type\":\"%s\",\"route\":\"%s\"}\n",
+                time_ms, from, to, pkt, pt, rt);
+    }
 }
 
 void dropWeak(unsigned long time_ms, const char* from, const char* to, float snr, float threshold,
               const uint8_t* data, int len) {
     char pkt[9];
     packetHashHex(pkt, data, len);
-    fprintf(stdout, "{\"type\":\"drop_weak\",\"time_ms\":%lu,\"from\":\"%s\",\"to\":\"%s\",\"snr\":%.1f,\"threshold\":%.1f,\"pkt\":\"%s\"}\n",
-            time_ms, from, to, snr, threshold, pkt);
+    const char* pt = len > 0 ? decodePayloadType(data[0]) : "?";
+    const char* rt = len > 0 ? decodeRouteType(data[0]) : "?";
+    fprintf(stdout, "{\"type\":\"drop_weak\",\"time_ms\":%lu,\"from\":\"%s\",\"to\":\"%s\",\"snr\":%.1f,\"threshold\":%.1f,\"pkt\":\"%s\",\"pkt_type\":\"%s\",\"route\":\"%s\"}\n",
+            time_ms, from, to, snr, threshold, pkt, pt, rt);
 }
 
 void dropLoss(unsigned long time_ms, const char* from, const char* to, float loss_prob,
               const uint8_t* data, int len) {
     char pkt[9];
     packetHashHex(pkt, data, len);
-    fprintf(stdout, "{\"type\":\"drop_loss\",\"time_ms\":%lu,\"from\":\"%s\",\"to\":\"%s\",\"loss\":%.3f,\"pkt\":\"%s\"}\n",
-            time_ms, from, to, loss_prob, pkt);
+    const char* pt = len > 0 ? decodePayloadType(data[0]) : "?";
+    const char* rt = len > 0 ? decodeRouteType(data[0]) : "?";
+    fprintf(stdout, "{\"type\":\"drop_loss\",\"time_ms\":%lu,\"from\":\"%s\",\"to\":\"%s\",\"loss\":%.3f,\"pkt\":\"%s\",\"pkt_type\":\"%s\",\"route\":\"%s\"}\n",
+            time_ms, from, to, loss_prob, pkt, pt, rt);
 }
 
 void adversarialDrop(unsigned long time_ms, const char* node, const uint8_t* data, int len) {
     char pkt[9];
     packetHashHex(pkt, data, len);
-    fprintf(stdout, "{\"type\":\"adversarial_drop\",\"time_ms\":%lu,\"node\":\"%s\",\"pkt\":\"%s\"}\n",
-            time_ms, node, pkt);
+    const char* pt = len > 0 ? decodePayloadType(data[0]) : "?";
+    const char* rt = len > 0 ? decodeRouteType(data[0]) : "?";
+    fprintf(stdout, "{\"type\":\"adversarial_drop\",\"time_ms\":%lu,\"node\":\"%s\",\"pkt\":\"%s\",\"pkt_type\":\"%s\",\"route\":\"%s\"}\n",
+            time_ms, node, pkt, pt, rt);
 }
 
 void adversarialCorrupt(unsigned long time_ms, const char* node, const uint8_t* data, int len,
                         int bits_flipped) {
     char pkt[9];
     packetHashHex(pkt, data, len);
-    fprintf(stdout, "{\"type\":\"adversarial_corrupt\",\"time_ms\":%lu,\"node\":\"%s\",\"pkt\":\"%s\",\"bits_flipped\":%d}\n",
-            time_ms, node, pkt, bits_flipped);
+    const char* pt = len > 0 ? decodePayloadType(data[0]) : "?";
+    const char* rt = len > 0 ? decodeRouteType(data[0]) : "?";
+    fprintf(stdout, "{\"type\":\"adversarial_corrupt\",\"time_ms\":%lu,\"node\":\"%s\",\"pkt\":\"%s\",\"pkt_type\":\"%s\",\"route\":\"%s\",\"bits_flipped\":%d}\n",
+            time_ms, node, pkt, pt, rt, bits_flipped);
 }
 
 void adversarialReplay(unsigned long time_ms, const char* node, const uint8_t* data, int len,
                        unsigned long delay_ms) {
     char pkt[9];
     packetHashHex(pkt, data, len);
-    fprintf(stdout, "{\"type\":\"adversarial_replay\",\"time_ms\":%lu,\"node\":\"%s\",\"pkt\":\"%s\",\"delay_ms\":%lu}\n",
-            time_ms, node, pkt, delay_ms);
+    const char* pt = len > 0 ? decodePayloadType(data[0]) : "?";
+    const char* rt = len > 0 ? decodeRouteType(data[0]) : "?";
+    fprintf(stdout, "{\"type\":\"adversarial_replay\",\"time_ms\":%lu,\"node\":\"%s\",\"pkt\":\"%s\",\"pkt_type\":\"%s\",\"route\":\"%s\",\"delay_ms\":%lu}\n",
+            time_ms, node, pkt, pt, rt, delay_ms);
 }
 
 } // namespace EventLog

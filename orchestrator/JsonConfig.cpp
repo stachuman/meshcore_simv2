@@ -50,6 +50,10 @@ static OrchestratorConfig parseJson(const json& j) {
                 if (r.contains("bw")) def.bw = r["bw"].get<int>();
                 if (r.contains("cr")) def.cr = r["cr"].get<int>();
             }
+            // Also accept flat sf/bw/cr at node level
+            if (nd.contains("sf")) def.sf = nd["sf"].get<int>();
+            if (nd.contains("bw")) def.bw = nd["bw"].get<int>();
+            if (nd.contains("cr")) def.cr = nd["cr"].get<int>();
             if (nd.contains("lat") && nd.contains("lon")) {
                 def.lat = nd["lat"].get<double>();
                 def.lon = nd["lon"].get<double>();
@@ -135,7 +139,8 @@ static OrchestratorConfig parseJson(const json& j) {
                 OrchestratorConfig::CmdDef def;
                 def.at_ms   = at_ms;
                 def.node    = from;
-                def.command = "msg " + to + " " + text;
+                std::string cmd = ms.value("ack", false) ? "msga " : "msg ";
+                def.command = cmd + to + " " + text;
                 cfg.commands.push_back(std::move(def));
             }
         }
@@ -145,10 +150,13 @@ static OrchestratorConfig parseJson(const json& j) {
         for (auto& ex : j["expect"]) {
             OrchestratorConfig::Assertion a;
             a.type = ex["type"].get<std::string>();
-            if (ex.contains("node"))    a.node    = ex["node"].get<std::string>();
-            if (ex.contains("command")) a.command = ex["command"].get<std::string>();
-            if (ex.contains("value"))   a.value   = ex["value"].get<std::string>();
-            if (ex.contains("count"))   a.count   = ex["count"].get<int>();
+            if (ex.contains("node"))       a.node       = ex["node"].get<std::string>();
+            if (ex.contains("command"))    a.command    = ex["command"].get<std::string>();
+            if (ex.contains("value"))      a.value      = ex["value"].get<std::string>();
+            if (ex.contains("event_type")) a.event_type = ex["event_type"].get<std::string>();
+            if (ex.contains("count"))      a.count      = ex["count"].get<int>();
+            if (ex.contains("min"))        a.min        = ex["min"].get<int>();
+            if (ex.contains("max"))        a.max        = ex["max"].get<int>();
             cfg.assertions.push_back(std::move(a));
         }
     }

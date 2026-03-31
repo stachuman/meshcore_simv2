@@ -9,6 +9,10 @@ struct MsgStats {
     int sent_flood = 0;       // direct messages sent via flood routing
     int sent_direct = 0;      // direct messages sent via direct routing
     int sent_group = 0;       // group/channel messages sent
+    int acks_pending = 0;     // message acks we're waiting for
+    int acks_received = 0;    // message acks received back
+    // Per-destination send counts (key = destination name)
+    std::map<std::string, int> sent_to;
     // Per-sender receive counts (key = sender name)
     std::map<std::string, int> recv_direct;   // direct messages received
     int recv_group = 0;       // group/channel messages received

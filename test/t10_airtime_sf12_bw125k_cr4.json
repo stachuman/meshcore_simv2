@@ -1,0 +1,29 @@
+{
+  "_name": "t10_airtime_sf12_bw125k_cr4",
+  "_desc": "Airtime check: SF12 BW=125000 CR=4 (long range). Msg ~38B should be ~2760ms, path ~22B ~1974ms.",
+  "simulation": {
+    "duration_ms": 60000,
+    "step_ms": 5,
+    "warmup_ms": 5000,
+    "hot_start": true
+  },
+  "nodes": [
+    { "name": "alice", "role": "companion", "sf": 12, "bw": 125000, "cr": 4 },
+    { "name": "relay1", "role": "repeater", "sf": 12, "bw": 125000, "cr": 4 },
+    { "name": "bob", "role": "companion", "sf": 12, "bw": 125000, "cr": 4 }
+  ],
+  "topology": {
+    "links": [
+      { "from": "alice", "to": "relay1", "snr": 10.0, "rssi": -70.0, "bidir": true },
+      { "from": "relay1", "to": "bob", "snr": 10.0, "rssi": -70.0, "bidir": true }
+    ]
+  },
+  "commands": [
+    { "at_ms": 6000, "node": "alice", "command": "msg bob hello" }
+  ],
+  "expect": [
+    { "type": "cmd_reply_contains", "node": "alice", "command": "msg bob", "value": "msg sent" },
+    { "type": "tx_airtime_between", "node": "alice", "min": 1900, "max": 3200 },
+    { "type": "tx_airtime_between", "node": "relay1", "min": 1900, "max": 7500 }
+  ]
+}

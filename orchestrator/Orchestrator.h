@@ -4,6 +4,7 @@
 #include <vector>
 #include <memory>
 #include <random>
+#include <map>
 
 #include "VirtualClock.h"
 #include "NodeContext.h"
@@ -51,11 +52,14 @@ struct OrchestratorConfig {
     std::vector<CmdDef> commands;
 
     struct Assertion {
-        std::string type;       // "cmd_reply_contains", "cmd_reply_not_contains", "event_count_min"
-        std::string node;       // node name (for cmd_reply assertions)
+        std::string type;       // "cmd_reply_contains", "cmd_reply_not_contains", "event_count_min", "tx_airtime_between", "event_count"
+        std::string node;       // node name (for cmd_reply / tx_airtime / event_count assertions)
         std::string command;    // command prefix to match
         std::string value;      // substring to check / event type for count
+        std::string event_type; // NDJSON event type string for event_count
         int count = 0;          // for event_count_min
+        int min = -1;           // for tx_airtime_between / event_count (-1 = no lower bound)
+        int max = -1;           // for tx_airtime_between / event_count (-1 = no upper bound)
     };
     std::vector<Assertion> assertions;
 };
@@ -93,10 +97,16 @@ class Orchestrator {
         std::string command;
         std::string reply;
     };
+    struct TxRecord {
+        std::string node;
+        uint32_t airtime_ms;
+    };
     std::vector<CmdReplyRecord> _reply_log;
+    std::vector<TxRecord> _tx_log;
     std::vector<OrchestratorConfig::Assertion> _assertions;
     int _tx_count = 0;
     int _rx_count = 0;
+    std::map<std::string, int> _event_counts;  // "event_type" or "event_type:node" → count
 
     int findNode(const std::string& name) const;
     void routePackets(unsigned long current_ms);

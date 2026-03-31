@@ -1,0 +1,31 @@
+{
+  "_name": "t15_halfduplex_sequential_ok",
+  "_desc": "Sequential sends with enough gap: no half-duplex issues, both messages delivered",
+  "simulation": {
+    "duration_ms": 30000,
+    "step_ms": 5,
+    "warmup_ms": 5000,
+    "hot_start": true
+  },
+  "nodes": [
+    { "name": "alice", "role": "companion" },
+    { "name": "relay", "role": "repeater" },
+    { "name": "bob", "role": "companion" }
+  ],
+  "topology": {
+    "links": [
+      { "from": "alice", "to": "relay", "snr": 8.0, "rssi": -80.0, "bidir": true },
+      { "from": "relay", "to": "bob", "snr": 8.0, "rssi": -80.0, "bidir": true }
+    ]
+  },
+  "commands": [
+    { "at_ms": 6000, "node": "alice", "command": "msg bob hello from alice" },
+    { "at_ms": 12000, "node": "bob", "command": "msg alice hi from bob" }
+  ],
+  "expect": [
+    { "type": "cmd_reply_contains", "node": "alice", "command": "msg bob", "value": "msg sent" },
+    { "type": "cmd_reply_contains", "node": "bob", "command": "msg alice", "value": "msg sent" },
+    { "type": "event_count", "event_type": "drop_halfduplex", "min": 0, "max": 0 },
+    { "type": "event_count", "event_type": "rx", "min": 2 }
+  ]
+}

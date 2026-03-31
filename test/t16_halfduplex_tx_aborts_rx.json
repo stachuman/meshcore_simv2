@@ -1,0 +1,29 @@
+{
+  "_name": "t16_halfduplex_tx_aborts_rx",
+  "_desc": "TX during active RX aborts reception: both nodes TX simultaneously with long airtime (SF12)",
+  "simulation": {
+    "duration_ms": 60000,
+    "step_ms": 5,
+    "warmup_ms": 5000,
+    "hot_start": true
+  },
+  "nodes": [
+    { "name": "alice", "role": "companion", "sf": 12, "bw": 125000, "cr": 4 },
+    { "name": "bob", "role": "companion", "sf": 12, "bw": 125000, "cr": 4 }
+  ],
+  "topology": {
+    "links": [
+      { "from": "alice", "to": "bob", "snr": 10.0, "rssi": -70.0, "bidir": true }
+    ]
+  },
+  "commands": [
+    { "at_ms": 6000, "node": "alice", "command": "msg bob hello from alice" },
+    { "at_ms": 6000, "node": "bob", "command": "msg alice hi from bob" }
+  ],
+  "expect": [
+    { "type": "cmd_reply_contains", "node": "alice", "command": "msg bob", "value": "msg sent" },
+    { "type": "cmd_reply_contains", "node": "bob", "command": "msg alice", "value": "msg sent" },
+    { "type": "event_count", "event_type": "drop_halfduplex", "node": "bob", "min": 1 },
+    { "type": "event_count", "event_type": "drop_halfduplex", "node": "alice", "min": 1 }
+  ]
+}

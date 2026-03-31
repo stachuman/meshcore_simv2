@@ -1,8 +1,8 @@
 {
   "_name": "t03_cold_start_advert",
-  "_desc": "Cold start: explicit adverts, verify multi-hop discovery through relay",
+  "_desc": "Cold start: explicit adverts with retries, verify multi-hop discovery through relay. Clock stagger causes realistic collisions so multiple rounds are needed.",
   "simulation": {
-    "duration_ms": 60000,
+    "duration_ms": 120000,
     "step_ms": 5,
     "warmup_ms": 5000
   },
@@ -24,8 +24,16 @@
     { "at_ms": 15000, "node": "relay1", "command": "advert" },
     { "at_ms": 15000, "node": "relay2", "command": "advert" },
     { "at_ms": 25000, "node": "bob", "command": "advert" },
-    { "at_ms": 50000, "node": "alice", "command": "neighbors" },
-    { "at_ms": 50000, "node": "bob", "command": "neighbors" }
+    { "at_ms": 35000, "node": "alice", "command": "advert" },
+    { "at_ms": 45000, "node": "relay1", "command": "advert" },
+    { "at_ms": 45000, "node": "relay2", "command": "advert" },
+    { "at_ms": 55000, "node": "bob", "command": "advert" },
+    { "at_ms": 65000, "node": "alice", "command": "advert" },
+    { "at_ms": 75000, "node": "relay1", "command": "advert" },
+    { "at_ms": 75000, "node": "relay2", "command": "advert" },
+    { "at_ms": 85000, "node": "bob", "command": "advert" },
+    { "at_ms": 105000, "node": "alice", "command": "neighbors" },
+    { "at_ms": 105000, "node": "bob", "command": "neighbors" }
   ],
   "expect": [
     { "type": "cmd_reply_contains", "node": "alice", "command": "neighbors", "value": "bob" },

@@ -1,0 +1,31 @@
+{
+  "_name": "t17_msga_ack",
+  "_desc": "Ack tracking: first msga goes flood (ack embedded in PATH return), second msga goes direct (standalone ACK packet). Both acks should be received.",
+  "simulation": {
+    "duration_ms": 90000,
+    "step_ms": 5,
+    "warmup_ms": 5000,
+    "hot_start": true
+  },
+  "nodes": [
+    { "name": "alice", "role": "companion" },
+    { "name": "relay1", "role": "repeater" },
+    { "name": "bob", "role": "companion" }
+  ],
+  "topology": {
+    "links": [
+      { "from": "alice", "to": "relay1", "snr": 8.0, "rssi": -80.0, "bidir": true },
+      { "from": "relay1", "to": "bob", "snr": 8.0, "rssi": -80.0, "bidir": true }
+    ]
+  },
+  "commands": [
+    { "at_ms": 6000, "node": "alice", "command": "msga bob first msg flood" },
+    { "at_ms": 30000, "node": "alice", "command": "msga bob second msg direct" },
+    { "at_ms": 80000, "node": "alice", "command": "stats" }
+  ],
+  "expect": [
+    { "type": "cmd_reply_contains", "node": "alice", "command": "msga bob first", "value": "flood, ack tracked" },
+    { "type": "cmd_reply_contains", "node": "alice", "command": "msga bob second", "value": "direct, ack tracked" },
+    { "type": "cmd_reply_contains", "node": "alice", "command": "stats", "value": "acks: 2/2" }
+  ]
+}

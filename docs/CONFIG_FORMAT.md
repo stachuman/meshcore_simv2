@@ -125,6 +125,7 @@ One-shot commands executed at specific simulation times. Sorted by `at_ms` at ru
 | Command | Role | Description |
 |---|---|---|
 | `msg <name> <text>` | companion | Send direct/flood message to named contact |
+| `msga <name> <text>` | companion | Same as `msg` but tracks ack receipt |
 | `advert` | companion | Broadcast self-advert (flood) |
 | `advert.zerohop` | companion | Broadcast self-advert (zero-hop only) |
 | `neighbors` | companion | List known contacts |
@@ -159,6 +160,7 @@ Generates periodic `msg` commands automatically. Expanded into `commands` entrie
 | `interval_ms` | int | *required* | Period between messages |
 | `count` | int | *auto* | Number of messages. If omitted: fills until `duration_ms - 10000` |
 | `message` | string | `"test msg {n}"` | Text template. `{n}` is replaced with 1-based sequence number. |
+| `ack` | bool | `false` | If true, generates `msga` commands (message with ack tracking) instead of `msg`. |
 
 Each entry expands to commands like:
 ```

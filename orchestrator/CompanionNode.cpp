@@ -5,6 +5,7 @@
 #include <vector>
 #include <memory>
 #include <cstring>
+#include <set>
 
 #include "NodeContext.h"
 
@@ -40,6 +41,7 @@ static int hex_to_bytes(uint8_t* out, const char* hex, size_t hex_len) {
 class InstrumentedMesh : public CompanionMyMesh {
 public:
     MsgStats* _stats = nullptr;   // set after construction
+    std::set<uint32_t> _pending_acks;  // expected_ack CRCs we're waiting for
 
     using CompanionMyMesh::CompanionMyMesh;  // inherit constructors
 
@@ -53,6 +55,33 @@ public:
                               uint32_t timestamp, const char* text) override {
         if (_stats) _stats->recv_group++;
         CompanionMyMesh::onChannelMessageRecv(channel, pkt, timestamp, text);
+    }
+
+    void onAckRecv(mesh::Packet* packet, uint32_t ack_crc) override {
+        if (_stats && _pending_acks.erase(ack_crc) > 0) {
+            _stats->acks_received++;
+        }
+        CompanionMyMesh::onAckRecv(packet, ack_crc);
+    }
+
+    // Flood messages embed ACK in PATH return — intercept here too.
+    bool onContactPathRecv(ContactInfo& from, uint8_t* in_path, uint8_t in_path_len,
+                           uint8_t* out_path, uint8_t out_path_len,
+                           uint8_t extra_type, uint8_t* extra, uint8_t extra_len) override {
+        if (_stats && extra_type == PAYLOAD_TYPE_ACK && extra_len >= 4) {
+            uint32_t ack_crc;
+            memcpy(&ack_crc, extra, 4);
+            if (_pending_acks.erase(ack_crc) > 0) {
+                _stats->acks_received++;
+            }
+        }
+        return CompanionMyMesh::onContactPathRecv(from, in_path, in_path_len,
+                                                   out_path, out_path_len,
+                                                   extra_type, extra, extra_len);
+    }
+
+    void trackAck(uint32_t expected_ack) {
+        _pending_acks.insert(expected_ack);
     }
 };
 
@@ -110,6 +139,32 @@ public:
             }
             return "ERROR: createSelfAdvert failed";
         }
+        if (strncmp(cmd, "msga ", 5) == 0) {
+            const char* rest = cmd + 5;
+            // Parse: msga <name_prefix> <text>  — message with ack tracking
+            const char* space = strchr(rest, ' ');
+            if (!space) return "ERROR: usage: msga <name> <text>";
+            std::string prefix(rest, space - rest);
+            const char* text = space + 1;
+            ContactInfo* contact = _mesh.searchContactsByPrefix(prefix.c_str());
+            if (!contact) return "ERROR: contact not found: " + prefix;
+            uint32_t expected_ack = 0, est_timeout = 0;
+            int rc = _mesh.sendMessage(*contact, timestamp, 0, text, expected_ack, est_timeout);
+            if (rc == MSG_SEND_SENT_FLOOD) {
+                msg_stats.sent_flood++;
+                msg_stats.sent_to[contact->name]++;
+                _mesh.trackAck(expected_ack);
+                msg_stats.acks_pending++;
+                return "msg sent to " + std::string(contact->name) + " (flood, ack tracked)";
+            } else if (rc == MSG_SEND_SENT_DIRECT) {
+                msg_stats.sent_direct++;
+                msg_stats.sent_to[contact->name]++;
+                _mesh.trackAck(expected_ack);
+                msg_stats.acks_pending++;
+                return "msg sent to " + std::string(contact->name) + " (direct, ack tracked)";
+            }
+            return "ERROR: sendMessage failed (rc=" + std::to_string(rc) + ")";
+        }
         if (strncmp(cmd, "msg ", 4) == 0) {
             const char* rest = cmd + 4;
             // Parse: msg <name_prefix> <text>
@@ -123,9 +178,11 @@ public:
             int rc = _mesh.sendMessage(*contact, timestamp, 0, text, expected_ack, est_timeout);
             if (rc == MSG_SEND_SENT_FLOOD) {
                 msg_stats.sent_flood++;
+                msg_stats.sent_to[contact->name]++;
                 return "msg sent to " + std::string(contact->name) + " (flood)";
             } else if (rc == MSG_SEND_SENT_DIRECT) {
                 msg_stats.sent_direct++;
+                msg_stats.sent_to[contact->name]++;
                 return "msg sent to " + std::string(contact->name) + " (direct)";
             }
             return "ERROR: sendMessage failed (rc=" + std::to_string(rc) + ")";
@@ -168,6 +225,10 @@ public:
                 r += ")";
             }
             r += ", " + std::to_string(msg_stats.recv_group) + " group";
+            if (msg_stats.acks_pending > 0) {
+                r += "; acks: " + std::to_string(msg_stats.acks_received)
+                   + "/" + std::to_string(msg_stats.acks_pending);
+            }
             return r;
         }
         return "ERROR: unknown command: " + std::string(cmd);
@@ -178,7 +239,7 @@ public:
 
 std::unique_ptr<MeshWrapper> createCompanionMesh(NodeContext& ctx) {
     auto w = std::make_unique<CompanionMeshWrapper>(
-        ctx.radio, ctx.rng, *ctx.clock, ctx.tables, ctx.filesystem);
+        ctx.radio, ctx.rng, ctx.own_clock, ctx.tables, ctx.filesystem);
     w->init(ctx.rng, ctx.name);
     return w;
 }

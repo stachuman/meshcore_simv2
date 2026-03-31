@@ -75,7 +75,7 @@ public:
 
 std::unique_ptr<MeshWrapper> createRepeaterMesh(NodeContext& ctx) {
     auto w = std::make_unique<RepeaterMeshWrapper>(
-        board, ctx.radio, *ctx.clock, ctx.rng, *ctx.clock, ctx.tables);
+        board, ctx.radio, ctx.own_clock, ctx.rng, ctx.own_clock, ctx.tables);
     w->init(ctx.rng, ctx.filesystem, ctx.name);
     return w;
 }

@@ -1,0 +1,29 @@
+{
+  "_name": "t13_halfduplex_simul_tx",
+  "_desc": "Simultaneous TX: both nodes TX at the same time, both signals dropped by the other (half-duplex)",
+  "simulation": {
+    "duration_ms": 15000,
+    "step_ms": 5,
+    "warmup_ms": 5000,
+    "hot_start": true
+  },
+  "nodes": [
+    { "name": "alice", "role": "companion" },
+    { "name": "bob", "role": "companion" }
+  ],
+  "topology": {
+    "links": [
+      { "from": "alice", "to": "bob", "snr": 10.0, "rssi": -70.0, "bidir": true }
+    ]
+  },
+  "commands": [
+    { "at_ms": 6000, "node": "alice", "command": "msg bob hello from alice" },
+    { "at_ms": 6000, "node": "bob", "command": "msg alice hi from bob" }
+  ],
+  "expect": [
+    { "type": "cmd_reply_contains", "node": "alice", "command": "msg bob", "value": "msg sent" },
+    { "type": "cmd_reply_contains", "node": "bob", "command": "msg alice", "value": "msg sent" },
+    { "type": "event_count", "event_type": "drop_halfduplex", "node": "alice", "min": 1 },
+    { "type": "event_count", "event_type": "drop_halfduplex", "node": "bob", "min": 1 }
+  ]
+}

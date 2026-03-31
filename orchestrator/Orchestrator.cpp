@@ -36,10 +36,13 @@ void Orchestrator::configure(const OrchestratorConfig& cfg) {
     _assertions = cfg.assertions;
     _tx_count = 0;
     _rx_count = 0;
+    _event_counts.clear();
 
-    // Create nodes
+    // Create nodes (each owns its own VirtualClock for per-node time stagger)
     for (const auto& nd : cfg.nodes) {
-        auto ctx = std::make_unique<NodeContext>(nd.name, nd.role, _clock, nd.sf, nd.bw, nd.cr);
+        auto ctx = std::make_unique<NodeContext>(nd.name, nd.role,
+                                                 cfg.epoch_start,
+                                                 nd.sf, nd.bw, nd.cr);
         ctx->adversarial = nd.adversarial;
         ctx->lat = nd.lat;
         ctx->lon = nd.lon;
@@ -90,6 +93,7 @@ void Orchestrator::routePackets(unsigned long current_ms) {
         auto& tx_list = _nodes[sender]->pending_tx;
         for (auto& cap : tx_list) {
             _tx_count++;
+            _tx_log.push_back({_nodes[sender]->name, cap.airtime_ms});
             EventLog::tx(current_ms, _nodes[sender]->name.c_str(),
                          cap.data.data(), (int)cap.data.size(), cap.airtime_ms);
             if (_verbose) {
@@ -108,7 +112,7 @@ void Orchestrator::routePackets(unsigned long current_ms) {
                         cap.data.data(), (int)cap.data.size(), lp.snr, lp.rssi);
                     EventLog::rx(current_ms, _nodes[sender]->name.c_str(),
                                  _nodes[receiver]->name.c_str(), lp.snr, lp.rssi,
-                                 cap.data.data(), (int)cap.data.size());
+                                 cap.data.data(), (int)cap.data.size(), cap.airtime_ms);
                 }
             }
         }
@@ -231,13 +235,21 @@ void Orchestrator::registerTransmissions(unsigned long current_ms) {
 
     // Pre-pass: set tx_busy_until for ALL senders with pending TX this step.
     // This ensures half-duplex checks are symmetric regardless of iteration order.
+    // Also mark any active RX on the sender as halfduplex_abort (TX aborts RX).
     for (int sender = 0; sender < n; sender++) {
         auto& tx_list = _nodes[sender]->pending_tx;
         if (tx_list.empty()) continue;
+        _nodes[sender]->tx_busy_from = current_ms;
         for (auto& cap : tx_list) {
             unsigned long end = current_ms + cap.airtime_ms;
             if (end > _nodes[sender]->tx_busy_until)
                 _nodes[sender]->tx_busy_until = end;
+        }
+        // TX aborts any ongoing RX on this sender
+        for (auto& prx : _nodes[sender]->active_rx) {
+            if (prx.rx_end_ms > current_ms) {
+                prx.halfduplex_abort = true;
+            }
         }
     }
 
@@ -251,6 +263,9 @@ void Orchestrator::registerTransmissions(unsigned long current_ms) {
             unsigned long rx_end = current_ms + airtime;
 
             _tx_count++;
+            _event_counts["tx"]++;
+            _event_counts["tx:" + _nodes[sender]->name]++;
+            _tx_log.push_back({_nodes[sender]->name, cap.airtime_ms});
             EventLog::tx(current_ms, _nodes[sender]->name.c_str(),
                          cap.data.data(), (int)cap.data.size(), cap.airtime_ms);
             if (_verbose) {
@@ -280,6 +295,8 @@ void Orchestrator::registerTransmissions(unsigned long current_ms) {
                 float score = _nodes[receiver]->radio.packetScore(rx_snr, (int)cap.data.size());
                 if (score <= 0.0f) {
                     float thr = _nodes[receiver]->radio.getSnrThreshold();
+                    _event_counts["drop_weak"]++;
+                    _event_counts["drop_weak:" + std::string(rname)]++;
                     EventLog::dropWeak(current_ms, sname, rname, rx_snr, thr,
                                        cap.data.data(), (int)cap.data.size());
                     if (_verbose) {
@@ -291,16 +308,23 @@ void Orchestrator::registerTransmissions(unsigned long current_ms) {
 
                 // LBT: notify receiver of channel activity. Signal is above
                 // threshold, so CAD would detect the preamble after ~5 symbols.
+                // Convert from orchestrator time domain to node-clock domain.
                 uint32_t preamble_detect_ms = _nodes[receiver]->radio.getPreambleDetectMs();
-                unsigned long lbt_from = current_ms + preamble_detect_ms;
-                if (lbt_from < rx_end) {
-                    _nodes[receiver]->radio.notifyChannelBusy(lbt_from, rx_end);
+                unsigned long node_now = _nodes[receiver]->own_clock.getMillis();
+                uint32_t airtime32 = (uint32_t)(rx_end - current_ms);
+                unsigned long lbt_from = node_now + preamble_detect_ms;
+                unsigned long lbt_until = node_now + airtime32;
+                if (lbt_from < lbt_until) {
+                    _nodes[receiver]->radio.notifyChannelBusy(lbt_from, lbt_until);
                 }
 
                 // Half-duplex check: receiver is currently transmitting
                 if (_nodes[receiver]->tx_busy_until > current_ms) {
+                    _event_counts["drop_halfduplex"]++;
+                    _event_counts["drop_halfduplex:" + std::string(rname)]++;
                     EventLog::dropHalfDuplex(current_ms, sname, rname,
-                                             cap.data.data(), (int)cap.data.size());
+                                             cap.data.data(), (int)cap.data.size(),
+                                             cap.airtime_ms);
                     if (_verbose) {
                         fprintf(stderr, "[%8.3fs]   X  %s half-duplex (tx until %.3fs)\n",
                                 current_ms / 1000.0, rname,
@@ -360,6 +384,13 @@ void Orchestrator::registerTransmissions(unsigned long current_ms) {
                 }
 
                 _nodes[receiver]->active_rx.push_back(std::move(prx));
+
+                // Notify receiver's SimRadio of the active reception so
+                // MeshCore's Dispatcher sees isReceiving()==true and defers TX.
+                // Clock-domain safe: notifyRxStart uses node_clock + relative duration.
+                if (!lost) {
+                    _nodes[receiver]->radio.notifyRxStart(airtime32);
+                }
             }
         }
         tx_list.clear();
@@ -376,31 +407,49 @@ void Orchestrator::deliverReceptions(unsigned long current_ms) {
             if (it->rx_end_ms <= current_ms) {
                 const char* sname = _nodes[it->sender_idx]->name.c_str();
                 const char* rname = _nodes[i]->name.c_str();
-                if (!it->collided && !it->link_loss) {
+                if (!it->collided && !it->link_loss && !it->halfduplex_abort) {
                     _rx_count++;
+                    _event_counts["rx"]++;
+                    _event_counts["rx:" + std::string(rname)]++;
                     _nodes[i]->activate();
                     _nodes[i]->radio.enqueue(
                         it->data.data(), (int)it->data.size(), it->snr, it->rssi);
-                    EventLog::rx(current_ms, sname, rname, it->snr, it->rssi,
-                                 it->data.data(), (int)it->data.size());
+                    uint32_t rx_airtime = (uint32_t)(it->rx_end_ms - it->rx_start_ms);
+                    // Use rx_start_ms so visualization bars align with TX bars (both use start time)
+                    EventLog::rx(it->rx_start_ms, sname, rname, it->snr, it->rssi,
+                                 it->data.data(), (int)it->data.size(), rx_airtime);
                     if (_verbose) {
                         fprintf(stderr, "[%8.3fs] RX %s <- %s %dB snr=%.1f\n",
-                                current_ms / 1000.0, rname, sname,
+                                it->rx_start_ms / 1000.0, rname, sname,
                                 (int)it->data.size(), it->snr);
                     }
+                } else if (it->halfduplex_abort) {
+                    _event_counts["drop_halfduplex"]++;
+                    _event_counts["drop_halfduplex:" + std::string(rname)]++;
+                    EventLog::dropHalfDuplex(it->rx_start_ms, sname, rname,
+                                             it->data.data(), (int)it->data.size(),
+                                             (uint32_t)(it->rx_end_ms - it->rx_start_ms));
+                    if (_verbose) {
+                        fprintf(stderr, "[%8.3fs] DROP-HD %s <- %s (tx during rx)\n",
+                                it->rx_start_ms / 1000.0, rname, sname);
+                    }
                 } else if (it->link_loss) {
-                    EventLog::dropLoss(current_ms, sname, rname, 0.0f,
+                    _event_counts["drop_loss"]++;
+                    _event_counts["drop_loss:" + std::string(rname)]++;
+                    EventLog::dropLoss(it->rx_start_ms, sname, rname, 0.0f,
                                        it->data.data(), (int)it->data.size());
                     if (_verbose) {
                         fprintf(stderr, "[%8.3fs] LOST %s <- %s (link-loss)\n",
-                                current_ms / 1000.0, rname, sname);
+                                it->rx_start_ms / 1000.0, rname, sname);
                     }
                 } else {
-                    EventLog::collision(current_ms, sname, rname, it->snr, it->rssi,
+                    _event_counts["collision"]++;
+                    _event_counts["collision:" + std::string(rname)]++;
+                    EventLog::collision(it->rx_start_ms, sname, rname, it->snr, it->rssi,
                                         it->data.data(), (int)it->data.size());
                     if (_verbose) {
                         fprintf(stderr, "[%8.3fs] COLLIDED %s <- %s (destroyed)\n",
-                                current_ms / 1000.0, rname, sname);
+                                it->rx_start_ms / 1000.0, rname, sname);
                     }
                 }
                 it = arx.erase(it);
@@ -416,7 +465,7 @@ void Orchestrator::processCommands(unsigned long current_ms) {
         const auto& cmd = _commands[_next_cmd];
         auto& node = _nodes[cmd.node_index];
         node->activate();
-        uint32_t ts = _clock.getCurrentTime();
+        uint32_t ts = node->own_clock.getCurrentTime();
         std::string reply = node->mesh->handleCommand(ts, cmd.command.c_str());
         _reply_log.push_back({node->name, cmd.command, reply});
         EventLog::cmdReply(current_ms, node->name.c_str(),
@@ -521,6 +570,9 @@ void Orchestrator::hotStart() {
             node->pending_tx.clear();
         }
         _clock.advanceMillis(_step_ms);
+        for (auto& node : _nodes) {
+            node->own_clock.advanceMillis(_step_ms);
+        }
     }
 
     if (_verbose) {
@@ -552,6 +604,23 @@ bool Orchestrator::run() {
         }
     }
 
+    // Stagger node clocks to prevent synchronized periodic timers.
+    // Each node runs loop() independently for a random duration (TX suppressed)
+    // so MeshCore processes time naturally — internal timers, scheduled events
+    // etc. all fire correctly during the stagger.
+    {
+        std::uniform_int_distribution<unsigned long> stagger_dist(0, 119999);
+        for (auto& node : _nodes) {
+            unsigned long stagger = stagger_dist(_rng);
+            for (unsigned long ms = 0; ms < stagger; ms += _step_ms) {
+                node->activate();
+                node->mesh->loop();
+                node->pending_tx.clear();
+                node->own_clock.advanceMillis(_step_ms);
+            }
+        }
+    }
+
     if (_hot_start) hotStart();
 
     // Main simulation loop
@@ -579,6 +648,9 @@ bool Orchestrator::run() {
 
         current_ms += _step_ms;
         _clock.advanceMillis(_step_ms);
+        for (auto& node : _nodes) {
+            node->own_clock.advanceMillis(_step_ms);
+        }
     }
 
     // Deliver any remaining receptions at end
@@ -595,6 +667,16 @@ bool Orchestrator::run() {
                node->name.c_str(),
                s.sent_flood, s.sent_direct, s.sent_group,
                s.totalRecvDirect(), s.recv_group);
+        if (!s.sent_to.empty()) {
+            printf(",\"sent_to\":{");
+            bool first = true;
+            for (auto& kv : s.sent_to) {
+                if (!first) printf(",");
+                printf("\"%s\":%d", kv.first.c_str(), kv.second);
+                first = false;
+            }
+            printf("}");
+        }
         if (!s.recv_direct.empty()) {
             printf(",\"recv_direct_by_sender\":{");
             bool first = true;
@@ -605,6 +687,10 @@ bool Orchestrator::run() {
             }
             printf("}");
         }
+        if (s.acks_pending > 0) {
+            printf(",\"acks_pending\":%d,\"acks_received\":%d",
+                   s.acks_pending, s.acks_received);
+        }
         printf("}\n");
         total_sent += s.totalSent();
         total_recv += s.totalRecvDirect() + s.recv_group;
@@ -612,11 +698,18 @@ bool Orchestrator::run() {
 
     EventLog::simEnd(current_ms);
 
+    // Build name -> stats lookup for cross-referencing delivery
+    std::map<std::string, MsgStats*> stats_by_name;
+    for (auto& node : _nodes) {
+        if (node->role != NodeRole::Companion) continue;
+        stats_by_name[node->name] = &node->mesh->msg_stats;
+    }
+
     // Summary to stderr (always visible)
     fprintf(stderr, "\n=== Simulation Summary (%.1fs) ===\n", current_ms / 1000.0);
     fprintf(stderr, "Radio: %d TX, %d RX\n\n", _tx_count, _rx_count);
 
-    // Per-companion sent
+    // Per-companion sent with per-destination breakdown and delivery
     fprintf(stderr, "Sent messages:\n");
     for (auto& node : _nodes) {
         if (node->role != NodeRole::Companion) continue;
@@ -625,6 +718,21 @@ bool Orchestrator::run() {
         fprintf(stderr, "  %-12s %d (flood:%d direct:%d group:%d)\n",
                 node->name.c_str(), s.totalSent(),
                 s.sent_flood, s.sent_direct, s.sent_group);
+        for (auto& kv : s.sent_to) {
+            // Look up how many the destination received from this sender
+            int delivered = 0;
+            auto it = stats_by_name.find(kv.first);
+            if (it != stats_by_name.end()) {
+                auto recv_it = it->second->recv_direct.find(node->name);
+                if (recv_it != it->second->recv_direct.end())
+                    delivered = recv_it->second;
+            }
+            fprintf(stderr, "    -> %-10s %d sent, %d delivered",
+                    kv.first.c_str(), kv.second, delivered);
+            if (kv.second > 0)
+                fprintf(stderr, " (%d%%)", delivered * 100 / kv.second);
+            fprintf(stderr, "\n");
+        }
     }
     if (total_sent == 0) fprintf(stderr, "  (none)\n");
 
@@ -649,7 +757,28 @@ bool Orchestrator::run() {
     }
     if (total_recv == 0) fprintf(stderr, "  (none)\n");
 
-    fprintf(stderr, "\nTotal: %d sent, %d received\n", total_sent, total_recv);
+    // Delivery summary
+    if (total_sent > 0) {
+        fprintf(stderr, "\nDelivery: %d/%d messages (%.0f%%)\n",
+                total_recv, total_sent,
+                total_sent > 0 ? total_recv * 100.0 / total_sent : 0.0);
+    } else {
+        fprintf(stderr, "\nTotal: 0 sent, 0 received\n");
+    }
+
+    // Ack summary (only if any acks were tracked)
+    int total_ack_pending = 0, total_ack_received = 0;
+    for (auto& node : _nodes) {
+        if (node->role != NodeRole::Companion) continue;
+        auto& s = node->mesh->msg_stats;
+        total_ack_pending += s.acks_pending;
+        total_ack_received += s.acks_received;
+    }
+    if (total_ack_pending > 0) {
+        fprintf(stderr, "Acks: %d/%d received (%.0f%%)\n",
+                total_ack_received, total_ack_pending,
+                total_ack_received * 100.0 / total_ack_pending);
+    }
 
     return checkAssertions();
 }
@@ -685,6 +814,40 @@ bool Orchestrator::checkAssertions() {
             ok = (actual >= a.count);
             if (!ok) {
                 fprintf(stderr, "  FAIL: %s >= %d, got %d\n", a.value.c_str(), a.count, actual);
+            }
+        } else if (a.type == "event_count") {
+            // Generic event count assertion: match event_type + optional node filter
+            std::string key = a.event_type;
+            if (!a.node.empty()) key += ":" + a.node;
+            int actual = 0;
+            auto it = _event_counts.find(key);
+            if (it != _event_counts.end()) actual = it->second;
+            ok = true;
+            if (a.min >= 0 && actual < a.min) ok = false;
+            if (a.max >= 0 && actual > a.max) ok = false;
+            if (!ok) {
+                fprintf(stderr, "  FAIL: event_count type=%s node=%s actual=%d min=%d max=%d\n",
+                        a.event_type.c_str(), a.node.c_str(), actual, a.min, a.max);
+            }
+        } else if (a.type == "tx_airtime_between") {
+            // Check that all TX from a.node have airtime in [a.min, a.max]
+            bool found = false;
+            ok = true;
+            for (const auto& tx : _tx_log) {
+                if (!a.node.empty() && tx.node != a.node) continue;
+                found = true;
+                int at = (int)tx.airtime_ms;
+                if (at < a.min || at > a.max) {
+                    ok = false;
+                    fprintf(stderr, "  FAIL: tx_airtime_between node=%s airtime=%d not in [%d, %d]\n",
+                            tx.node.c_str(), at, a.min, a.max);
+                    break;
+                }
+            }
+            if (!found) {
+                ok = false;
+                fprintf(stderr, "  FAIL: tx_airtime_between node=%s — no TX events found\n",
+                        a.node.c_str());
             }
         } else {
             fprintf(stderr, "  UNKNOWN assertion type: %s\n", a.type.c_str());

@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MeshCore Topology Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'SF Mono', 'Consolas', 'Menlo', monospace; font-size: 12px; background: #1a1a2e; color: #e0e0e0; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+#toolbar { display: flex; align-items: center; gap: 12px; padding: 6px 12px; background: #16213e; border-bottom: 1px solid #333; flex-shrink: 0; z-index: 1000; }
+#toolbar label { color: #8888aa; font-size: 11px; }
+#toolbar select, #toolbar input { background: #1a1a2e; color: #e0e0e0; border: 1px solid #444; padding: 3px 6px; font-size: 11px; font-family: inherit; border-radius: 3px; }
+#toolbar .sep { width: 1px; height: 20px; background: #333; }
+#toolbar .info { color: #6a6aaa; font-size: 11px; }
+#toolbar button { background: #2a2a4e; color: #ccc; border: 1px solid #444; padding: 3px 10px; font-size: 11px; font-family: inherit; border-radius: 3px; cursor: pointer; }
+#toolbar button:hover { background: #3a3a5e; }
+#toolbar button.active { background: #4a4a7e; border-color: #88f; color: #fff; }
+#main { flex: 1; display: flex; overflow: hidden; position: relative; }
+#map-container { flex: 1; position: relative; }
+#leaflet-map { width: 100%; height: 100%; background: #1a1a2e; }
+#force-canvas { width: 100%; height: 100%; display: block; }
+#sidebar { width: 0; background: #16213e; border-left: 1px solid #333; overflow-y: auto; transition: width 0.2s; flex-shrink: 0; }
+#sidebar.open { width: 360px; }
+#sidebar-content { padding: 10px; width: 360px; }
+#sidebar h3 { color: #aaf; margin: 8px 0 4px; font-size: 12px; }
+#sidebar .field { margin: 2px 0; }
+#sidebar .field .key { color: #888; }
+#sidebar .field .val { color: #ddd; }
+#sidebar table { border-collapse: collapse; width: 100%; margin: 4px 0; }
+#sidebar td, #sidebar th { padding: 2px 6px; text-align: left; font-size: 11px; }
+#sidebar th { color: #888; border-bottom: 1px solid #333; }
+#sidebar td { border-bottom: 1px solid #222; }
+#sidebar .node-link { color: #88ccff; cursor: pointer; text-decoration: underline; }
+#sidebar .node-link:hover { color: #bbddff; }
+#legend { position: absolute; bottom: 20px; left: 20px; background: #16213eee; border: 1px solid #444; border-radius: 6px; padding: 8px 12px; z-index: 1000; font-size: 11px; }
+#legend .item { display: flex; align-items: center; gap: 6px; margin: 2px 0; }
+#legend .dot { width: 10px; height: 10px; border-radius: 50%; }
+#legend .line { width: 20px; height: 2px; }
+#loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #666; font-size: 16px; z-index: 500; }
+.leaflet-container { background: #1a1a2e !important; }
+.leaflet-tile-pane { filter: brightness(0.7) contrast(1.1) saturate(0.4) hue-rotate(180deg) invert(1); }
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+    <span class="info" id="title">MeshCore Topology Map</span>
+    <div class="sep"></div>
+    <label>Filter:</label>
+    <input id="node-filter" type="text" placeholder="node name..." style="width:120px">
+    <div class="sep"></div>
+    <label>Links:</label>
+    <select id="link-display">
+        <option value="all">All</option>
+        <option value="snr-high">SNR > 5</option>
+        <option value="snr-low">SNR <= 5</option>
+        <option value="none">None</option>
+    </select>
+    <div class="sep"></div>
+    <button id="btn-labels" title="Toggle node labels">Labels</button>
+    <button id="btn-snr-labels" title="Toggle SNR labels on links">SNR</button>
+    <div class="sep"></div>
+    <span class="info" id="stats-info"></span>
+</div>
+
+<div id="main">
+    <div id="map-container">
+        <div id="leaflet-map"></div>
+        <canvas id="force-canvas" style="display:none"></canvas>
+        <div id="loading">Loading topology...</div>
+        <div id="legend">
+            <div class="item"><div class="dot" style="background:#4488ff"></div> Repeater</div>
+            <div class="item"><div class="dot" style="background:#44cc66"></div> Companion</div>
+            <div class="item"><div class="line" style="background:#666"></div> Link (thickness = SNR)</div>
+        </div>
+    </div>
+    <div id="sidebar">
+        <div id="sidebar-content"></div>
+    </div>
+</div>
+
+<script>
+const COL_REPEATER = '#4488ff';
+const COL_COMPANION = '#44cc66';
+const COL_LINK = '#556688';
+const COL_LINK_WEAK = '#553333';
+const COL_HIGHLIGHT = '#ffaa33';
+
+let topology = null;
+let leafletMap = null;
+let markers = {};        // name -> L.circleMarker
+let linkLines = [];       // [{line: L.polyline, link: {...}}]
+let showLabels = false;
+let showSnrLabels = false;
+let labelMarkers = [];
+let snrLabelMarkers = [];
+let selectedNode = null;
+
+// Force-directed state
+let forceNodes = [];
+let forceLinks = [];
+let forceCanvas = null;
+let forceCtx = null;
+let forceDrag = null;
+
+async function init() {
+    try {
+        const resp = await fetch('/api/topology');
+        topology = await resp.json();
+    } catch (e) {
+        document.getElementById('loading').textContent = 'Failed to load topology: ' + e.message;
+        return;
+    }
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('stats-info').textContent =
+        `${topology.nodes.length} nodes, ${topology.links.length} links`;
+
+    if (topology.has_geo) {
+        initLeaflet();
+    } else {
+        initForceLayout();
+    }
+
+    setupControls();
+}
+
+// ── Leaflet geo mode ──────────────────────────────────────────
+
+function initLeaflet() {
+    document.getElementById('leaflet-map').style.display = 'block';
+    document.getElementById('force-canvas').style.display = 'none';
+
+    leafletMap = L.map('leaflet-map', {
+        zoomControl: true,
+        attributionControl: false,
+    });
+
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+    }).addTo(leafletMap);
+
+    // Build neighbor lookup
+    const neighbors = buildNeighborMap();
+
+    // Draw links first (under markers)
+    drawLeafletLinks();
+
+    // Draw node markers
+    const bounds = L.latLngBounds();
+    for (const node of topology.nodes) {
+        if (node.lat == null || node.lon == null) continue;
+        const ll = L.latLng(node.lat, node.lon);
+        bounds.extend(ll);
+
+        const nLinks = (neighbors[node.name] || []).length;
+        const radius = Math.max(4, Math.min(12, 4 + nLinks));
+        const color = node.role === 'companion' ? COL_COMPANION : COL_REPEATER;
+
+        const marker = L.circleMarker(ll, {
+            radius: radius,
+            color: color,
+            fillColor: color,
+            fillOpacity: 0.7,
+            weight: 1,
+        }).addTo(leafletMap);
+
+        marker.on('click', () => selectNode(node.name));
+        marker.bindTooltip(node.name, {
+            permanent: false, direction: 'top', offset: [0, -radius],
+            className: 'dark-tooltip',
+        });
+        markers[node.name] = marker;
+    }
+
+    if (bounds.isValid()) {
+        leafletMap.fitBounds(bounds, { padding: [30, 30] });
+    }
+}
+
+function drawLeafletLinks() {
+    // Remove existing
+    for (const ll of linkLines) {
+        leafletMap.removeLayer(ll.line);
+    }
+    linkLines = [];
+
+    const filter = document.getElementById('link-display').value;
+
+    // Deduplicate bidir links for drawing
+    const drawn = new Set();
+    for (const link of topology.links) {
+        const key = [link.from, link.to].sort().join('|');
+        if (drawn.has(key)) continue;
+        drawn.add(key);
+
+        if (filter === 'none') continue;
+        if (filter === 'snr-high' && link.snr <= 5) continue;
+        if (filter === 'snr-low' && link.snr > 5) continue;
+
+        const fromNode = topology.nodes.find(n => n.name === link.from);
+        const toNode = topology.nodes.find(n => n.name === link.to);
+        if (!fromNode || !toNode || fromNode.lat == null || toNode.lat == null) continue;
+
+        const weight = Math.max(1, Math.min(5, link.snr / 4));
+        const opacity = Math.max(0.2, Math.min(0.8, link.snr / 15));
+        const color = link.snr > 5 ? COL_LINK : COL_LINK_WEAK;
+
+        const line = L.polyline(
+            [[fromNode.lat, fromNode.lon], [toNode.lat, toNode.lon]],
+            { color, weight, opacity }
+        ).addTo(leafletMap);
+
+        line.on('click', () => selectLink(link));
+        line.bindTooltip(`${link.from} ↔ ${link.to}: SNR=${link.snr}dB`, {
+            sticky: true, className: 'dark-tooltip',
+        });
+        linkLines.push({ line, link });
+    }
+}
+
+function toggleLabels() {
+    showLabels = !showLabels;
+    document.getElementById('btn-labels').classList.toggle('active', showLabels);
+
+    if (showLabels) {
+        for (const node of topology.nodes) {
+            if (!markers[node.name]) continue;
+            const ll = markers[node.name].getLatLng();
+            const lbl = L.marker(ll, {
+                icon: L.divIcon({
+                    className: 'node-label',
+                    html: `<span style="color:#ccc;font-size:10px;text-shadow:0 0 3px #000,0 0 3px #000;white-space:nowrap">${node.name}</span>`,
+                    iconAnchor: [-8, 4],
+                }),
+                interactive: false,
+            }).addTo(leafletMap);
+            labelMarkers.push(lbl);
+        }
+    } else {
+        for (const lbl of labelMarkers) leafletMap.removeLayer(lbl);
+        labelMarkers = [];
+    }
+}
+
+function toggleSnrLabels() {
+    showSnrLabels = !showSnrLabels;
+    document.getElementById('btn-snr-labels').classList.toggle('active', showSnrLabels);
+
+    if (showSnrLabels) {
+        const drawn = new Set();
+        for (const link of topology.links) {
+            const key = [link.from, link.to].sort().join('|');
+            if (drawn.has(key)) continue;
+            drawn.add(key);
+
+            const fromNode = topology.nodes.find(n => n.name === link.from);
+            const toNode = topology.nodes.find(n => n.name === link.to);
+            if (!fromNode || !toNode || fromNode.lat == null || toNode.lat == null) continue;
+
+            const midLat = (fromNode.lat + toNode.lat) / 2;
+            const midLon = (fromNode.lon + toNode.lon) / 2;
+            const col = link.snr > 5 ? '#8899bb' : '#bb6666';
+            const lbl = L.marker([midLat, midLon], {
+                icon: L.divIcon({
+                    className: 'snr-label',
+                    html: `<span style="color:${col};font-size:9px;text-shadow:0 0 3px #000,0 0 3px #000">${link.snr.toFixed(1)}</span>`,
+                    iconAnchor: [12, 6],
+                }),
+                interactive: false,
+            }).addTo(leafletMap);
+            snrLabelMarkers.push(lbl);
+        }
+    } else {
+        for (const lbl of snrLabelMarkers) leafletMap.removeLayer(lbl);
+        snrLabelMarkers = [];
+    }
+}
+
+// ── Force-directed layout (no geo) ───────────────────────────
+
+function initForceLayout() {
+    document.getElementById('leaflet-map').style.display = 'none';
+    forceCanvas = document.getElementById('force-canvas');
+    forceCanvas.style.display = 'block';
+    forceCtx = forceCanvas.getContext('2d');
+
+    const rect = forceCanvas.parentElement.getBoundingClientRect();
+    forceCanvas.width = rect.width * devicePixelRatio;
+    forceCanvas.height = rect.height * devicePixelRatio;
+    forceCanvas.style.width = rect.width + 'px';
+    forceCanvas.style.height = rect.height + 'px';
+    forceCtx.scale(devicePixelRatio, devicePixelRatio);
+
+    const W = rect.width, H = rect.height;
+    const neighbors = buildNeighborMap();
+
+    // Initialize node positions in a circle
+    forceNodes = topology.nodes.map((n, i) => {
+        const angle = (2 * Math.PI * i) / topology.nodes.length;
+        const r = Math.min(W, H) * 0.35;
+        return {
+            name: n.name,
+            role: n.role,
+            x: W / 2 + r * Math.cos(angle),
+            y: H / 2 + r * Math.sin(angle),
+            vx: 0, vy: 0,
+            nLinks: (neighbors[n.name] || []).length,
+        };
+    });
+
+    const nodeIdx = {};
+    forceNodes.forEach((n, i) => nodeIdx[n.name] = i);
+
+    // Deduplicate links
+    const drawn = new Set();
+    forceLinks = [];
+    for (const link of topology.links) {
+        const key = [link.from, link.to].sort().join('|');
+        if (drawn.has(key)) continue;
+        drawn.add(key);
+        const si = nodeIdx[link.from], ti = nodeIdx[link.to];
+        if (si != null && ti != null) {
+            forceLinks.push({ source: si, target: ti, snr: link.snr, link });
+        }
+    }
+
+    // Run simulation
+    const iterations = 300;
+    const repulsion = 2000;
+    const attraction = 0.005;
+    const damping = 0.9;
+    const centerPull = 0.001;
+
+    for (let iter = 0; iter < iterations; iter++) {
+        // Repulsion
+        for (let i = 0; i < forceNodes.length; i++) {
+            for (let j = i + 1; j < forceNodes.length; j++) {
+                let dx = forceNodes[j].x - forceNodes[i].x;
+                let dy = forceNodes[j].y - forceNodes[i].y;
+                let d2 = dx * dx + dy * dy;
+                if (d2 < 1) d2 = 1;
+                const f = repulsion / d2;
+                const fx = f * dx / Math.sqrt(d2);
+                const fy = f * dy / Math.sqrt(d2);
+                forceNodes[i].vx -= fx;
+                forceNodes[i].vy -= fy;
+                forceNodes[j].vx += fx;
+                forceNodes[j].vy += fy;
+            }
+        }
+        // Attraction along links
+        for (const fl of forceLinks) {
+            const s = forceNodes[fl.source], t = forceNodes[fl.target];
+            const dx = t.x - s.x, dy = t.y - s.y;
+            const d = Math.sqrt(dx * dx + dy * dy);
+            if (d < 1) continue;
+            const f = attraction * d;
+            const fx = f * dx / d, fy = f * dy / d;
+            s.vx += fx; s.vy += fy;
+            t.vx -= fx; t.vy -= fy;
+        }
+        // Center pull
+        for (const n of forceNodes) {
+            n.vx += (W / 2 - n.x) * centerPull;
+            n.vy += (H / 2 - n.y) * centerPull;
+        }
+        // Apply velocity
+        for (const n of forceNodes) {
+            n.vx *= damping; n.vy *= damping;
+            n.x += n.vx; n.y += n.vy;
+            n.x = Math.max(20, Math.min(W - 20, n.x));
+            n.y = Math.max(20, Math.min(H - 20, n.y));
+        }
+    }
+
+    drawForce();
+
+    // Interaction
+    forceCanvas.addEventListener('click', (e) => {
+        const rect = forceCanvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+        let closest = null, closestD = 15;
+        for (const n of forceNodes) {
+            const d = Math.sqrt((n.x - mx) ** 2 + (n.y - my) ** 2);
+            if (d < closestD) { closest = n; closestD = d; }
+        }
+        if (closest) {
+            selectNode(closest.name);
+            drawForce();
+        } else {
+            // Check link hit
+            for (const fl of forceLinks) {
+                const s = forceNodes[fl.source], t = forceNodes[fl.target];
+                const d = pointToSegmentDist(mx, my, s.x, s.y, t.x, t.y);
+                if (d < 6) {
+                    selectLink(fl.link);
+                    return;
+                }
+            }
+            clearSelection();
+            drawForce();
+        }
+    });
+
+    window.addEventListener('resize', () => {
+        const rect = forceCanvas.parentElement.getBoundingClientRect();
+        forceCanvas.width = rect.width * devicePixelRatio;
+        forceCanvas.height = rect.height * devicePixelRatio;
+        forceCanvas.style.width = rect.width + 'px';
+        forceCanvas.style.height = rect.height + 'px';
+        forceCtx.setTransform(1, 0, 0, 1, 0, 0);
+        forceCtx.scale(devicePixelRatio, devicePixelRatio);
+        drawForce();
+    });
+}
+
+function drawForce() {
+    if (!forceCtx) return;
+    const W = forceCanvas.width / devicePixelRatio;
+    const H = forceCanvas.height / devicePixelRatio;
+    forceCtx.clearRect(0, 0, W, H);
+
+    const filter = document.getElementById('link-display').value;
+
+    // Draw links
+    for (const fl of forceLinks) {
+        if (filter === 'none') continue;
+        if (filter === 'snr-high' && fl.snr <= 5) continue;
+        if (filter === 'snr-low' && fl.snr > 5) continue;
+
+        const s = forceNodes[fl.source], t = forceNodes[fl.target];
+        const lw = Math.max(1, Math.min(4, fl.snr / 4));
+        const alpha = Math.max(0.15, Math.min(0.6, fl.snr / 15));
+        const isHighlight = selectedNode && (s.name === selectedNode || t.name === selectedNode);
+
+        forceCtx.strokeStyle = isHighlight ? COL_HIGHLIGHT :
+            (fl.snr > 5 ? COL_LINK : COL_LINK_WEAK);
+        forceCtx.lineWidth = isHighlight ? lw + 1 : lw;
+        forceCtx.globalAlpha = isHighlight ? 0.9 : alpha;
+        forceCtx.beginPath();
+        forceCtx.moveTo(s.x, s.y);
+        forceCtx.lineTo(t.x, t.y);
+        forceCtx.stroke();
+
+        if (showSnrLabels) {
+            const mx = (s.x + t.x) / 2, my = (s.y + t.y) / 2;
+            forceCtx.globalAlpha = 0.7;
+            forceCtx.fillStyle = fl.snr > 5 ? '#8899bb' : '#bb6666';
+            forceCtx.font = '9px monospace';
+            forceCtx.fillText(fl.snr.toFixed(1), mx + 2, my - 2);
+        }
+    }
+    forceCtx.globalAlpha = 1;
+
+    // Draw nodes
+    for (const n of forceNodes) {
+        const r = Math.max(4, Math.min(12, 4 + n.nLinks));
+        const isSel = n.name === selectedNode;
+        forceCtx.beginPath();
+        forceCtx.arc(n.x, n.y, r, 0, 2 * Math.PI);
+        forceCtx.fillStyle = n.role === 'companion' ? COL_COMPANION : COL_REPEATER;
+        forceCtx.globalAlpha = isSel ? 1 : 0.7;
+        forceCtx.fill();
+        if (isSel) {
+            forceCtx.strokeStyle = COL_HIGHLIGHT;
+            forceCtx.lineWidth = 2;
+            forceCtx.stroke();
+        }
+        forceCtx.globalAlpha = 1;
+
+        if (showLabels) {
+            forceCtx.fillStyle = '#ccc';
+            forceCtx.font = '10px monospace';
+            forceCtx.fillText(n.name, n.x + r + 3, n.y + 3);
+        }
+    }
+}
+
+function pointToSegmentDist(px, py, ax, ay, bx, by) {
+    const dx = bx - ax, dy = by - ay;
+    const len2 = dx * dx + dy * dy;
+    if (len2 === 0) return Math.sqrt((px - ax) ** 2 + (py - ay) ** 2);
+    let t = ((px - ax) * dx + (py - ay) * dy) / len2;
+    t = Math.max(0, Math.min(1, t));
+    const cx = ax + t * dx, cy = ay + t * dy;
+    return Math.sqrt((px - cx) ** 2 + (py - cy) ** 2);
+}
+
+// ── Shared logic ─────────────────────────────────────────────
+
+function buildNeighborMap() {
+    const neighbors = {};
+    for (const link of topology.links) {
+        if (!neighbors[link.from]) neighbors[link.from] = [];
+        neighbors[link.from].push({ peer: link.to, snr: link.snr, rssi: link.rssi });
+    }
+    return neighbors;
+}
+
+function selectNode(name) {
+    selectedNode = name;
+    const sidebar = document.getElementById('sidebar');
+    const content = document.getElementById('sidebar-content');
+    sidebar.classList.add('open');
+
+    const node = topology.nodes.find(n => n.name === name);
+    if (!node) return;
+
+    const neighbors = buildNeighborMap();
+    const nodeNeighbors = neighbors[name] || [];
+
+    // Also find links TO this node
+    const inLinks = topology.links.filter(l => l.to === name);
+    const allPeers = new Map();
+    for (const n of nodeNeighbors) {
+        allPeers.set(n.peer, { snr_out: n.snr, rssi_out: n.rssi });
+    }
+    for (const l of inLinks) {
+        const existing = allPeers.get(l.from) || {};
+        existing.snr_in = l.snr;
+        existing.rssi_in = l.rssi;
+        allPeers.set(l.from, existing);
+    }
+
+    let html = `<h3>${name}</h3>`;
+    html += `<div class="field"><span class="key">Role: </span><span class="val">${node.role}</span></div>`;
+    if (node.lat != null) {
+        html += `<div class="field"><span class="key">Position: </span><span class="val">${node.lat.toFixed(5)}, ${node.lon.toFixed(5)}</span></div>`;
+    }
+    html += `<div class="field"><span class="key">Links: </span><span class="val">${allPeers.size}</span></div>`;
+
+    html += `<h3>Neighbors</h3>`;
+    html += `<table><tr><th>Node</th><th>SNR→</th><th>RSSI→</th><th>SNR←</th><th>RSSI←</th></tr>`;
+    for (const [peer, info] of allPeers) {
+        html += `<tr>`;
+        html += `<td><span class="node-link" data-node="${peer}">${peer}</span></td>`;
+        html += `<td>${info.snr_out != null ? info.snr_out.toFixed(1) : '-'}</td>`;
+        html += `<td>${info.rssi_out != null ? info.rssi_out.toFixed(0) : '-'}</td>`;
+        html += `<td>${info.snr_in != null ? info.snr_in.toFixed(1) : '-'}</td>`;
+        html += `<td>${info.rssi_in != null ? info.rssi_in.toFixed(0) : '-'}</td>`;
+        html += `</tr>`;
+    }
+    html += `</table>`;
+
+    content.innerHTML = html;
+
+    // Click handlers for neighbor links
+    content.querySelectorAll('.node-link').forEach(el => {
+        el.addEventListener('click', () => selectNode(el.dataset.node));
+    });
+
+    // Highlight on map
+    highlightNode(name);
+}
+
+function selectLink(link) {
+    const sidebar = document.getElementById('sidebar');
+    const content = document.getElementById('sidebar-content');
+    sidebar.classList.add('open');
+
+    let html = `<h3>Link</h3>`;
+    html += `<div class="field"><span class="key">From: </span><span class="val node-link" data-node="${link.from}">${link.from}</span></div>`;
+    html += `<div class="field"><span class="key">To: </span><span class="val node-link" data-node="${link.to}">${link.to}</span></div>`;
+    html += `<div class="field"><span class="key">SNR: </span><span class="val">${link.snr.toFixed(1)} dB</span></div>`;
+    html += `<div class="field"><span class="key">RSSI: </span><span class="val">${link.rssi.toFixed(0)} dBm</span></div>`;
+    if (link.snr_std_dev) {
+        html += `<div class="field"><span class="key">SNR std dev: </span><span class="val">${link.snr_std_dev}</span></div>`;
+    }
+    if (link.loss) {
+        html += `<div class="field"><span class="key">Loss: </span><span class="val">${(link.loss * 100).toFixed(1)}%</span></div>`;
+    }
+    if (link.bidir !== undefined) {
+        html += `<div class="field"><span class="key">Bidirectional: </span><span class="val">${link.bidir ? 'yes' : 'no'}</span></div>`;
+    }
+
+    content.innerHTML = html;
+    content.querySelectorAll('.node-link').forEach(el => {
+        el.addEventListener('click', () => selectNode(el.dataset.node));
+    });
+}
+
+function clearSelection() {
+    selectedNode = null;
+    document.getElementById('sidebar').classList.remove('open');
+
+    // Reset marker styles
+    if (topology.has_geo) {
+        for (const [name, marker] of Object.entries(markers)) {
+            const node = topology.nodes.find(n => n.name === name);
+            const color = node && node.role === 'companion' ? COL_COMPANION : COL_REPEATER;
+            marker.setStyle({ color, fillColor: color, weight: 1 });
+        }
+    }
+}
+
+function highlightNode(name) {
+    if (topology.has_geo) {
+        // Reset all
+        for (const [n, m] of Object.entries(markers)) {
+            const node = topology.nodes.find(nd => nd.name === n);
+            const color = node && node.role === 'companion' ? COL_COMPANION : COL_REPEATER;
+            m.setStyle({ color, fillColor: color, weight: 1 });
+        }
+        // Highlight selected
+        if (markers[name]) {
+            markers[name].setStyle({ color: COL_HIGHLIGHT, fillColor: COL_HIGHLIGHT, weight: 3 });
+        }
+        // Highlight neighbors
+        const neighbors = buildNeighborMap();
+        const peers = neighbors[name] || [];
+        // Also reverse links
+        const inPeers = topology.links.filter(l => l.to === name).map(l => l.from);
+        const allPeerNames = new Set([...peers.map(p => p.peer), ...inPeers]);
+        for (const peer of allPeerNames) {
+            if (markers[peer]) {
+                markers[peer].setStyle({ weight: 2 });
+            }
+        }
+        // Highlight connected links
+        for (const ll of linkLines) {
+            const l = ll.link;
+            const isConnected = (l.from === name || l.to === name);
+            if (isConnected) {
+                ll.line.setStyle({ color: COL_HIGHLIGHT, weight: 3, opacity: 0.9 });
+            } else {
+                const w = Math.max(1, Math.min(5, l.snr / 4));
+                const o = Math.max(0.2, Math.min(0.8, l.snr / 15));
+                ll.line.setStyle({ color: l.snr > 5 ? COL_LINK : COL_LINK_WEAK, weight: w, opacity: o });
+            }
+        }
+    }
+}
+
+function setupControls() {
+    document.getElementById('link-display').addEventListener('change', () => {
+        if (topology.has_geo) {
+            drawLeafletLinks();
+            if (selectedNode) highlightNode(selectedNode);
+        } else {
+            drawForce();
+        }
+    });
+
+    document.getElementById('btn-labels').addEventListener('click', () => {
+        if (topology.has_geo) {
+            toggleLabels();
+        } else {
+            showLabels = !showLabels;
+            document.getElementById('btn-labels').classList.toggle('active', showLabels);
+            drawForce();
+        }
+    });
+
+    document.getElementById('btn-snr-labels').addEventListener('click', () => {
+        if (topology.has_geo) {
+            toggleSnrLabels();
+        } else {
+            showSnrLabels = !showSnrLabels;
+            document.getElementById('btn-snr-labels').classList.toggle('active', showSnrLabels);
+            drawForce();
+        }
+    });
+
+    document.getElementById('node-filter').addEventListener('input', (e) => {
+        const q = e.target.value.toLowerCase();
+        if (topology.has_geo) {
+            for (const [name, marker] of Object.entries(markers)) {
+                if (!q || name.toLowerCase().includes(q)) {
+                    marker.setStyle({ opacity: 1, fillOpacity: 0.7 });
+                } else {
+                    marker.setStyle({ opacity: 0.1, fillOpacity: 0.1 });
+                }
+            }
+        } else {
+            drawForce();
+            // dim non-matching in force
+            if (q) {
+                for (const n of forceNodes) {
+                    const match = n.name.toLowerCase().includes(q);
+                    if (!match) {
+                        const r = Math.max(4, Math.min(12, 4 + n.nLinks));
+                        forceCtx.globalAlpha = 0.1;
+                        forceCtx.beginPath();
+                        forceCtx.arc(n.x, n.y, r + 1, 0, 2 * Math.PI);
+                        forceCtx.fillStyle = '#1a1a2e';
+                        forceCtx.fill();
+                        forceCtx.globalAlpha = 0.15;
+                        forceCtx.beginPath();
+                        forceCtx.arc(n.x, n.y, r, 0, 2 * Math.PI);
+                        forceCtx.fillStyle = n.role === 'companion' ? COL_COMPANION : COL_REPEATER;
+                        forceCtx.fill();
+                        forceCtx.globalAlpha = 1;
+                    }
+                }
+            }
+        }
+    });
+}
+
+init();
+</script>
+</body>
+</html>

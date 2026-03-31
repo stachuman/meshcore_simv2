@@ -46,6 +46,7 @@ struct PendingRx {
     float rssi;
     bool collided = false;
     bool link_loss = false;
+    bool halfduplex_abort = false;
 };
 
 // NullSerial: discards all output (Serial is unused in orchestrator)
@@ -62,6 +63,7 @@ struct NodeContext {
     double lon = 0.0;
     bool has_location = false;
 
+    VirtualClock own_clock;   // Must precede radio (radio holds clock ref)
     SimBoard node_board;
     SimRadio radio;
     SensorManager sensors_obj;
@@ -73,11 +75,11 @@ struct NodeContext {
     std::vector<TxCapture> pending_tx;
     std::vector<PendingRx> active_rx;
     unsigned long tx_busy_until = 0;
+    unsigned long tx_busy_from = 0;
     AdversarialConfig adversarial;
-    VirtualClock* clock = nullptr;
 
     NodeContext(const std::string& name, NodeRole role,
-                VirtualClock& clock,
+                uint32_t epoch_base,
                 int sf = 8, int bw = 62500, int cr = 4);
     ~NodeContext();
 

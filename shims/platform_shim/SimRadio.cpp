@@ -114,6 +114,7 @@ float SimRadio::packetScore(float snr, int packet_len) {
 }
 
 bool SimRadio::startSendRaw(const uint8_t* bytes, int len) {
+    _rx_active_until = 0;  // TX aborts any ongoing RX
     uint32_t airtime = getEstAirtimeFor(len);
 #ifdef ORCHESTRATOR_BUILD
     if (_tx_callback) {

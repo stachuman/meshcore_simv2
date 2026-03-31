@@ -16,12 +16,12 @@ void nodeReady(unsigned long time_ms, const char* node, const uint8_t* pub_key, 
                bool has_location = false, double lat = 0.0, double lon = 0.0);
 void tx(unsigned long time_ms, const char* node, const uint8_t* data, int len, uint32_t airtime_ms);
 void rx(unsigned long time_ms, const char* from, const char* to, float snr, float rssi,
-        const uint8_t* data, int len);
+        const uint8_t* data, int len, uint32_t airtime_ms = 0);
 void cmdReply(unsigned long time_ms, const char* node, const char* command, const char* reply);
 void collision(unsigned long time_ms, const char* from, const char* to, float snr, float rssi,
                const uint8_t* data, int len);
 void dropHalfDuplex(unsigned long time_ms, const char* from, const char* to,
-                    const uint8_t* data, int len);
+                    const uint8_t* data, int len, uint32_t airtime_ms = 0);
 void dropWeak(unsigned long time_ms, const char* from, const char* to, float snr, float threshold,
               const uint8_t* data, int len);
 void dropLoss(unsigned long time_ms, const char* from, const char* to, float loss_prob,

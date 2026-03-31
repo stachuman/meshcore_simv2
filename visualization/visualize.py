@@ -2,9 +2,10 @@
 """MeshCore simulation visualizer.
 
 Reads NDJSON event log, builds indexes, serves interactive swim-lane visualization.
+Optionally serves a topology map view on port+1 when --config is given.
 
 Usage:
-    python3 visualize.py output.ndjson [--port 8000] [--no-open]
+    python3 visualize.py output.ndjson [--config config.json] [--port 8000] [--no-open]
 """
 
 import argparse
@@ -194,6 +195,107 @@ class EventIndex:
                 return ev
         return None
 
+    def _find_relay_tx(self, node: str, after_ms: int, pkt_type: str | None,
+                       exclude_pkts: set) -> dict | None:
+        """Find a relay TX from node within 3s after an RX, matching pkt_type.
+
+        Only repeaters relay packets. Companions originate new messages but
+        never forward — skip them to avoid confusing a response with a relay.
+        """
+        meta = self.node_set.get(node, {})
+        if meta.get("role") == "companion":
+            return None
+        indices = self.by_node.get(node, [])
+        for i in indices:
+            t = self.times[i]
+            if t < after_ms:
+                continue
+            if t > after_ms + 3000:
+                break
+            ev = self.events[i]
+            if (ev["type"] == "tx"
+                    and ev.get("pkt") not in exclude_pkts
+                    and (pkt_type is None or ev.get("pkt_type") == pkt_type)):
+                return ev
+        return None
+
+    def _find_response_txs(self, node: str, after_ms: int,
+                           exclude_pkts: set) -> list[dict]:
+        """Find response TXs from a companion node after receiving a packet.
+
+        Returns all TXs within 3s (ack, path, msg responses) regardless of
+        pkt_type — companions can respond with any packet type.
+        """
+        results = []
+        indices = self.by_node.get(node, [])
+        for i in indices:
+            t = self.times[i]
+            if t < after_ms:
+                continue
+            if t > after_ms + 3000:
+                break
+            ev = self.events[i]
+            if ev["type"] == "tx" and ev.get("pkt") not in exclude_pkts:
+                results.append(ev)
+        return results
+
+    def deep_trace(self, pkt: str, max_hops: int = 30) -> dict:
+        """Follow relay chain across packet hash boundaries.
+
+        Returns hops: [{pkt, events, relay_from?, response_from?}] where each
+        hop is one packet hash in the relay chain.
+
+        relay_from: this hop is a relay (repeater forwarded the parent packet)
+        response_from: this hop is a response (companion reacted to the parent)
+        """
+        visited_pkts: set[str] = set()
+        hops: list[dict] = []
+        # Queue: (pkt_hash, parent_pkt, is_response)
+        queue: list[tuple[str, str | None, bool]] = [(pkt, None, False)]
+
+        while queue and len(hops) < max_hops:
+            current_pkt, parent_pkt, is_response = queue.pop(0)
+            if current_pkt in visited_pkts:
+                continue
+            visited_pkts.add(current_pkt)
+
+            events = self.query_pkt(current_pkt)
+            if not events:
+                continue
+
+            hop: dict = {"pkt": current_pkt, "events": events}
+            if parent_pkt:
+                if is_response:
+                    hop["response_from"] = parent_pkt
+                else:
+                    hop["relay_from"] = parent_pkt
+            hops.append(hop)
+
+            # For each RX, look for relay or response TXs
+            pkt_type = events[0].get("pkt_type") if events else None
+            for ev in events:
+                if ev["type"] != "rx":
+                    continue
+                receiver = ev["to"]
+                rx_time = ev["time_ms"]
+
+                meta = self.node_set.get(receiver, {})
+                if meta.get("role") == "companion":
+                    # Companion: find response TXs (any type)
+                    responses = self._find_response_txs(
+                        receiver, rx_time, visited_pkts)
+                    for resp_tx in responses:
+                        if resp_tx["pkt"] not in visited_pkts:
+                            queue.append((resp_tx["pkt"], current_pkt, True))
+                else:
+                    # Repeater: find relay TX (same pkt_type)
+                    relay_tx = self._find_relay_tx(
+                        receiver, rx_time, pkt_type, visited_pkts)
+                    if relay_tx and relay_tx["pkt"] not in visited_pkts:
+                        queue.append((relay_tx["pkt"], current_pkt, False))
+
+        return {"root_pkt": pkt, "hops": hops}
+
     def get_meta(self) -> dict:
         return {
             "nodes": self.nodes,
@@ -203,6 +305,87 @@ class EventIndex:
             "sim": self.sim_info,
             "stats": self.stats,
         }
+
+
+def load_topology(path: str) -> dict:
+    """Load topology from config JSON for map view."""
+    print(f"Loading topology from {path}...", file=sys.stderr)
+    with open(path, "r") as f:
+        config = json.load(f)
+
+    nodes = []
+    has_geo = False
+    for n in config.get("nodes", []):
+        node = {"name": n["name"], "role": n.get("role", "repeater")}
+        if "lat" in n and "lon" in n:
+            node["lat"] = n["lat"]
+            node["lon"] = n["lon"]
+            has_geo = True
+        else:
+            node["lat"] = None
+            node["lon"] = None
+        nodes.append(node)
+
+    links = []
+    topo = config.get("topology", {})
+    for link in topo.get("links", []):
+        entry = {
+            "from": link["from"],
+            "to": link["to"],
+            "snr": link.get("snr", 0),
+            "rssi": link.get("rssi", 0),
+            "snr_std_dev": link.get("snr_std_dev", 0),
+            "loss": link.get("loss", 0),
+            "bidir": link.get("bidir", False),
+        }
+        links.append(entry)
+        if entry["bidir"]:
+            rev = dict(entry)
+            rev["from"], rev["to"] = rev["to"], rev["from"]
+            links.append(rev)
+
+    print(f"Topology: {len(nodes)} nodes, {len(links)} links, geo={has_geo}",
+          file=sys.stderr)
+    return {"nodes": nodes, "links": links, "has_geo": has_geo}
+
+
+class MapHandler(BaseHTTPRequestHandler):
+    topology: dict  # set by server factory
+
+    def log_message(self, format, *args):
+        pass
+
+    def do_GET(self):
+        parsed = urlparse(self.path)
+        path = parsed.path
+
+        if path == "/" or path == "/index.html":
+            self._serve_html()
+        elif path == "/api/topology":
+            self._json_response(self.topology)
+        else:
+            self.send_error(404)
+
+    def _json_response(self, data):
+        body = json.dumps(data).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", len(body))
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _serve_html(self):
+        html_path = Path(__file__).parent / "map_view.html"
+        if not html_path.exists():
+            self.send_error(500, "map_view.html not found")
+            return
+        body = html_path.read_bytes()
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", len(body))
+        self.end_headers()
+        self.wfile.write(body)
 
 
 class VisualizerHandler(BaseHTTPRequestHandler):
@@ -230,10 +413,12 @@ class VisualizerHandler(BaseHTTPRequestHandler):
             to_ms = int(params.get("to", [self.index.time_max])[0])
             bucket_ms = int(params.get("bucket", [1000])[0])
             self._json_response(self.index.density(from_ms, to_ms, bucket_ms))
+        elif path.startswith("/api/deep_trace/"):
+            pkt = path.split("/")[-1]
+            self._json_response(self.index.deep_trace(pkt))
         elif path.startswith("/api/trace/"):
             pkt = path.split("/")[-1]
             events = self.index.query_pkt(pkt)
-            # Also find correlated msg command if this pkt was a message
             self._json_response({"pkt": pkt, "events": events, "count": len(events)})
         elif path.startswith("/api/msg_tx/"):
             # /api/msg_tx/nodename?after=12345
@@ -269,7 +454,9 @@ class VisualizerHandler(BaseHTTPRequestHandler):
 def main():
     parser = argparse.ArgumentParser(description="MeshCore simulation visualizer")
     parser.add_argument("input", help="NDJSON event log file")
+    parser.add_argument("--config", help="Input config JSON for topology map view")
     parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--bind", default="0.0.0.0", help="Bind address (default: 0.0.0.0)")
     parser.add_argument("--no-open", action="store_true", help="Don't open browser")
     args = parser.parse_args()
 
@@ -280,9 +467,26 @@ def main():
     index = EventIndex(args.input)
 
     VisualizerHandler.index = index
-    server = HTTPServer(("127.0.0.1", args.port), VisualizerHandler)
+    server = HTTPServer((args.bind, args.port), VisualizerHandler)
     url = f"http://127.0.0.1:{args.port}"
-    print(f"Serving at {url}", file=sys.stderr)
+    print(f"Swim-lane: {url} (bind={args.bind})", file=sys.stderr)
+
+    map_server = None
+    if args.config:
+        if not os.path.exists(args.config):
+            print(f"Error: {args.config} not found", file=sys.stderr)
+            sys.exit(1)
+        topo = load_topology(args.config)
+        MapHandler.topology = topo
+        map_port = args.port + 1
+        map_server = HTTPServer((args.bind, map_port), MapHandler)
+        map_url = f"http://127.0.0.1:{map_port}"
+        print(f"Map view:  {map_url}", file=sys.stderr)
+        # Run map server in daemon thread
+        map_thread = threading.Thread(target=map_server.serve_forever, daemon=True)
+        map_thread.start()
+        if not args.no_open:
+            threading.Timer(1.0, lambda: webbrowser.open(map_url)).start()
 
     if not args.no_open:
         threading.Timer(0.5, lambda: webbrowser.open(url)).start()
@@ -291,6 +495,8 @@ def main():
         server.serve_forever()
     except KeyboardInterrupt:
         print("\nShutting down.", file=sys.stderr)
+        if map_server:
+            map_server.shutdown()
         server.shutdown()
 
 
