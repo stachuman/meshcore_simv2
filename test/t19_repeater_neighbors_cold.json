@@ -1,0 +1,49 @@
+{
+  "_name": "t19_repeater_neighbors_cold",
+  "_desc": "Cold start: repeaters discover neighbors via explicit advert exchange",
+  "simulation": {
+    "duration_ms": 90000,
+    "step_ms": 5,
+    "warmup_ms": 5000
+  },
+  "nodes": [
+    { "name": "r1", "role": "repeater" },
+    { "name": "r2", "role": "repeater" },
+    { "name": "r3", "role": "repeater" },
+    { "name": "r4", "role": "repeater" }
+  ],
+  "topology": {
+    "links": [
+      { "from": "r1", "to": "r2", "snr": 8.0, "rssi": -80.0, "bidir": true },
+      { "from": "r2", "to": "r3", "snr": 8.0, "rssi": -80.0, "bidir": true },
+      { "from": "r3", "to": "r4", "snr": 8.0, "rssi": -80.0, "bidir": true }
+    ]
+  },
+  "commands": [
+    { "at_ms":  6000, "node": "r1", "command": "advert" },
+    { "at_ms": 10000, "node": "r2", "command": "advert" },
+    { "at_ms": 14000, "node": "r3", "command": "advert" },
+    { "at_ms": 18000, "node": "r4", "command": "advert" },
+
+    { "at_ms": 24000, "node": "r1", "command": "advert" },
+    { "at_ms": 28000, "node": "r2", "command": "advert" },
+    { "at_ms": 32000, "node": "r3", "command": "advert" },
+    { "at_ms": 36000, "node": "r4", "command": "advert" },
+
+    { "at_ms": 42000, "node": "r1", "command": "advert" },
+    { "at_ms": 46000, "node": "r2", "command": "advert" },
+    { "at_ms": 50000, "node": "r3", "command": "advert" },
+    { "at_ms": 54000, "node": "r4", "command": "advert" },
+
+    { "at_ms": 70000, "node": "r1", "command": "neighbors" },
+    { "at_ms": 70000, "node": "r2", "command": "neighbors" },
+    { "at_ms": 70000, "node": "r3", "command": "neighbors" },
+    { "at_ms": 70000, "node": "r4", "command": "neighbors" }
+  ],
+  "expect": [
+    { "type": "cmd_reply_not_contains", "node": "r1", "command": "neighbors", "value": "-none-" },
+    { "type": "cmd_reply_not_contains", "node": "r2", "command": "neighbors", "value": "-none-" },
+    { "type": "cmd_reply_not_contains", "node": "r3", "command": "neighbors", "value": "-none-" },
+    { "type": "cmd_reply_not_contains", "node": "r4", "command": "neighbors", "value": "-none-" }
+  ]
+}

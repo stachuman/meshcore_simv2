@@ -502,73 +502,78 @@ void Orchestrator::injectReplays(unsigned long current_ms) {
 }
 
 void Orchestrator::hotStart() {
-    const unsigned long SETTLE_MS = _hot_start_settle_ms;
     int n = (int)_nodes.size();
 
-    // Phase 1: Collect advert bytes from all nodes via exportSelfAdvert().
-    // No flood traffic is triggered — just packet serialization.
-    struct AdvertInfo {
-        int idx;
-        NodeRole role;
-        std::vector<uint8_t> data;
-    };
-    std::vector<AdvertInfo> adverts;
+    // Collision-free advert exchange: trigger real advert commands on each node,
+    // staggered 2s apart (Dispatcher needs ~1500ms), then run a collision-free
+    // simulation loop with instant delivery (no physics, no event logging).
+    // This lets MeshCore naturally populate neighbor/contact tables via its own
+    // flood routing, including multi-hop propagation.
+    //
+    // Companion adverts need special handling: repeaters don't forward them
+    // (Mesh::allowPacketForward returns false for non-flood packets), so we
+    // inject companion adverts directly to all other companions.
 
-    for (int i = 0; i < n; i++) {
-        _nodes[i]->activate();
-        auto bytes = _nodes[i]->mesh->exportSelfAdvert();
-        if (!bytes.empty()) {
-            adverts.push_back({i, _nodes[i]->role, std::move(bytes)});
-        }
-    }
-
-    // Phase 2: Direct injection into radio queues.
-    //  - Companion advert → all other companions (can't discover via mesh)
-    //  - Any advert → direct link neighbors (0-hop)
-    for (auto& adv : adverts) {
-        for (int recv = 0; recv < n; recv++) {
-            if (recv == adv.idx) continue;
-
-            bool deliver = false;
-            float snr = 10.0f, rssi = -70.0f;
-
-            // Companion → all other companions
-            if (adv.role == NodeRole::Companion && _nodes[recv]->role == NodeRole::Companion) {
-                deliver = true;
-            }
-
-            // Any node → direct link neighbors
-            LinkParams lp;
-            if (_link_model->getLink(adv.idx, recv, lp)) {
-                deliver = true;
-                snr = lp.snr;
-                rssi = lp.rssi;
-            }
-
-            if (deliver) {
-                _nodes[recv]->activate();
-                _nodes[recv]->radio.enqueue(
-                    adv.data.data(), (int)adv.data.size(), snr, rssi);
-            }
-        }
-    }
+    const unsigned long ADVERT_SPACING_MS = 2000;
+    const unsigned long ADVERT_PHASE_MS = ADVERT_SPACING_MS * n;
+    const unsigned long SETTLE_MS = _hot_start_settle_ms;
+    const unsigned long TOTAL_MS = ADVERT_PHASE_MS + SETTLE_MS;
 
     if (_verbose) {
-        fprintf(stderr, "[hot-start] injected %d adverts, settling for %lums\n",
-                (int)adverts.size(), SETTLE_MS);
+        fprintf(stderr, "[hot-start] collision-free advert exchange: %d nodes, "
+                "%lums advert phase + %lums settle\n", n, ADVERT_PHASE_MS, SETTLE_MS);
     }
 
-    // Phase 3: Settle — run loop() with all TX suppressed.
-    // Nodes process injected adverts and populate contact/neighbor tables.
-    // Any TX generated (re-floods, periodic timers) is discarded.
-    for (unsigned long ms = 0; ms < SETTLE_MS; ms += _step_ms) {
+    // Direct companion→companion advert injection (repeaters won't forward these)
+    for (int i = 0; i < n; i++) {
+        if (_nodes[i]->role != NodeRole::Companion) continue;
+        _nodes[i]->activate();
+        auto bytes = _nodes[i]->mesh->exportSelfAdvert();
+        if (bytes.empty()) continue;
+        for (int j = 0; j < n; j++) {
+            if (j == i || _nodes[j]->role != NodeRole::Companion) continue;
+            _nodes[j]->activate();
+            _nodes[j]->radio.enqueue(bytes.data(), (int)bytes.size(), 10.0f, -70.0f);
+        }
+    }
+
+    for (unsigned long ms = 0; ms < TOTAL_MS; ms += _step_ms) {
+        // Trigger advert on each node at its scheduled time
+        int advert_idx = (int)(ms / ADVERT_SPACING_MS);
+        if (advert_idx < n && ms == (unsigned long)advert_idx * ADVERT_SPACING_MS) {
+            _nodes[advert_idx]->activate();
+            uint32_t ts = _nodes[advert_idx]->own_clock.getCurrentTime();
+            _nodes[advert_idx]->mesh->handleCommand(ts, "advert");
+            if (_verbose) {
+                fprintf(stderr, "[hot-start] %8.3fs advert on %s\n",
+                        ms / 1000.0, _nodes[advert_idx]->name.c_str());
+            }
+        }
+
+        // Run all node loops
         for (auto& node : _nodes) {
             node->activate();
             node->mesh->loop();
         }
-        for (auto& node : _nodes) {
-            node->pending_tx.clear();
+
+        // Collision-free instant delivery (no stats, no NDJSON logging)
+        for (int sender = 0; sender < n; sender++) {
+            auto& tx_list = _nodes[sender]->pending_tx;
+            for (auto& cap : tx_list) {
+                for (int receiver = 0; receiver < n; receiver++) {
+                    if (receiver == sender) continue;
+                    LinkParams lp;
+                    if (_link_model->getLink(sender, receiver, lp)) {
+                        _nodes[receiver]->activate();
+                        _nodes[receiver]->radio.enqueue(
+                            cap.data.data(), (int)cap.data.size(), lp.snr, lp.rssi);
+                    }
+                }
+            }
+            tx_list.clear();
         }
+
+        // Advance clocks
         _clock.advanceMillis(_step_ms);
         for (auto& node : _nodes) {
             node->own_clock.advanceMillis(_step_ms);

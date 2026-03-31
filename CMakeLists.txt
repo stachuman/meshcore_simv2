@@ -3,6 +3,10 @@ project(meshcore_real_sim LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_C_STANDARD 11)
 
+# MeshCore source directory — override with -DMESHCORE_DIR=/path/to/fork
+set(MESHCORE_DIR "${CMAKE_SOURCE_DIR}/MeshCore" CACHE PATH "Path to MeshCore source tree")
+message(STATUS "Using MeshCore from: ${MESHCORE_DIR}")
+
 # Find OpenSSL
 find_package(OpenSSL REQUIRED)
 
@@ -28,9 +32,9 @@ set(COMMON_INCLUDES
     ${CMAKE_SOURCE_DIR}/shims/lib_shim
     ${CMAKE_SOURCE_DIR}/shims/crypto_shim
     ${CMAKE_SOURCE_DIR}/shims/platform_shim
-    ${CMAKE_SOURCE_DIR}/MeshCore/src
-    ${CMAKE_SOURCE_DIR}/MeshCore/src/helpers
-    ${CMAKE_SOURCE_DIR}/MeshCore/lib/ed25519
+    ${MESHCORE_DIR}/src
+    ${MESHCORE_DIR}/src/helpers
+    ${MESHCORE_DIR}/lib/ed25519
 )
 
 # ---- Shim sources (shared by both binaries) ----
@@ -49,30 +53,30 @@ set(SHIM_SOURCES
 
 # ---- MeshCore sources (shared by both binaries) ----
 set(MESHCORE_SOURCES
-    ${CMAKE_SOURCE_DIR}/MeshCore/src/Packet.cpp
-    ${CMAKE_SOURCE_DIR}/MeshCore/src/Dispatcher.cpp
-    ${CMAKE_SOURCE_DIR}/MeshCore/src/Mesh.cpp
-    ${CMAKE_SOURCE_DIR}/MeshCore/src/Utils.cpp
-    ${CMAKE_SOURCE_DIR}/MeshCore/src/Identity.cpp
-    ${CMAKE_SOURCE_DIR}/MeshCore/src/helpers/StaticPoolPacketManager.cpp
-    ${CMAKE_SOURCE_DIR}/MeshCore/src/helpers/BaseChatMesh.cpp
-    ${CMAKE_SOURCE_DIR}/MeshCore/src/helpers/TxtDataHelpers.cpp
-    ${CMAKE_SOURCE_DIR}/MeshCore/src/helpers/AdvertDataHelpers.cpp
-    ${CMAKE_SOURCE_DIR}/MeshCore/src/helpers/IdentityStore.cpp
-    ${CMAKE_SOURCE_DIR}/MeshCore/src/helpers/TransportKeyStore.cpp
+    ${MESHCORE_DIR}/src/Packet.cpp
+    ${MESHCORE_DIR}/src/Dispatcher.cpp
+    ${MESHCORE_DIR}/src/Mesh.cpp
+    ${MESHCORE_DIR}/src/Utils.cpp
+    ${MESHCORE_DIR}/src/Identity.cpp
+    ${MESHCORE_DIR}/src/helpers/StaticPoolPacketManager.cpp
+    ${MESHCORE_DIR}/src/helpers/BaseChatMesh.cpp
+    ${MESHCORE_DIR}/src/helpers/TxtDataHelpers.cpp
+    ${MESHCORE_DIR}/src/helpers/AdvertDataHelpers.cpp
+    ${MESHCORE_DIR}/src/helpers/IdentityStore.cpp
+    ${MESHCORE_DIR}/src/helpers/TransportKeyStore.cpp
 )
 
 # ---- ed25519 library (C sources, excluding seed.c) ----
 set(ED25519_SOURCES
-    ${CMAKE_SOURCE_DIR}/MeshCore/lib/ed25519/add_scalar.c
-    ${CMAKE_SOURCE_DIR}/MeshCore/lib/ed25519/keypair.c
-    ${CMAKE_SOURCE_DIR}/MeshCore/lib/ed25519/sha512.c
-    ${CMAKE_SOURCE_DIR}/MeshCore/lib/ed25519/sc.c
-    ${CMAKE_SOURCE_DIR}/MeshCore/lib/ed25519/ge.c
-    ${CMAKE_SOURCE_DIR}/MeshCore/lib/ed25519/fe.c
-    ${CMAKE_SOURCE_DIR}/MeshCore/lib/ed25519/key_exchange.c
-    ${CMAKE_SOURCE_DIR}/MeshCore/lib/ed25519/verify.c
-    ${CMAKE_SOURCE_DIR}/MeshCore/lib/ed25519/sign.c
+    ${MESHCORE_DIR}/lib/ed25519/add_scalar.c
+    ${MESHCORE_DIR}/lib/ed25519/keypair.c
+    ${MESHCORE_DIR}/lib/ed25519/sha512.c
+    ${MESHCORE_DIR}/lib/ed25519/sc.c
+    ${MESHCORE_DIR}/lib/ed25519/ge.c
+    ${MESHCORE_DIR}/lib/ed25519/fe.c
+    ${MESHCORE_DIR}/lib/ed25519/key_exchange.c
+    ${MESHCORE_DIR}/lib/ed25519/verify.c
+    ${MESHCORE_DIR}/lib/ed25519/sign.c
 )
 
 # ---- Subdirectories ----

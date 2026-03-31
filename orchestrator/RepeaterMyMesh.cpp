@@ -2,5 +2,5 @@
 // This translation unit sees ONLY the repeater's MyMesh/NodePrefs.
 
 #define MyMesh RepeaterMyMesh
-#include "../MeshCore/examples/simple_repeater/MyMesh.cpp"
+#include "MyMesh.cpp"  // resolved via include path (MESHCORE_DIR/examples/simple_repeater)
 #undef MyMesh

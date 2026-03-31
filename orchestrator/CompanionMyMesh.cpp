@@ -2,5 +2,5 @@
 // This translation unit sees ONLY the companion's MyMesh/NodePrefs.
 
 #define MyMesh CompanionMyMesh
-#include "../MeshCore/examples/companion_radio/MyMesh.cpp"
+#include "MyMesh.cpp"  // resolved via include path (MESHCORE_DIR/examples/companion_radio)
 #undef MyMesh

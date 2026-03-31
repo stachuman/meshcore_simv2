@@ -4,5 +4,5 @@
 // Only include this in CompanionNode.cpp and CompanionMyMesh.cpp.
 
 #define MyMesh CompanionMyMesh
-#include "../MeshCore/examples/companion_radio/MyMesh.h"
+#include "MyMesh.h"  // resolved via include path (MESHCORE_DIR/examples/companion_radio)
 #undef MyMesh

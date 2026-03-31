@@ -4,5 +4,5 @@
 // Only include this in RepeaterNode.cpp and RepeaterMyMesh.cpp.
 
 #define MyMesh RepeaterMyMesh
-#include "../MeshCore/examples/simple_repeater/MyMesh.h"
+#include "MyMesh.h"  // resolved via include path (MESHCORE_DIR/examples/simple_repeater)
 #undef MyMesh

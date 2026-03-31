@@ -36,15 +36,32 @@ _SNR_FLOOR = -12.0          # LoRa demodulation floor (dB)
 _MAX_GAP_KM = 30.0          # max practical LoRa range (km)
 _DEFAULT_SIGMA = 8.0        # dB shadow fading
 _MIN_EDGES_FOR_FIT = 5      # min measured edges for model fitting
-_MAX_GOOD_LINKS = 3         # cap SNR>0 edges/node
-_MAX_EDGES_PER_NODE = 12    # hard cap total edges/node
+_MAX_GOOD_LINKS = 2         # cap SNR>0 edges/node
+_MAX_EDGES_PER_NODE = 8     # hard cap total edges/node
 _MAX_RANGE_FACTOR = 1.5     # auto max range = 1.5x max measured
 _DEFAULT_NOISE_FLOOR = -111 # dBm for RSSI computation
+_MAX_LINK_KM = 80.0         # max distance for measured edges (km)
+
+# SNR-to-loss logistic sigmoid parameters
+_LOSS_SNR_MID = -6.0        # SNR at 50% loss (midpoint of sigmoid)
+_LOSS_STEEPNESS = 0.8       # steepness of sigmoid curve
 
 # Fallback propagation model (log-distance path loss)
 _SNR_REF = 10.0             # dB at reference distance
 _D_REF_KM = 1.0             # reference distance in km
 _PATH_LOSS_N = 3.0          # path loss exponent
+
+
+# ---------------------------------------------------------------------------
+# SNR-to-loss mapping
+# ---------------------------------------------------------------------------
+
+def snr_to_loss(snr_db: float) -> float:
+    """Map SNR to packet loss probability via logistic sigmoid.
+
+    Links with high SNR get ~0 loss, links near the demod floor get high loss.
+    """
+    return round(1.0 / (1.0 + math.exp(_LOSS_STEEPNESS * (snr_db - _LOSS_SNR_MID))), 4)
 
 
 # ---------------------------------------------------------------------------
@@ -349,6 +366,105 @@ def validate_coordinates(
 
 
 # ---------------------------------------------------------------------------
+# Co-located node deduplication
+# ---------------------------------------------------------------------------
+
+def dedup_colocated(
+    nodes_in: dict,
+    edges_in: list,
+    dedup_km: float,
+    verbose: bool = False,
+) -> tuple[dict, list]:
+    """Merge co-located nodes (within dedup_km).
+
+    Keeps the node with more edges, redirects the other's edges to the
+    survivor. Returns (modified nodes_in, modified edges_in).
+    """
+    if dedup_km <= 0:
+        return nodes_in, edges_in
+
+    # Count edges per prefix
+    edge_count: dict[str, int] = defaultdict(int)
+    for edge in edges_in:
+        edge_count[edge["from"]] += 1
+        edge_count[edge["to"]] += 1
+
+    # Find co-located pairs among nodes with valid coords
+    prefixes_with_coords = []
+    for prefix, nd in nodes_in.items():
+        if len(prefix) < 8:
+            continue
+        lat = float(nd.get("lat", 0.0))
+        lon = float(nd.get("lon", 0.0))
+        if lat != 0.0 or lon != 0.0:
+            prefixes_with_coords.append(prefix)
+
+    prefixes_with_coords.sort()
+
+    # Build merge map: victim -> survivor
+    merge_map: dict[str, str] = {}
+    removed = set()
+
+    for i, p1 in enumerate(prefixes_with_coords):
+        if p1 in removed:
+            continue
+        n1 = nodes_in[p1]
+        lat1 = float(n1.get("lat", 0.0))
+        lon1 = float(n1.get("lon", 0.0))
+
+        for p2 in prefixes_with_coords[i + 1:]:
+            if p2 in removed:
+                continue
+            n2 = nodes_in[p2]
+            lat2 = float(n2.get("lat", 0.0))
+            lon2 = float(n2.get("lon", 0.0))
+
+            dist = haversine_km(lat1, lon1, lat2, lon2)
+            if dist <= dedup_km:
+                # Keep the one with more edges
+                if edge_count[p1] >= edge_count[p2]:
+                    survivor, victim = p1, p2
+                else:
+                    survivor, victim = p2, p1
+                merge_map[victim] = survivor
+                removed.add(victim)
+                if verbose:
+                    name_v = nodes_in[victim].get("name", victim)
+                    name_s = nodes_in[survivor].get("name", survivor)
+                    print(f"  Dedup: merging {victim} ({name_v}) into "
+                          f"{survivor} ({name_s}), dist={dist*1000:.0f}m",
+                          file=sys.stderr)
+
+    if not merge_map:
+        return nodes_in, edges_in
+
+    # Remove victim nodes
+    new_nodes = {p: nd for p, nd in nodes_in.items() if p not in removed}
+
+    # Redirect edges
+    new_edges = []
+    dropped_self = 0
+    for edge in edges_in:
+        e = dict(edge)
+        if e["from"] in merge_map:
+            e["from"] = merge_map[e["from"]]
+        if e["to"] in merge_map:
+            e["to"] = merge_map[e["to"]]
+        # Drop self-loops created by merge
+        if e["from"] == e["to"]:
+            dropped_self += 1
+            continue
+        new_edges.append(e)
+
+    if verbose:
+        print(f"  Dedup: merged {len(merge_map)} nodes, "
+              f"dropped {dropped_self} self-loop edges",
+              file=sys.stderr)
+
+    return new_nodes, new_edges
+
+
+# ---------------------------------------------------------------------------
 # Bidirectional edge merging
 # ---------------------------------------------------------------------------
 
@@ -410,6 +526,11 @@ def merge_bidir_edges(
             if std_max > 0:
                 link["snr_std_dev"] = std_max
 
+            # loss: compute from averaged SNR
+            loss = snr_to_loss(snr_avg)
+            if loss > 0.0001:
+                link["loss"] = loss
+
             merged.append(link)
             n_bidir += 1
         else:
@@ -438,11 +559,13 @@ def fill_gaps(
     prefix_to_name: dict[str, str],
     max_gap_km: float,
     max_good_links: int,
+    max_edges_per_node: int,
     gap_sigma: float | None,
     model_a: float,
     model_b: float,
     sigma: float,
     max_measured_dist: float,
+    max_measured_snr: float,
     verbose: bool = False,
 ) -> list[dict]:
     """Add estimated edges for unmeasured nearby node pairs.
@@ -522,12 +645,14 @@ def fill_gaps(
     for dist, p1, p2 in all_candidates:
         t1 = total_count.get(p1, 0)
         t2 = total_count.get(p2, 0)
-        if t1 >= _MAX_EDGES_PER_NODE or t2 >= _MAX_EDGES_PER_NODE:
+        if t1 >= max_edges_per_node or t2 >= max_edges_per_node:
             continue
 
-        # Estimate SNR with shadow fading
+        # Estimate SNR with shadow fading, clamped to max observed
         snr_est = model_a + model_b * math.log10(dist) \
             + rng.gauss(0.0, effective_sigma)
+        if max_measured_snr > 0:
+            snr_est = min(snr_est, max_measured_snr)
 
         if snr_est <= _SNR_FLOOR:
             continue
@@ -542,13 +667,18 @@ def fill_gaps(
         # Compute RSSI from noise floor + estimated SNR
         rssi = max(-140.0, min(-20.0, _DEFAULT_NOISE_FLOOR + snr_est))
 
-        new_links.append({
+        new_link = {
             "from": prefix_to_name[p1],
             "to": prefix_to_name[p2],
             "snr": round(snr_est, 2),
             "rssi": round(rssi, 2),
             "bidir": True,
-        })
+            "snr_std_dev": round(effective_sigma, 2),
+        }
+        loss = snr_to_loss(snr_est)
+        if loss > 0.0001:
+            new_link["loss"] = loss
+        new_links.append(new_link)
         edge_set.add(frozenset([p1, p2]))
         total_count[p1] = t1 + 1
         total_count[p2] = t2 + 1
@@ -559,9 +689,11 @@ def fill_gaps(
 
     if verbose:
         print(f"  Gap-fill: {gap_filled} estimated edges added "
-              f"(max {max_good_links} good links/node, "
+              f"(max {max_good_links} good/node, "
+              f"max {max_edges_per_node} total/node, "
               f"max {effective_max_km:.1f} km, "
-              f"SNR floor {_SNR_FLOOR} dB)",
+              f"SNR floor {_SNR_FLOOR} dB"
+              f"{f', SNR cap {max_measured_snr:.1f}' if max_measured_snr > 0 else ''})",
               file=sys.stderr)
 
     return links + new_links
@@ -669,6 +801,26 @@ def convert(args):
     if skipped_prefix and args.verbose:
         print(f"  Skipped {skipped_prefix} stub nodes (short prefix)", file=sys.stderr)
 
+    # --- [1b] Co-located node dedup (--dedup-km) ---
+    if args.dedup_km and args.dedup_km > 0:
+        nodes_in, edges_in = dedup_colocated(
+            nodes_in, edges_in, args.dedup_km, verbose=args.verbose)
+        # Rebuild nodes_out and prefix_to_name after dedup
+        seen_names = {}
+        prefix_to_name = {}
+        nodes_out = []
+        for prefix, nd in nodes_in.items():
+            if len(prefix) < 8:
+                continue
+            raw_name = nd.get("name", prefix)
+            sname = sanitize_name(raw_name, seen_names)
+            prefix_to_name[prefix] = sname
+            node_def = {"name": sname, "role": "repeater"}
+            if "lat" in nd and "lon" in nd:
+                node_def["lat"] = nd["lat"]
+                node_def["lon"] = nd["lon"]
+            nodes_out.append(node_def)
+
     # --- [2] Estimate coordinates (--estimate-coords, default ON) ---
     estimated_coords = {}
     if args.estimate_coords:
@@ -724,6 +876,7 @@ def convert(args):
     total_edges = len(edges_in)
     filtered_edges = 0
     links_out = []
+    max_measured_snr = 0.0  # track max SNR across surviving edges
 
     for edge in edges_in:
         src_prefix = edge["from"]
@@ -753,6 +906,26 @@ def convert(args):
             filtered_edges += 1
             continue
 
+        # Filter by distance (--max-link-km)
+        if args.max_link_km is not None:
+            if src_prefix in nodes_in and dst_prefix in nodes_in:
+                n1 = nodes_in[src_prefix]
+                n2 = nodes_in[dst_prefix]
+                lat1 = float(n1.get("lat", 0.0))
+                lon1 = float(n1.get("lon", 0.0))
+                lat2 = float(n2.get("lat", 0.0))
+                lon2 = float(n2.get("lon", 0.0))
+                if (lat1 != 0.0 or lon1 != 0.0) and (lat2 != 0.0 or lon2 != 0.0):
+                    dist = haversine_km(lat1, lon1, lat2, lon2)
+                    if dist > args.max_link_km:
+                        filtered_edges += 1
+                        if args.verbose:
+                            print(f"  Dropped edge {prefix_to_name.get(src_prefix, src_prefix)}"
+                                  f" -> {prefix_to_name.get(dst_prefix, dst_prefix)}"
+                                  f": {dist:.1f} km > {args.max_link_km} km",
+                                  file=sys.stderr)
+                        continue
+
         # Compute RSSI from receiver noise floor + SNR
         receiver_nf = node_noise_floor.get(dst_prefix, _DEFAULT_NOISE_FLOOR)
         rssi = max(-140.0, min(-20.0, receiver_nf + snr_db))
@@ -773,6 +946,11 @@ def convert(args):
         }
         if snr_std_dev > 0:
             link["snr_std_dev"] = snr_std_dev
+        loss = snr_to_loss(snr_db)
+        if loss > 0.0001:
+            link["loss"] = loss
+        if snr_db > max_measured_snr:
+            max_measured_snr = snr_db
         links_out.append(link)
 
     surviving_edges = total_edges - filtered_edges
@@ -806,11 +984,13 @@ def convert(args):
             links_out, nodes_out, nodes_in, prefix_to_name,
             max_gap_km=args.max_gap_km,
             max_good_links=args.max_good_links,
+            max_edges_per_node=args.max_edges_per_node,
             gap_sigma=args.gap_sigma,
             model_a=model_a,
             model_b=model_b,
             sigma=sigma,
             max_measured_dist=max_measured_dist,
+            max_measured_snr=max_measured_snr,
             verbose=args.verbose,
         )
 
@@ -913,7 +1093,12 @@ def convert(args):
         print(f"Message schedules: {len(msg_schedules)}", file=sys.stderr)
     print(f"Total links in output: {len(links_out)}", file=sys.stderr)
     print(f"Filters: min_snr={args.min_snr}, min_confidence={args.min_confidence}, "
-          f"include_inferred={args.include_inferred}", file=sys.stderr)
+          f"include_inferred={args.include_inferred}, max_link_km={args.max_link_km}", file=sys.stderr)
+    if max_measured_snr > 0:
+        print(f"Max measured SNR: {max_measured_snr:.1f} dB", file=sys.stderr)
+    loss_links = sum(1 for l in links_out if "loss" in l)
+    if loss_links:
+        print(f"Links with loss probability: {loss_links}", file=sys.stderr)
 
     # --- Output ---
     output_str = json.dumps(config, indent=2)
@@ -939,6 +1124,10 @@ def main():
                         help="Drop edges with confidence below this (default: 0.7)")
     parser.add_argument("--include-inferred", action="store_true", default=False,
                         help="Include edges with source='inferred' (default: drop them)")
+    parser.add_argument("--max-link-km", type=float, default=_MAX_LINK_KM,
+                        help=f"Drop measured edges longer than this (default: {_MAX_LINK_KM})")
+    parser.add_argument("--dedup-km", type=float, default=0.0,
+                        help="Merge co-located nodes within this distance in km (default: 0 = off)")
 
     # Coordinate handling
     parser.add_argument("--estimate-coords", action="store_true", default=True,
@@ -961,6 +1150,8 @@ def main():
                         help=f"Max distance for gap-fill (default: {_MAX_GAP_KM})")
     parser.add_argument("--max-good-links", type=int, default=_MAX_GOOD_LINKS,
                         help=f"Max SNR>0 edges per node (default: {_MAX_GOOD_LINKS})")
+    parser.add_argument("--max-edges-per-node", type=int, default=_MAX_EDGES_PER_NODE,
+                        help=f"Hard cap total edges per node (default: {_MAX_EDGES_PER_NODE})")
     parser.add_argument("--gap-sigma", type=float, default=None,
                         help="Override shadow fading sigma (dB)")
 

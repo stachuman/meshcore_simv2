@@ -133,6 +133,25 @@ python3 tools/convert_topology.py simulation/topology.json \
 tools/run_sim.sh /tmp/my_network.json -v
 ```
 
+## Testing Different MeshCore Variants
+
+You can build against a different MeshCore source tree (e.g., a fork or feature branch) by setting `MESHCORE_DIR`:
+
+```bash
+# Clone a fork alongside this repo
+git clone https://github.com/stachuman/MeshCore.git ../MeshCore-stachuman
+
+# Build against the fork in a separate build directory
+cmake -S . -B build-fork -DMESHCORE_DIR=$(pwd)/../MeshCore-stachuman
+cmake --build build-fork
+
+# Both build dirs coexist — run tests against each
+build/orchestrator/orchestrator test/t06_msg_stats.json 2>/dev/null
+build-fork/orchestrator/orchestrator test/t06_msg_stats.json 2>/dev/null
+```
+
+The default (no flag) uses the `MeshCore/` submodule as before.
+
 ## Radio Physics Model
 
 The simulator models realistic LoRa radio behavior:

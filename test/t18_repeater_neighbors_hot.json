@@ -1,0 +1,35 @@
+{
+  "_name": "t18_repeater_neighbors_hot",
+  "_desc": "Hot start: do repeaters discover direct-link neighbors without explicit adverts?",
+  "simulation": {
+    "duration_ms": 15000,
+    "step_ms": 5,
+    "warmup_ms": 5000,
+    "hot_start": true
+  },
+  "nodes": [
+    { "name": "r1", "role": "repeater" },
+    { "name": "r2", "role": "repeater" },
+    { "name": "r3", "role": "repeater" },
+    { "name": "r4", "role": "repeater" }
+  ],
+  "topology": {
+    "links": [
+      { "from": "r1", "to": "r2", "snr": 8.0, "rssi": -80.0, "bidir": true },
+      { "from": "r2", "to": "r3", "snr": 8.0, "rssi": -80.0, "bidir": true },
+      { "from": "r3", "to": "r4", "snr": 8.0, "rssi": -80.0, "bidir": true }
+    ]
+  },
+  "commands": [
+    { "at_ms": 6000, "node": "r1", "command": "neighbors" },
+    { "at_ms": 6000, "node": "r2", "command": "neighbors" },
+    { "at_ms": 6000, "node": "r3", "command": "neighbors" },
+    { "at_ms": 6000, "node": "r4", "command": "neighbors" }
+  ],
+  "expect": [
+    { "type": "cmd_reply_not_contains", "node": "r1", "command": "neighbors", "value": "-none-" },
+    { "type": "cmd_reply_not_contains", "node": "r2", "command": "neighbors", "value": "-none-" },
+    { "type": "cmd_reply_not_contains", "node": "r3", "command": "neighbors", "value": "-none-" },
+    { "type": "cmd_reply_not_contains", "node": "r4", "command": "neighbors", "value": "-none-" }
+  ]
+}

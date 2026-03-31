@@ -6,13 +6,13 @@ add_executable(companion_radio
     ${MESHCORE_SOURCES}
     ${ED25519_SOURCES}
     # Companion-specific MeshCore sources
-    ${CMAKE_SOURCE_DIR}/MeshCore/examples/companion_radio/MyMesh.cpp
-    ${CMAKE_SOURCE_DIR}/MeshCore/examples/companion_radio/DataStore.cpp
+    ${MESHCORE_DIR}/examples/companion_radio/MyMesh.cpp
+    ${MESHCORE_DIR}/examples/companion_radio/DataStore.cpp
 )
 
 target_include_directories(companion_radio PRIVATE
     ${COMMON_INCLUDES}
-    ${CMAKE_SOURCE_DIR}/MeshCore/examples/companion_radio
+    ${MESHCORE_DIR}/examples/companion_radio
 )
 
 target_compile_definitions(companion_radio PRIVATE ${COMMON_DEFS})

@@ -6,15 +6,15 @@ add_executable(simple_repeater
     ${MESHCORE_SOURCES}
     ${ED25519_SOURCES}
     # Repeater-specific MeshCore sources
-    ${CMAKE_SOURCE_DIR}/MeshCore/examples/simple_repeater/MyMesh.cpp
-    ${CMAKE_SOURCE_DIR}/MeshCore/src/helpers/CommonCLI.cpp
-    ${CMAKE_SOURCE_DIR}/MeshCore/src/helpers/ClientACL.cpp
-    ${CMAKE_SOURCE_DIR}/MeshCore/src/helpers/RegionMap.cpp
+    ${MESHCORE_DIR}/examples/simple_repeater/MyMesh.cpp
+    ${MESHCORE_DIR}/src/helpers/CommonCLI.cpp
+    ${MESHCORE_DIR}/src/helpers/ClientACL.cpp
+    ${MESHCORE_DIR}/src/helpers/RegionMap.cpp
 )
 
 target_include_directories(simple_repeater PRIVATE
     ${COMMON_INCLUDES}
-    ${CMAKE_SOURCE_DIR}/MeshCore/examples/simple_repeater
+    ${MESHCORE_DIR}/examples/simple_repeater
 )
 
 target_compile_definitions(simple_repeater PRIVATE ${COMMON_DEFS})
