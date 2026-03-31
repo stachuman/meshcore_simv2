@@ -53,6 +53,7 @@ canvas { display: block; }
         <option value="alpha">Alphabetical</option>
         <option value="lat">By latitude</option>
         <option value="activity">By activity</option>
+        <option value="trace">By trace</option>
     </select>
     <div class="sep"></div>
     <label>Filter:</label>
@@ -129,6 +130,9 @@ const S = {
 
     // Node activity counts (for sorting)
     nodeActivity: {},
+
+    // Saved sort order before trace auto-switch
+    preTraceOrder: null,
 };
 
 const canvas = document.getElementById('canvas');
@@ -207,6 +211,38 @@ function sortNodes() {
         nodes.sort((a, b) => (b.lat || 0) - (a.lat || 0));
     } else if (order === 'activity') {
         nodes.sort((a, b) => (S.nodeActivity[b.name] || 0) - (S.nodeActivity[a.name] || 0));
+    } else if (order === 'trace') {
+        if (S.traceEvents && S.traceEvents.length > 0) {
+            // Build map of node -> earliest appearance time from trace events
+            const earliest = {};
+            for (const ev of S.traceEvents) {
+                const names = [];
+                if (ev.node) names.push(ev.node);
+                if (ev.from) names.push(ev.from);
+                if (ev.to) names.push(ev.to);
+                for (const n of names) {
+                    if (!(n in earliest) || ev.time_ms < earliest[n]) {
+                        earliest[n] = ev.time_ms;
+                    }
+                }
+            }
+            nodes.sort((a, b) => {
+                const aIn = a.name in earliest;
+                const bIn = b.name in earliest;
+                if (aIn && bIn) return earliest[a.name] - earliest[b.name];
+                if (aIn) return -1;
+                if (bIn) return 1;
+                return a.name.localeCompare(b.name);
+            });
+        } else {
+            // No active trace — fall back to role sort
+            nodes.sort((a, b) => {
+                const ca = a.role === 'companion' ? 0 : 1;
+                const cb = b.role === 'companion' ? 0 : 1;
+                if (ca !== cb) return ca - cb;
+                return a.name.localeCompare(b.name);
+            });
+        }
     }
 
     // Apply filter
@@ -936,7 +972,11 @@ canvas.addEventListener('click', async (e) => {
 
     const hit = findEventAt(e.offsetX, e.offsetY);
     if (hit) {
-        if (S.traceMode && hit.pkt) {
+        if (hit.pkt) {
+            if (!S.traceMode) {
+                S.traceMode = true;
+                document.getElementById('btn-trace-mode').classList.add('active');
+            }
             await tracePkt(hit.pkt);
         } else {
             showEventDetail(hit);
@@ -1110,6 +1150,14 @@ async function tracePkt(pkt) {
     S.traceEvents = allEvents;
     S.tracePkts = allPkts;  // all pkt hashes in the relay chain
 
+    // Auto-switch to trace sort order
+    const orderSelect = document.getElementById('node-order');
+    if (orderSelect.value !== 'trace') {
+        S.preTraceOrder = orderSelect.value;
+        orderSelect.value = 'trace';
+    }
+    sortNodes();
+
     showDeepTraceDetail(data);
     render();
 }
@@ -1119,6 +1167,15 @@ function clearTrace() {
     S.traceEvents = [];
     S.tracePkts = null;
     S.deepTrace = null;
+
+    // Restore previous sort order if we auto-switched to trace
+    const orderSelect = document.getElementById('node-order');
+    if (orderSelect.value === 'trace' && S.preTraceOrder) {
+        orderSelect.value = S.preTraceOrder;
+    }
+    S.preTraceOrder = null;
+    sortNodes();
+
     render();
 }
 
