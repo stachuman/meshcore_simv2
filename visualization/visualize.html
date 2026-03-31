@@ -348,6 +348,8 @@ function render() {
     ctx.rect(S.labelW, S.headerH, w - S.labelW, h - S.headerH);
     ctx.clip();
 
+    drawWarmupOverlay(h);
+
     if (S.densityCache) {
         drawDensity();
     } else {
@@ -421,6 +423,41 @@ function drawTimeAxis(contentW) {
         ctx.fillStyle = COLORS.time_text;
         ctx.fillText(formatTime(t), x, 4);
     }
+}
+
+function drawWarmupOverlay(h) {
+    if (!S.meta || !S.meta.sim) return;
+    const warmup = S.meta.sim.warmup_ms || 0;
+    if (warmup <= 0) return;
+    if (warmup <= S.viewFrom) return;  // warmup region not visible
+
+    const x0 = Math.max(msToX(0), S.labelW);
+    const x1 = Math.min(msToX(warmup), canvas.width);
+    if (x1 <= x0) return;
+
+    // Semi-transparent overlay
+    ctx.fillStyle = 'rgba(40, 60, 120, 0.15)';
+    ctx.fillRect(x0, 0, x1 - x0, h);
+
+    // Dashed vertical line at warmup boundary
+    ctx.strokeStyle = 'rgba(100, 130, 200, 0.6)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([5, 4]);
+    ctx.beginPath();
+    ctx.moveTo(x1, 0);
+    ctx.lineTo(x1, h);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.lineWidth = 1;
+
+    // Label at top
+    const label = S.meta.sim.hot_start ? 'warmup / hot-start' : 'warmup';
+    ctx.font = '10px monospace';
+    ctx.fillStyle = 'rgba(140, 170, 240, 0.8)';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    const labelX = Math.max(x0 + 4, x1 - ctx.measureText(label).width - 6);
+    ctx.fillText(label, labelX, 4);
 }
 
 function drawDensity() {

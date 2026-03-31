@@ -2,6 +2,10 @@
 
 A single-process network simulator for [MeshCore](https://github.com/ripplebiz/MeshCore) LoRa mesh networks. Runs unmodified MeshCore firmware code against a configurable virtual radio layer with realistic RF propagation, collisions, and half-duplex constraints.
 
+![Swim-lane event visualization](main.png)
+
+![Geographic topology map](map.png)
+
 ## Building
 
 Requires CMake 3.16+, a C++17 compiler, and OpenSSL.

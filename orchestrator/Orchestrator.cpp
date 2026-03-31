@@ -589,7 +589,7 @@ bool Orchestrator::run() {
     sim_clock_set_global(&_clock);
 
     int n = (int)_nodes.size();
-    EventLog::simStart(0, n, _step_ms);
+    EventLog::simStart(0, n, _step_ms, _warmup_ms, _hot_start);
     if (_verbose) {
         fprintf(stderr, "[%8.3fs] SIM START: %d nodes, step=%dms, duration=%.1fs, warmup=%.1fs\n",
                 0.0, n, _step_ms, _duration_ms / 1000.0, _warmup_ms / 1000.0);

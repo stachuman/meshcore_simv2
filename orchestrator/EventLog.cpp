@@ -80,9 +80,10 @@ void packetHashHex(char out[9], const uint8_t* data, int len) {
     out[8] = '\0';
 }
 
-void simStart(unsigned long time_ms, int n_nodes, int step_ms) {
-    fprintf(stdout, "{\"type\":\"sim_start\",\"time_ms\":%lu,\"n_nodes\":%d,\"step_ms\":%d}\n",
-            time_ms, n_nodes, step_ms);
+void simStart(unsigned long time_ms, int n_nodes, int step_ms,
+              unsigned long warmup_ms, bool hot_start) {
+    fprintf(stdout, "{\"type\":\"sim_start\",\"time_ms\":%lu,\"n_nodes\":%d,\"step_ms\":%d,\"warmup_ms\":%lu,\"hot_start\":%s}\n",
+            time_ms, n_nodes, step_ms, warmup_ms, hot_start ? "true" : "false");
 }
 
 void simEnd(unsigned long time_ms) {
