@@ -53,7 +53,15 @@ public:
 
     void onChannelMessageRecv(const mesh::GroupChannel& channel, mesh::Packet* pkt,
                               uint32_t timestamp, const char* text) override {
-        if (_stats) _stats->recv_group++;
+        if (_stats) {
+            _stats->recv_group++;
+            // Parse sender name from "sender: msg" format (set by sendGroupMessage)
+            const char* sep = strstr(text, ": ");
+            if (sep) {
+                std::string sender(text, sep - text);
+                _stats->recv_group_by_sender[sender]++;
+            }
+        }
         CompanionMyMesh::onChannelMessageRecv(channel, pkt, timestamp, text);
     }
 
@@ -138,6 +146,20 @@ public:
                 return "advert sent (flood)";
             }
             return "ERROR: createSelfAdvert failed";
+        }
+        if (strncmp(cmd, "msgc ", 5) == 0) {
+            const char* text = cmd + 5;
+            ChannelDetails ch;
+            if (!_mesh.getChannel(0, ch))
+                return "ERROR: no public channel configured";
+            const char* sender_name = _mesh.getNodeName();
+            bool ok = _mesh.sendGroupMessage(timestamp, ch.channel,
+                                             sender_name, text, strlen(text));
+            if (ok) {
+                msg_stats.sent_group++;
+                return "channel msg sent (flood)";
+            }
+            return "ERROR: sendGroupMessage failed";
         }
         if (strncmp(cmd, "msga ", 5) == 0) {
             const char* rest = cmd + 5;

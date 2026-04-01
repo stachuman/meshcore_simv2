@@ -88,5 +88,5 @@ struct NodeContext {
     void activate();
 
     // Construct mesh (repeater or companion based on role), load identity, begin()
-    void initMesh();
+    void initMesh(uint64_t global_seed);
 };

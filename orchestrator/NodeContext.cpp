@@ -41,11 +41,18 @@ void NodeContext::activate() {
     sim_clock_set_global(&own_clock);  // millis() returns this node's time
 }
 
-void NodeContext::initMesh() {
+void NodeContext::initMesh(uint64_t global_seed) {
     activate();
 
-    // Seed RNG deterministically from node name (shared by both roles)
-    rng.seed((const uint8_t*)name.c_str(), name.size());
+    // Seed RNG deterministically from global seed XOR'd with node name hash.
+    // Different global seeds produce different per-node sequences;
+    // same-name nodes still differ from each other.
+    uint64_t name_hash = 0xcbf29ce484222325ULL;  // FNV-1a offset basis
+    for (char c : name) {
+        name_hash ^= static_cast<uint8_t>(c);
+        name_hash *= 0x100000001b3ULL;  // FNV-1a prime
+    }
+    rng.seed(name_hash ^ global_seed);
 
     if (role == NodeRole::Companion) {
         mesh = createCompanionMesh(*this);

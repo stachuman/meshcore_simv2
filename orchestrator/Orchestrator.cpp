@@ -29,6 +29,8 @@ void Orchestrator::configure(const OrchestratorConfig& cfg) {
     _step_ms = cfg.step_ms;
     _warmup_ms = cfg.warmup_ms;
     _verbose = cfg.verbose;
+    _seed = cfg.seed;
+    _rng.seed(static_cast<std::mt19937::result_type>(cfg.seed));
     _clock = VirtualClock(cfg.epoch_start);
 
     _pending_replays.clear();
@@ -69,7 +71,6 @@ void Orchestrator::configure(const OrchestratorConfig& cfg) {
     }
 
     _hot_start = cfg.hot_start;
-    _hot_start_settle_ms = cfg.hot_start_settle_ms;
 
     // Build scheduled commands (sorted by time)
     for (const auto& cd : cfg.commands) {
@@ -513,15 +514,19 @@ void Orchestrator::hotStart() {
     // Companion adverts need special handling: repeaters don't forward them
     // (Mesh::allowPacketForward returns false for non-flood packets), so we
     // inject companion adverts directly to all other companions.
+    //
+    // The loop runs until quiescence: after all adverts are triggered, we keep
+    // running until no node transmits for QUIESCE_MS. This auto-adapts to any
+    // network size/topology without manual settle tuning.
 
     const unsigned long ADVERT_SPACING_MS = 2000;
     const unsigned long ADVERT_PHASE_MS = ADVERT_SPACING_MS * n;
-    const unsigned long SETTLE_MS = _hot_start_settle_ms;
-    const unsigned long TOTAL_MS = ADVERT_PHASE_MS + SETTLE_MS;
+    const unsigned long QUIESCE_MS = 5000;  // no TX for this long = settled
+    const unsigned long MAX_SETTLE_MS = 120000;  // safety cap on settle phase
 
     if (_verbose) {
         fprintf(stderr, "[hot-start] collision-free advert exchange: %d nodes, "
-                "%lums advert phase + %lums settle\n", n, ADVERT_PHASE_MS, SETTLE_MS);
+                "%lums advert phase, quiesce=%lums\n", n, ADVERT_PHASE_MS, QUIESCE_MS);
     }
 
     // Direct companion→companion advert injection (repeaters won't forward these)
@@ -537,16 +542,29 @@ void Orchestrator::hotStart() {
         }
     }
 
-    for (unsigned long ms = 0; ms < TOTAL_MS; ms += _step_ms) {
+    unsigned long ms = 0;
+    unsigned long last_tx_ms = 0;
+    bool adverts_done = false;
+
+    while (true) {
         // Trigger advert on each node at its scheduled time
-        int advert_idx = (int)(ms / ADVERT_SPACING_MS);
-        if (advert_idx < n && ms == (unsigned long)advert_idx * ADVERT_SPACING_MS) {
-            _nodes[advert_idx]->activate();
-            uint32_t ts = _nodes[advert_idx]->own_clock.getCurrentTime();
-            _nodes[advert_idx]->mesh->handleCommand(ts, "advert");
+        if (ms < ADVERT_PHASE_MS) {
+            int advert_idx = (int)(ms / ADVERT_SPACING_MS);
+            if (advert_idx < n && ms == (unsigned long)advert_idx * ADVERT_SPACING_MS) {
+                _nodes[advert_idx]->activate();
+                uint32_t ts = _nodes[advert_idx]->own_clock.getCurrentTime();
+                _nodes[advert_idx]->mesh->handleCommand(ts, "advert");
+                last_tx_ms = ms;
+                if (_verbose) {
+                    fprintf(stderr, "[hot-start] %8.3fs advert on %s\n",
+                            ms / 1000.0, _nodes[advert_idx]->name.c_str());
+                }
+            }
+        } else if (!adverts_done) {
+            adverts_done = true;
             if (_verbose) {
-                fprintf(stderr, "[hot-start] %8.3fs advert on %s\n",
-                        ms / 1000.0, _nodes[advert_idx]->name.c_str());
+                fprintf(stderr, "[hot-start] %8.3fs all adverts triggered, waiting for quiescence\n",
+                        ms / 1000.0);
             }
         }
 
@@ -557,8 +575,10 @@ void Orchestrator::hotStart() {
         }
 
         // Collision-free instant delivery (no stats, no NDJSON logging)
+        bool any_tx = false;
         for (int sender = 0; sender < n; sender++) {
             auto& tx_list = _nodes[sender]->pending_tx;
+            if (!tx_list.empty()) any_tx = true;
             for (auto& cap : tx_list) {
                 for (int receiver = 0; receiver < n; receiver++) {
                     if (receiver == sender) continue;
@@ -573,15 +593,30 @@ void Orchestrator::hotStart() {
             tx_list.clear();
         }
 
+        if (any_tx) last_tx_ms = ms;
+
         // Advance clocks
         _clock.advanceMillis(_step_ms);
         for (auto& node : _nodes) {
             node->own_clock.advanceMillis(_step_ms);
         }
+        ms += _step_ms;
+
+        // Check quiescence: all adverts triggered + no TX for QUIESCE_MS
+        if (adverts_done && (ms - last_tx_ms) >= QUIESCE_MS) break;
+        // Safety cap: don't settle forever
+        if (adverts_done && (ms - ADVERT_PHASE_MS) >= MAX_SETTLE_MS) {
+            if (_verbose) {
+                fprintf(stderr, "[hot-start] %8.3fs settle capped at %lums\n",
+                        ms / 1000.0, MAX_SETTLE_MS);
+            }
+            break;
+        }
     }
 
     if (_verbose) {
-        fprintf(stderr, "[hot-start] complete\n");
+        fprintf(stderr, "[hot-start] complete at %.3fs (advert phase: %.1fs, settle: %.1fs)\n",
+                ms / 1000.0, ADVERT_PHASE_MS / 1000.0, (ms - ADVERT_PHASE_MS) / 1000.0);
     }
 }
 
@@ -597,7 +632,7 @@ bool Orchestrator::run() {
 
     // Initialize all nodes
     for (auto& node : _nodes) {
-        node->initMesh();
+        node->initMesh(_seed);
         EventLog::nodeReady(0, node->name.c_str(),
                             node->mesh->pubKey(), 32,
                             node->has_location, node->lat, node->lon);
@@ -662,9 +697,12 @@ bool Orchestrator::run() {
     deliverReceptions(current_ms);
 
     // Emit per-node message stats (JSON to stdout)
-    int total_sent = 0, total_recv = 0;
+    int total_direct_sent = 0, total_direct_recv = 0;
+    int total_group_sent = 0, total_group_recv = 0;
+    int num_companions = 0;
     for (auto& node : _nodes) {
         if (node->role != NodeRole::Companion) continue;
+        num_companions++;
         auto& s = node->mesh->msg_stats;
         printf("{\"type\":\"node_stats\",\"node\":\"%s\""
                ",\"sent_flood\":%d,\"sent_direct\":%d,\"sent_group\":%d"
@@ -692,13 +730,25 @@ bool Orchestrator::run() {
             }
             printf("}");
         }
+        if (!s.recv_group_by_sender.empty()) {
+            printf(",\"recv_group_by_sender\":{");
+            bool first = true;
+            for (auto& kv : s.recv_group_by_sender) {
+                if (!first) printf(",");
+                printf("\"%s\":%d", kv.first.c_str(), kv.second);
+                first = false;
+            }
+            printf("}");
+        }
         if (s.acks_pending > 0) {
             printf(",\"acks_pending\":%d,\"acks_received\":%d",
                    s.acks_pending, s.acks_received);
         }
         printf("}\n");
-        total_sent += s.totalSent();
-        total_recv += s.totalRecvDirect() + s.recv_group;
+        total_direct_sent += s.sent_flood + s.sent_direct;
+        total_direct_recv += s.totalRecvDirect();
+        total_group_sent += s.sent_group;
+        total_group_recv += s.recv_group;
     }
 
     EventLog::simEnd(current_ms);
@@ -739,7 +789,7 @@ bool Orchestrator::run() {
             fprintf(stderr, "\n");
         }
     }
-    if (total_sent == 0) fprintf(stderr, "  (none)\n");
+    if (total_direct_sent + total_group_sent == 0) fprintf(stderr, "  (none)\n");
 
     // Per-companion received, broken down by sender
     fprintf(stderr, "\nReceived messages:\n");
@@ -760,15 +810,23 @@ bool Orchestrator::run() {
         }
         fprintf(stderr, "\n");
     }
-    if (total_recv == 0) fprintf(stderr, "  (none)\n");
+    if (total_direct_recv + total_group_recv == 0) fprintf(stderr, "  (none)\n");
 
-    // Delivery summary
-    if (total_sent > 0) {
+    // Delivery summary — direct messages
+    if (total_direct_sent > 0) {
         fprintf(stderr, "\nDelivery: %d/%d messages (%.0f%%)\n",
-                total_recv, total_sent,
-                total_sent > 0 ? total_recv * 100.0 / total_sent : 0.0);
-    } else {
+                total_direct_recv, total_direct_sent,
+                total_direct_recv * 100.0 / total_direct_sent);
+    } else if (total_group_sent == 0) {
         fprintf(stderr, "\nTotal: 0 sent, 0 received\n");
+    }
+
+    // Channel delivery — each sent msg should reach (num_companions - 1) others
+    if (total_group_sent > 0 && num_companions > 1) {
+        int expected_receptions = total_group_sent * (num_companions - 1);
+        fprintf(stderr, "Channel: %d/%d receptions (%.0f%%)\n",
+                total_group_recv, expected_receptions,
+                total_group_recv * 100.0 / expected_receptions);
     }
 
     // Ack summary (only if any acks were tracked)

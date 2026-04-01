@@ -5,12 +5,13 @@
     "duration_ms": 20000,
     "step_ms": 5,
     "warmup_ms": 5000,
-    "hot_start": true
+    "hot_start": true,
+    "radio": { "sf": 8, "bw": 62500, "cr": 4 }
   },
   "nodes": [
-    { "name": "alice", "role": "companion", "sf": 8, "bw": 62500, "cr": 4 },
-    { "name": "relay1", "role": "repeater", "sf": 8, "bw": 62500, "cr": 4 },
-    { "name": "bob", "role": "companion", "sf": 8, "bw": 62500, "cr": 4 }
+    { "name": "alice", "role": "companion" },
+    { "name": "relay1", "role": "repeater" },
+    { "name": "bob", "role": "companion" }
   ],
   "topology": {
     "links": [

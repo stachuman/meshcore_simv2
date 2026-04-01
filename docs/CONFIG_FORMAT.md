@@ -36,10 +36,13 @@ The orchestrator reads a single JSON file that defines the network, radio links,
 | `step_ms` | int | 5 | Time resolution per tick |
 | `epoch_start` | int | 1700000000 | Unix epoch for simulated RTC |
 | `warmup_ms` | int | 0 | During warmup, packets are delivered instantly (no physics). Must be < `duration_ms`. |
-| `hot_start` | bool | false | Inject mutual node awareness at t=0 (skips slow advert propagation) |
-| `hot_start_settle_ms` | int | 10000 | Time after hot-start injection for mesh tables to stabilize before commands run |
+| `hot_start` | bool | false | Inject mutual node awareness at t=0 (skips slow advert propagation). Settle time is auto-detected via quiescence. |
+| `seed` | int | 42 | RNG seed for all randomness (stagger, SNR variance, link loss, adversarial, per-node MeshCore). Change for Monte Carlo runs. |
+| `radio.sf` | int | 8 | Global default LoRa spreading factor (7-12). Applied to all nodes unless overridden per-node. |
+| `radio.bw` | int | 62500 | Global default bandwidth in Hz. |
+| `radio.cr` | int | 4 | Global default coding rate (1-4). |
 
-**Typical setup**: For message-passing tests, use `hot_start: true` with `warmup_ms` set to at least `hot_start_settle_ms`. Commands should fire after warmup ends.
+**Typical setup**: For message-passing tests, use `hot_start: true` with `warmup_ms` long enough for the hot-start advert exchange to complete. Commands should fire after warmup ends.
 
 ### `nodes`
 
@@ -55,9 +58,9 @@ Array of node definitions. Each node becomes an independent MeshCore instance.
 | `role` | string | `"repeater"` | `"repeater"` or `"companion"`. Repeaters forward packets; companions send/receive messages. |
 | `lat` | float | *(omit)* | Latitude (WGS84). Optional. Passed through to `node_ready` output event for analysis/visualization. |
 | `lon` | float | *(omit)* | Longitude (WGS84). Optional. Must appear together with `lat`. |
-| `radio.sf` | int | 8 | LoRa spreading factor (7-12) |
-| `radio.bw` | int | 62500 | Bandwidth in Hz |
-| `radio.cr` | int | 4 | Coding rate (1-4) |
+| `radio.sf` | int | *(global)* | Per-node override for LoRa spreading factor (7-12). Falls back to `simulation.radio.sf`. |
+| `radio.bw` | int | *(global)* | Per-node override for bandwidth in Hz. Falls back to `simulation.radio.bw`. |
+| `radio.cr` | int | *(global)* | Per-node override for coding rate (1-4). Falls back to `simulation.radio.cr`. |
 
 **Adversarial testing** (optional per-node):
 
@@ -126,11 +129,18 @@ One-shot commands executed at specific simulation times. Sorted by `at_ms` at ru
 |---|---|---|
 | `msg <name> <text>` | companion | Send direct/flood message to named contact |
 | `msga <name> <text>` | companion | Same as `msg` but tracks ack receipt |
+| `msgc <text>` | companion | Send message on public channel (channel 0, flood). No ack support. |
 | `advert` | companion | Broadcast self-advert (flood) |
 | `advert.zerohop` | companion | Broadcast self-advert (zero-hop only) |
 | `neighbors` | companion | List known contacts |
 | `stats` | companion | Print message send/receive counters |
 | `import <hex>` | companion | Import a contact from hex-encoded advert |
+| `get rxdelay` | repeater | Query RX delay base (float, default 0.0) |
+| `set rxdelay <f>` | repeater | Set RX delay base (>= 0) |
+| `get txdelay` | repeater | Query TX delay factor (float, default 0.5) |
+| `set txdelay <f>` | repeater | Set TX delay factor (>= 0) |
+| `get direct.txdelay` | repeater | Query direct TX delay factor (float, default 0.3) |
+| `set direct.txdelay <f>` | repeater | Set direct TX delay factor (>= 0) |
 | *(any CLI)* | repeater | Passed through to MeshCore's `CommonCLI::handleCommand` |
 
 ### `message_schedule`
@@ -169,6 +179,38 @@ at_ms=40000  node=alice  command="msg bob periodic test #2"
 ...
 ```
 
+### `channel_schedule`
+
+Generates periodic `msgc` (public channel) commands. Works like `message_schedule` but for broadcast channel messages.
+
+```json
+{
+  "channel_schedule": [
+    {
+      "from": "alice",
+      "channel": 0,
+      "start_ms": 10000,
+      "interval_ms": 30000,
+      "count": 5,
+      "message": "chan hello #{n}"
+    }
+  ]
+}
+```
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `from` | string | *required* | Sending companion node name |
+| `channel` | int | 0 | Channel index (only 0 = public channel currently supported) |
+| `start_ms` | int | 10000 | Time of first message |
+| `interval_ms` | int | *required* | Period between messages |
+| `count` | int | *auto* | Number of messages. If omitted: fills until `duration_ms - 10000` |
+| `message` | string | `"channel msg {n}"` | Text template. `{n}` is replaced with 1-based sequence number. |
+
+Channel messages use flood routing (no direct path). No ack support — delivery is tracked by counting receptions.
+
+**Delivery metric**: Each channel message should reach all other companions. Expected receptions = `sent * (N_companions - 1)`. The summary reports `Channel: X/Y receptions (P%)`.
+
 ### `expect`
 
 Test assertions checked after the simulation completes. The orchestrator exits with code 0 if all pass, 1 otherwise.
@@ -184,6 +226,8 @@ Test assertions checked after the simulation completes. The orchestrator exits w
 | `cmd_reply_contains` | `node`, `command`, `value` | Some command reply from `node` matching prefix `command` contains substring `value` |
 | `cmd_reply_not_contains` | `node`, `command`, `value` | No matching reply contains `value` |
 | `event_count_min` | `value`, `count` | Total events of type `value` (e.g. `"tx"`, `"rx"`) >= `count` |
+| `event_count` | `event_type`, `node` (opt), `min`/`max` | Event count in [`min`, `max`] range. `node` scopes to one node. -1 = no bound. |
+| `tx_airtime_between` | `node`, `min`, `max` | All TX airtimes from `node` fall within [`min`, `max`] ms |
 
 ---
 
@@ -212,7 +256,7 @@ Filtering flags:
 | `--min-confidence` | 0.7 | Drop edges below this confidence |
 | `--include-inferred` | off | Include `source: "inferred"` edges (dropped by default) |
 
-Simulation flags: `--duration`, `--step`, `--warmup`, `--hot-start-settle` (default 15000 for large networks).
+Simulation flags: `--duration`, `--step`, `--warmup`.
 
 ---
 

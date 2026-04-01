@@ -1,0 +1,39 @@
+{
+  "_name": "t22_channel_schedule",
+  "_desc": "Channel schedule: periodic channel messages from alice, verify bob receives them.",
+  "simulation": {
+    "duration_ms": 60000,
+    "step_ms": 5,
+    "warmup_ms": 5000,
+    "hot_start": true
+  },
+  "nodes": [
+    { "name": "alice", "role": "companion" },
+    { "name": "relay1", "role": "repeater" },
+    { "name": "bob", "role": "companion" }
+  ],
+  "topology": {
+    "links": [
+      { "from": "alice", "to": "relay1", "snr": 8.0, "rssi": -80.0, "bidir": true },
+      { "from": "relay1", "to": "bob", "snr": 8.0, "rssi": -80.0, "bidir": true }
+    ]
+  },
+  "channel_schedule": [
+    {
+      "from": "alice",
+      "channel": 0,
+      "start_ms": 7000,
+      "interval_ms": 10000,
+      "count": 3,
+      "message": "chan #{n}"
+    }
+  ],
+  "commands": [
+    { "at_ms": 50000, "node": "alice", "command": "stats" },
+    { "at_ms": 50000, "node": "bob", "command": "stats" }
+  ],
+  "expect": [
+    { "type": "cmd_reply_contains", "node": "alice", "command": "stats", "value": "3 group" },
+    { "type": "cmd_reply_contains", "node": "bob", "command": "stats", "value": "group" }
+  ]
+}

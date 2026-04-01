@@ -16,6 +16,7 @@ struct MsgStats {
     // Per-sender receive counts (key = sender name)
     std::map<std::string, int> recv_direct;   // direct messages received
     int recv_group = 0;       // group/channel messages received
+    std::map<std::string, int> recv_group_by_sender; // channel messages by sender name
 
     int totalSent() const { return sent_flood + sent_direct + sent_group; }
     int totalRecvDirect() const {

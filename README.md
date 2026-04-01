@@ -15,6 +15,14 @@ cmake -S . -B build
 cmake --build build
 ```
 
+It is possible to build alternate version of MeshCore (e.g. - testing new features) kept in a different directory.
+
+```bash
+cmake -S /home/user/meshcore_real_sim -B /home/user/meshcore_real_sim/build-fork -DMESHCORE_DIR=/home/user/MeshCore-stachuman
+cmake --build build-fork
+```
+
+
 This produces three binaries:
 - `build/orchestrator/orchestrator` -- the multi-node simulator (main tool)
 - `build/simple_repeater/simple_repeater` -- standalone single-repeater binary

@@ -1058,7 +1058,6 @@ def convert(args):
             "step_ms": args.step,
             "warmup_ms": warmup_ms,
             "hot_start": args.hot_start,
-            "hot_start_settle_ms": args.hot_start_settle,
         },
         "nodes": nodes_out,
         "topology": {
@@ -1172,8 +1171,6 @@ def main():
                         help="Warmup period in ms (default: 5000)")
     parser.add_argument("--hot-start", type=bool, default=True,
                         help="Enable hot start (default: true)")
-    parser.add_argument("--hot-start-settle", type=int, default=15000,
-                        help="Hot start settle time in ms (default: 15000)")
 
     # Output
     parser.add_argument("-v", "--verbose", action="store_true", default=False,

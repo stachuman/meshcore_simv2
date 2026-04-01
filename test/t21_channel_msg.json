@@ -1,0 +1,33 @@
+{
+  "_name": "t21_channel_msg",
+  "_desc": "Public channel (channel 0) messages: alice sends channel msg, bob receives it via repeater.",
+  "simulation": {
+    "duration_ms": 60000,
+    "step_ms": 5,
+    "warmup_ms": 5000,
+    "hot_start": true
+  },
+  "nodes": [
+    { "name": "alice", "role": "companion" },
+    { "name": "relay1", "role": "repeater" },
+    { "name": "bob", "role": "companion" }
+  ],
+  "topology": {
+    "links": [
+      { "from": "alice", "to": "relay1", "snr": 8.0, "rssi": -80.0, "bidir": true },
+      { "from": "relay1", "to": "bob", "snr": 8.0, "rssi": -80.0, "bidir": true }
+    ]
+  },
+  "commands": [
+    { "at_ms": 7000, "node": "alice", "command": "msgc hello public channel" },
+    { "at_ms": 20000, "node": "bob", "command": "msgc reply on channel" },
+    { "at_ms": 40000, "node": "alice", "command": "stats" },
+    { "at_ms": 40000, "node": "bob", "command": "stats" }
+  ],
+  "expect": [
+    { "type": "cmd_reply_contains", "node": "alice", "command": "msgc hello", "value": "channel msg sent" },
+    { "type": "cmd_reply_contains", "node": "bob", "command": "msgc reply", "value": "channel msg sent" },
+    { "type": "cmd_reply_contains", "node": "alice", "command": "stats", "value": "1 group" },
+    { "type": "cmd_reply_contains", "node": "bob", "command": "stats", "value": "1 group" }
+  ]
+}

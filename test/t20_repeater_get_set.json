@@ -1,0 +1,50 @@
+{
+  "_name": "t20_repeater_get_set",
+  "_desc": "Repeater get/set CLI: verify rxdelay, txdelay, direct.txdelay read defaults and update correctly",
+  "simulation": {
+    "duration_ms": 5000,
+    "step_ms": 5,
+    "hot_start": true
+  },
+  "nodes": [
+    { "name": "alice", "role": "companion" },
+    { "name": "relay1", "role": "repeater" },
+    { "name": "bob", "role": "companion" }
+  ],
+  "topology": {
+    "links": [
+      { "from": "alice", "to": "relay1", "snr": 10.0, "rssi": -70.0, "bidir": true },
+      { "from": "relay1", "to": "bob", "snr": 10.0, "rssi": -70.0, "bidir": true }
+    ]
+  },
+  "commands": [
+    { "at_ms": 500,  "node": "relay1", "command": "get rxdelay" },
+    { "at_ms": 500,  "node": "relay1", "command": "get txdelay" },
+    { "at_ms": 500,  "node": "relay1", "command": "get direct.txdelay" },
+
+    { "at_ms": 1000, "node": "relay1", "command": "set rxdelay 3.5" },
+    { "at_ms": 1000, "node": "relay1", "command": "set txdelay 0.8" },
+    { "at_ms": 1000, "node": "relay1", "command": "set direct.txdelay 0.25" },
+
+    { "at_ms": 1500, "node": "relay1", "command": "get rxdelay" },
+    { "at_ms": 1500, "node": "relay1", "command": "get txdelay" },
+    { "at_ms": 1500, "node": "relay1", "command": "get direct.txdelay" }
+  ],
+  "expect": [
+    { "type": "cmd_reply_contains",     "node": "relay1", "command": "get rxdelay",         "value": "0.0" },
+    { "type": "cmd_reply_contains",     "node": "relay1", "command": "get txdelay",         "value": "0.5" },
+    { "type": "cmd_reply_contains",     "node": "relay1", "command": "get direct.txdelay",  "value": "0.3" },
+
+    { "type": "cmd_reply_contains",     "node": "relay1", "command": "set rxdelay",         "value": "OK" },
+    { "type": "cmd_reply_contains",     "node": "relay1", "command": "set txdelay",         "value": "OK" },
+    { "type": "cmd_reply_contains",     "node": "relay1", "command": "set direct.txdelay",  "value": "OK" },
+
+    { "type": "cmd_reply_contains",     "node": "relay1", "command": "get rxdelay",         "value": "3.5" },
+    { "type": "cmd_reply_contains",     "node": "relay1", "command": "get txdelay",         "value": "0.8" },
+    { "type": "cmd_reply_contains",     "node": "relay1", "command": "get direct.txdelay",  "value": "0.25" },
+
+    { "type": "cmd_reply_not_contains", "node": "relay1", "command": "set rxdelay",         "value": "ERROR" },
+    { "type": "cmd_reply_not_contains", "node": "relay1", "command": "set txdelay",         "value": "ERROR" },
+    { "type": "cmd_reply_not_contains", "node": "relay1", "command": "set direct.txdelay",  "value": "ERROR" }
+  ]
+}

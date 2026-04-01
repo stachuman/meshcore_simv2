@@ -129,7 +129,6 @@ python3 tools/convert_topology.py simulation/topology.json \
 | `--step` | 5 | Simulation step (ms) |
 | `--warmup` | 5000 | Warmup period (ms) |
 | `--hot-start` | true | Enable hot start |
-| `--hot-start-settle` | 15000 | Hot start settle time (ms) |
 
 ## Pipeline Order
 

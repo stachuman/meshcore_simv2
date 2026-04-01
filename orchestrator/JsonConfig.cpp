@@ -36,7 +36,13 @@ static OrchestratorConfig parseJson(const json& j) {
         if (sim.contains("epoch_start")) cfg.epoch_start = sim["epoch_start"].get<uint32_t>();
         if (sim.contains("warmup_ms"))  cfg.warmup_ms = sim["warmup_ms"].get<unsigned long>();
         if (sim.contains("hot_start"))  cfg.hot_start = sim["hot_start"].get<bool>();
-        if (sim.contains("hot_start_settle_ms")) cfg.hot_start_settle_ms = sim["hot_start_settle_ms"].get<unsigned long>();
+        if (sim.contains("seed")) cfg.seed = sim["seed"].get<uint64_t>();
+        if (sim.contains("radio")) {
+            auto& r = sim["radio"];
+            if (r.contains("sf")) cfg.sf = r["sf"].get<int>();
+            if (r.contains("bw")) cfg.bw = r["bw"].get<int>();
+            if (r.contains("cr")) cfg.cr = r["cr"].get<int>();
+        }
     }
 
     if (j.contains("nodes")) {
@@ -72,6 +78,13 @@ static OrchestratorConfig parseJson(const json& j) {
             }
             cfg.nodes.push_back(std::move(def));
         }
+    }
+
+    // Merge global radio defaults into nodes where not explicitly set
+    for (auto& nd : cfg.nodes) {
+        if (nd.sf == -1) nd.sf = cfg.sf;
+        if (nd.bw == -1) nd.bw = cfg.bw;
+        if (nd.cr == -1) nd.cr = cfg.cr;
     }
 
     if (j.contains("topology")) {
@@ -141,6 +154,47 @@ static OrchestratorConfig parseJson(const json& j) {
                 def.node    = from;
                 std::string cmd = ms.value("ack", false) ? "msga " : "msg ";
                 def.command = cmd + to + " " + text;
+                cfg.commands.push_back(std::move(def));
+            }
+        }
+    }
+
+    // Expand channel_schedule into CmdDef entries (msgc commands)
+    if (j.contains("channel_schedule")) {
+        for (auto& cs : j["channel_schedule"]) {
+            std::string from = cs["from"].get<std::string>();
+            unsigned long start_ms    = cs.value("start_ms", 10000UL);
+            unsigned long interval_ms = cs["interval_ms"].get<unsigned long>();
+            std::string msg_template  = cs.value("message", std::string("channel msg {n}"));
+
+            int count;
+            if (cs.contains("count")) {
+                count = cs["count"].get<int>();
+            } else {
+                unsigned long end_ms = (cfg.duration_ms > 10000) ? cfg.duration_ms - 10000 : cfg.duration_ms;
+                if (end_ms > start_ms && interval_ms > 0) {
+                    count = static_cast<int>((end_ms - start_ms) / interval_ms) + 1;
+                } else {
+                    count = 1;
+                }
+            }
+
+            for (int i = 0; i < count; i++) {
+                unsigned long at_ms = start_ms + static_cast<unsigned long>(i) * interval_ms;
+                if (at_ms >= cfg.duration_ms) break;
+
+                std::string text = msg_template;
+                std::string seq = std::to_string(i + 1);
+                size_t pos = 0;
+                while ((pos = text.find("{n}", pos)) != std::string::npos) {
+                    text.replace(pos, 3, seq);
+                    pos += seq.length();
+                }
+
+                OrchestratorConfig::CmdDef def;
+                def.at_ms   = at_ms;
+                def.node    = from;
+                def.command = "msgc " + text;
                 cfg.commands.push_back(std::move(def));
             }
         }

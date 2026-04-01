@@ -17,15 +17,20 @@ struct OrchestratorConfig {
     uint32_t epoch_start = 1700000000;
     unsigned long warmup_ms = 0;
     bool hot_start = false;
-    unsigned long hot_start_settle_ms = 10000;
     bool verbose = false;
+    uint64_t seed = 42;
+
+    // Global radio defaults (overridable per-node)
+    int sf = 8;
+    int bw = 62500;
+    int cr = 4;
 
     struct NodeDef {
         std::string name;
         NodeRole role = NodeRole::Repeater;
-        int sf = 8;
-        int bw = 62500;
-        int cr = 4;
+        int sf = -1;   // -1 = use global default
+        int bw = -1;
+        int cr = -1;
         double lat = 0.0;
         double lon = 0.0;
         bool has_location = false;
@@ -81,8 +86,8 @@ class Orchestrator {
     size_t _next_cmd = 0;
     bool _verbose = false;
     bool _hot_start = false;
-    unsigned long _hot_start_settle_ms = 10000;
-    std::mt19937 _rng{42};  // deterministic seed for reproducibility
+    uint64_t _seed = 42;
+    std::mt19937 _rng;  // seeded in configure() from cfg.seed
 
     struct PendingReplay {
         unsigned long emit_ms;
