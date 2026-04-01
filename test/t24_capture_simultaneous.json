@@ -1,0 +1,28 @@
+{
+  "_name": "t24_capture_simultaneous",
+  "_desc": "Simultaneous arrival, 3dB SNR difference. Neither locks first. 3dB < 6dB unlocked threshold. Both packets collide at the receiver repeater.",
+  "simulation": {
+    "duration_ms": 15000,
+    "step_ms": 5,
+    "warmup_ms": 5000,
+    "hot_start": true
+  },
+  "nodes": [
+    { "name": "alice", "role": "companion" },
+    { "name": "bob", "role": "companion" },
+    { "name": "hub", "role": "repeater" }
+  ],
+  "topology": {
+    "links": [
+      { "from": "alice", "to": "hub", "snr": 10.0, "rssi": -70.0, "bidir": true },
+      { "from": "bob", "to": "hub", "snr": 7.0, "rssi": -85.0, "bidir": true }
+    ]
+  },
+  "commands": [
+    { "at_ms": 6000, "node": "alice", "command": "msg bob hello from alice" },
+    { "at_ms": 6000, "node": "bob", "command": "msg alice hello from bob" }
+  ],
+  "expect": [
+    { "type": "event_count", "event_type": "collision", "node": "hub", "min": 1 }
+  ]
+}

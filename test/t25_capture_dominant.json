@@ -1,0 +1,29 @@
+{
+  "_name": "t25_capture_dominant",
+  "_desc": "Simultaneous arrival, 8dB SNR difference. 8dB > 6dB unlocked threshold. Strong signal survives capture even without lock advantage.",
+  "simulation": {
+    "duration_ms": 15000,
+    "step_ms": 5,
+    "warmup_ms": 5000,
+    "hot_start": true
+  },
+  "nodes": [
+    { "name": "alice", "role": "companion" },
+    { "name": "bob", "role": "companion" },
+    { "name": "hub", "role": "repeater" }
+  ],
+  "topology": {
+    "links": [
+      { "from": "alice", "to": "hub", "snr": 15.0, "rssi": -65.0, "bidir": true },
+      { "from": "bob", "to": "hub", "snr": 7.0, "rssi": -90.0, "bidir": true }
+    ]
+  },
+  "commands": [
+    { "at_ms": 6000, "node": "alice", "command": "msg bob hello from alice" },
+    { "at_ms": 6000, "node": "bob", "command": "msg alice hello from bob" }
+  ],
+  "expect": [
+    { "type": "event_count", "event_type": "rx", "node": "hub", "min": 1 },
+    { "type": "event_count", "event_type": "collision", "node": "hub", "min": 1 }
+  ]
+}

@@ -9,7 +9,13 @@
 #include "MeshWrapper.h"
 #include "SimClock.h"
 
-static constexpr float CAPTURE_THRESHOLD_DB = 6.0f;
+// Timing-dependent capture thresholds (Semtech AN1200.22, SX1276/SX1262).
+// Once the receiver locks onto a preamble (~5 symbols), a later interferer
+// needs far less power advantage to be rejected.  When preambles overlap,
+// the receiver hasn't locked to either signal and classic 6 dB capture applies.
+static constexpr float CAPTURE_LOCKED_DB     = 1.0f;  // primary locked before interferer
+static constexpr float CAPTURE_UNLOCKED_DB   = 6.0f;  // preambles overlap
+static constexpr int   PREAMBLE_LOCK_SYMBOLS = 5;     // symbols needed for preamble lock
 
 int Orchestrator::findNode(const std::string& name) const {
     for (size_t i = 0; i < _nodes.size(); i++) {
@@ -121,19 +127,30 @@ void Orchestrator::routePackets(unsigned long current_ms) {
     }
 }
 
-// Check if 'primary' packet survives interference from 'interferer' using
-// 3-stage survival: (1) capture effect, (2) preamble grace, (3) FEC tolerance.
+// Check if 'primary' packet survives interference from 'interferer'.
+// 3-stage survival:
+//   (1) Timing-dependent capture (first-arrival advantage)
+//   (2) Preamble grace period
+//   (3) FEC overlap tolerance
 // Returns true if primary is destroyed by interferer.
 static bool isDestroyedBy(const PendingRx& primary, const PendingRx& interferer,
                           double preamble_grace_ms, double fec_tolerance_ms,
-                          double t_preamble_ms) {
+                          double t_preamble_ms, double t_sym) {
     // No temporal overlap → no interference
     if (interferer.rx_end_ms <= primary.rx_start_ms ||
         primary.rx_end_ms <= interferer.rx_start_ms)
         return false;
 
-    // Stage 1: Capture — primary survives if it's much stronger
-    if (primary.snr >= interferer.snr + CAPTURE_THRESHOLD_DB)
+    // Stage 1: Timing-dependent capture effect.
+    // If the primary's preamble was fully locked (5 symbols received cleanly)
+    // before the interferer arrived, the receiver is synchronized to the
+    // primary's chirps and only 1 dB SIR is needed (Semtech AN1200.22).
+    // If preambles overlap, neither has lock priority — 6 dB needed.
+    double lock_time_ms = primary.rx_start_ms + PREAMBLE_LOCK_SYMBOLS * t_sym;
+    float capture_threshold = ((double)interferer.rx_start_ms >= lock_time_ms)
+                              ? CAPTURE_LOCKED_DB : CAPTURE_UNLOCKED_DB;
+
+    if (primary.snr >= interferer.snr + capture_threshold)
         return false;
 
     // Stage 2: Preamble grace — primary survives if interferer only
@@ -141,9 +158,6 @@ static bool isDestroyedBy(const PendingRx& primary, const PendingRx& interferer,
     unsigned long critical = primary.rx_start_ms + (unsigned long)preamble_grace_ms;
     if (interferer.rx_end_ms <= critical)
         return false;
-
-    // Also check: if interferer starts after primary's preamble is done and
-    // only overlaps briefly, FEC might save it (handled in stage 3).
 
     // Stage 3: FEC overlap tolerance — if overlap is small and within payload,
     // forward error correction can recover.
@@ -364,9 +378,9 @@ void Orchestrator::registerTransmissions(unsigned long current_ms) {
 
                 // Collision check: test each direction independently
                 for (auto& existing : _nodes[receiver]->active_rx) {
-                    if (isDestroyedBy(prx, existing, preamble_grace_ms, fec_tolerance_ms, t_preamble))
+                    if (isDestroyedBy(prx, existing, preamble_grace_ms, fec_tolerance_ms, t_preamble, t_sym))
                         prx.collided = true;
-                    if (isDestroyedBy(existing, prx, preamble_grace_ms, fec_tolerance_ms, t_preamble))
+                    if (isDestroyedBy(existing, prx, preamble_grace_ms, fec_tolerance_ms, t_preamble, t_sym))
                         existing.collided = true;
                 }
 

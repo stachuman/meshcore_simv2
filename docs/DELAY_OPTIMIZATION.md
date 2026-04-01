@@ -62,10 +62,10 @@ repeater knows its surronding AND each companion knows all the other companions.
 
 ### Simulation length
 
-Test simulation period is 10 minutes with the following setup:
+Test simulation period is 22 minutes with the following setup:
 
 - **12 companions** placed via farthest-point sampling across 71 repeaters
-- **Message interval**: 120s mean (each schedule gets a random offset within [0, interval) for desynchronization)
+- **Message interval**: 200s mean (each schedule gets a random offset within [0, interval) for desynchronization)
 - **4 concurrent patterns**: 1-to-1, 1-to-many, many-to-1, and channel broadcast — all interleaved from the same base time
 - **Deterministic randomization**: 3 different seeds per parameter combination (seeds 42, 43, 44)
 
@@ -105,7 +105,7 @@ Test messages are ~70-75 characters each, approximating realistic MeshCore messa
 
 The orchestrator simulates LoRa radio physics:
 
-- **Collision detection**: 3-stage model (capture effect at 6 dB, preamble grace period, FEC tolerance)
+- **Collision detection**: 3-stage model with timing-dependent capture (1 dB locked / 6 dB unlocked), preamble grace, FEC tolerance. See [RADIO_MODEL.md](RADIO_MODEL.md) for full details.
 - **Half-duplex**: nodes cannot TX while receiving (RX blocks TX, TX aborts active RX)
 - **Listen-before-talk**: channel activity detection with preamble sensing delay
 - **SNR variance**: per-link Gaussian jitter on each reception
@@ -115,7 +115,7 @@ The orchestrator simulates LoRa radio physics:
 
 - **No multipath/fading dynamics**: SNR variance is static Gaussian, not correlated over time (no slow fading, no Doppler)
 - **No duty cycle**: Real LoRa is subject to regulatory duty-cycle limits (1% in EU). The simulator does not enforce this, hence, it is easy to turn on
-- **Simplified collision model**: Real LoRa capture effect depends on timing, frequency offset, and coding rate in ways more complex than the 3-stage model
+- **No frequency-offset modeling**: All nodes assumed on the same channel. Real LoRa receivers have a frequency-dependent capture margin (+-30kHz for BW125).
 - **No near-far effect**: All SNR values come from the link table. A node receiving a weak distant signal next to a strong nearby transmitter doesn't experience additional desensitization beyond what the collision model captures.
 - **Clock stagger only**: Node desynchronization uses random clock offsets (0-120s). Real networks have drift, GPS sync, and power-cycle patterns.
 
@@ -153,6 +153,7 @@ Three MeshCore repeater parameters:
 - **Single topology**: Results are specific to this network topology. Different network shapes/sizes may have different optimal delays.
 - **Fixed radio params**: The sweep holds SF/BW/CR constant. Optimal delays may differ for SF7 vs SF12.
 - **No interaction with other settings**: Only delay parameters are swept. Other MeshCore settings (e.g., max hops, flood limits) stay at defaults.
+- **Uniform settings**: All repeaters are set to the exactly same delay settings - no distingtion for 'local/regional' repeaters. We are testing kind of 'default' settings.
 
 ## 6. Running the Pipeline
 
@@ -202,60 +203,29 @@ Sweep grid used for the results:
 Run 1
 
 ```
-Parameter sweep: 858 combinations x 3 seeds = 2574 runs (roughly 40minutes of real time simulation on my machine)
-  rxdelay:         [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0]
-  txdelay:         [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4]
-  direct.txdelay:  [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
-  seeds:           [42, 43, 44]
-  Repeaters:       71
-
-
-=====================================================================================
-  Completed 2574 runs (858 combos x 3 seeds) in 36m02s
-=====================================================================================
-  Top 10 combinations (of 858):
-=====================================================================================
-   rxdelay   txdelay  d.txdelay    mean    std   min   max  delivered   acks   chan
-  --------  --------  ---------  ------  -----  ----  ----  ---------  -----  -----
-      0.00      0.00       0.20   15.7%   1.2%   14%   17%   159/1020     7%    28%
-      0.00      0.60       0.10   15.7%   1.2%   14%   17%   159/1020     7%    25%
-      0.80      0.00       0.20   15.7%   1.2%   14%   17%   159/1020     7%    28%
-      0.80      0.60       0.10   15.7%   1.2%   14%   17%   159/1020     7%    25%
-      1.00      0.00       0.20   15.7%   1.2%   14%   17%   159/1020     7%    28%
-      1.00      0.60       0.10   15.7%   1.2%   14%   17%   159/1020     7%    25%
-      1.40      0.00       0.50   15.7%   1.2%   14%   17%   159/1020     6%    29%
-      0.60      1.00       0.50   15.3%   1.2%   14%   17%   157/1020     6%    23%
-      1.80      2.00       0.00   15.3%   1.2%   14%   17%   154/1020     8%    23%
-      0.00      0.00       0.30   15.3%   3.3%   11%   19%   157/1020     6%    30%
-```
-
-Run 2
-
-```
-Parameter sweep: 45 combinations x 3 seeds = 135 runs
+Parameter sweep: 63 combinations x 3 seeds = 189 runs
   rxdelay:         [0.0, 0.5, 1.0]
-  txdelay:         [0.0, 0.5, 1.0]
-  direct.txdelay:  [0.0, 0.5, 1.0, 1.5, 2.0]
+  txdelay:         [0.0, 0.3, 0.6]
+  direct.txdelay:  [0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0]
   seeds:           [42, 43, 44]
   Repeaters:       71
 
-
 =====================================================================================
-  Completed 135 runs (45 combos x 3 seeds) in 1m58s
+  Completed 189 runs (63 combos x 3 seeds) in 3m45s
 =====================================================================================
-  Top 10 combinations (of 45):
+  Top 10 combinations (of 63):
 =====================================================================================
    rxdelay   txdelay  d.txdelay    mean    std   min   max  delivered   acks   chan
   --------  --------  ---------  ------  -----  ----  ----  ---------  -----  -----
-      0.00      1.00       0.50   14.7%   0.5%   14%   15%   149/1020     7%    25%
-      1.00      1.00       0.50   14.7%   0.5%   14%   15%   149/1020     7%    25%
-      0.00      0.00       2.00   14.7%   0.9%   14%   16%   148/1020     7%    32%
-      0.50      0.00       2.00   14.7%   0.9%   14%   16%   153/1020     5%    27%
-      0.50      0.50       2.00   14.7%   0.9%   14%   16%   148/1020     6%    24%
-      1.00      0.00       2.00   14.7%   0.9%   14%   16%   148/1020     7%    32%
-      0.50      0.00       0.00   14.3%   1.2%   13%   16%   146/1020     5%    28%
-      0.50      0.50       0.50   14.0%   0.0%   14%   14%   141/1020     6%    24%
-      0.00      0.00       0.50   14.0%   0.8%   13%   15%   146/1020     6%    31%
-      1.00      0.00       0.50   14.0%   0.8%   13%   15%   146/1020     6%    31%
+      0.00      0.00       1.50   19.3%   1.7%   17%   21%   197/1020    10%    46%
+      1.00      0.00       1.50   19.3%   1.7%   17%   21%   197/1020    10%    46%
+      0.00      0.00       1.00   19.3%   1.9%   18%   22%   198/1020    10%    45%
+      1.00      0.00       1.00   19.3%   1.9%   18%   22%   198/1020    10%    45%
+      0.50      0.00       0.50   19.0%   0.8%   18%   20%   194/1020     9%    45%
+      0.00      0.00       3.00   19.0%   1.6%   17%   21%   194/1020     9%    47%
+      1.00      0.00       3.00   19.0%   1.6%   17%   21%   194/1020     9%    47%
+      0.00      0.00       0.00   18.7%   1.2%   17%   20%   192/1020     9%    43%
+      1.00      0.00       0.00   18.7%   1.2%   17%   20%   192/1020     9%    43%
+      0.50      0.00       0.00   18.3%   0.9%   17%   19%   187/1020    10%    44%
 
 ```
