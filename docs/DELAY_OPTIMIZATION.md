@@ -69,17 +69,6 @@ Test simulation period is 10 minutes with the following setup:
 - **4 concurrent patterns**: 1-to-1, 1-to-many, many-to-1, and channel broadcast — all interleaved from the same base time
 - **Deterministic randomization**: 3 different seeds per parameter combination (seeds 42, 43, 44)
 
-Sweep grid used for the results in Section 7:
-
-```
-Parameter sweep: 858 combinations x 3 seeds = 2574 runs (roughly 40minutes of real time simulation)
-  rxdelay:         [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0]
-  txdelay:         [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4]
-  direct.txdelay:  [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
-  seeds:           [42, 43, 44]
-  Repeaters:       71
-```
-
 
 ### Schedule patterns
 
@@ -125,7 +114,7 @@ The orchestrator simulates LoRa radio physics:
 ### Limitations
 
 - **No multipath/fading dynamics**: SNR variance is static Gaussian, not correlated over time (no slow fading, no Doppler)
-- **No duty cycle**: Real LoRa is subject to regulatory duty-cycle limits (1% in EU). The simulator does not enforce this.
+- **No duty cycle**: Real LoRa is subject to regulatory duty-cycle limits (1% in EU). The simulator does not enforce this, hence, it is easy to turn on
 - **Simplified collision model**: Real LoRa capture effect depends on timing, frequency offset, and coding rate in ways more complex than the 3-stage model
 - **No near-far effect**: All SNR values come from the link table. A node receiving a weak distant signal next to a strong nearby transmitter doesn't experience additional desensitization beyond what the collision model captures.
 - **Clock stagger only**: Node desynchronization uses random clock offsets (0-120s). Real networks have drift, GPS sync, and power-cycle patterns.
@@ -207,26 +196,66 @@ Channel schedule flags for `build_real_sim.py`:
 
 ## 7. Results
 
-### 1) Direct messages only (no channel broadcast)
 
-Baseline sweep with `--no-channel` — only direct (1-to-1, 1-to-many, many-to-1) traffic:
+Sweep grid used for the results:
+
+Run 1
+
+```
+Parameter sweep: 858 combinations x 3 seeds = 2574 runs (roughly 40minutes of real time simulation on my machine)
+  rxdelay:         [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0]
+  txdelay:         [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4]
+  direct.txdelay:  [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
+  seeds:           [42, 43, 44]
+  Repeaters:       71
+
 
 =====================================================================================
-  Completed 2574 runs (858 combos x 3 seeds) in 22m51s
+  Completed 2574 runs (858 combos x 3 seeds) in 36m02s
 =====================================================================================
   Top 10 combinations (of 858):
 =====================================================================================
-   rxdelay   txdelay  d.txdelay    mean    std   min   max  delivered   acks
-  --------  --------  ---------  ------  -----  ----  ----  ---------  -----
-      0.00      0.00       0.00   31.7%   3.1%   29%   36%   266/840     16%
-      0.60      0.00       0.00   31.7%   3.1%   29%   36%   266/840     16%
-      0.80      0.00       0.00   31.7%   3.1%   29%   36%   266/840     16%
-      1.00      0.00       0.00   31.7%   3.1%   29%   36%   266/840     16%
-      1.20      0.00       0.00   29.0%   1.4%   28%   31%   242/840     13%
-      1.40      0.00       0.00   29.0%   2.2%   26%   31%   243/840     13%
-      1.20      0.00       0.50   29.0%   2.9%   25%   32%   244/840     12%
-      0.00      0.00       0.50   28.7%   0.9%   28%   30%   241/840     12%
-      0.60      0.00       0.50   28.7%   0.9%   28%   30%   241/840     12%
-      0.80      0.00       0.50   28.7%   0.9%   28%   30%   241/840     12%
+   rxdelay   txdelay  d.txdelay    mean    std   min   max  delivered   acks   chan
+  --------  --------  ---------  ------  -----  ----  ----  ---------  -----  -----
+      0.00      0.00       0.20   15.7%   1.2%   14%   17%   159/1020     7%    28%
+      0.00      0.60       0.10   15.7%   1.2%   14%   17%   159/1020     7%    25%
+      0.80      0.00       0.20   15.7%   1.2%   14%   17%   159/1020     7%    28%
+      0.80      0.60       0.10   15.7%   1.2%   14%   17%   159/1020     7%    25%
+      1.00      0.00       0.20   15.7%   1.2%   14%   17%   159/1020     7%    28%
+      1.00      0.60       0.10   15.7%   1.2%   14%   17%   159/1020     7%    25%
+      1.40      0.00       0.50   15.7%   1.2%   14%   17%   159/1020     6%    29%
+      0.60      1.00       0.50   15.3%   1.2%   14%   17%   157/1020     6%    23%
+      1.80      2.00       0.00   15.3%   1.2%   14%   17%   154/1020     8%    23%
+      0.00      0.00       0.30   15.3%   3.3%   11%   19%   157/1020     6%    30%
+```
+
+Run 2
+
+```
+Parameter sweep: 45 combinations x 3 seeds = 135 runs
+  rxdelay:         [0.0, 0.5, 1.0]
+  txdelay:         [0.0, 0.5, 1.0]
+  direct.txdelay:  [0.0, 0.5, 1.0, 1.5, 2.0]
+  seeds:           [42, 43, 44]
+  Repeaters:       71
 
 
+=====================================================================================
+  Completed 135 runs (45 combos x 3 seeds) in 1m58s
+=====================================================================================
+  Top 10 combinations (of 45):
+=====================================================================================
+   rxdelay   txdelay  d.txdelay    mean    std   min   max  delivered   acks   chan
+  --------  --------  ---------  ------  -----  ----  ----  ---------  -----  -----
+      0.00      1.00       0.50   14.7%   0.5%   14%   15%   149/1020     7%    25%
+      1.00      1.00       0.50   14.7%   0.5%   14%   15%   149/1020     7%    25%
+      0.00      0.00       2.00   14.7%   0.9%   14%   16%   148/1020     7%    32%
+      0.50      0.00       2.00   14.7%   0.9%   14%   16%   153/1020     5%    27%
+      0.50      0.50       2.00   14.7%   0.9%   14%   16%   148/1020     6%    24%
+      1.00      0.00       2.00   14.7%   0.9%   14%   16%   148/1020     7%    32%
+      0.50      0.00       0.00   14.3%   1.2%   13%   16%   146/1020     5%    28%
+      0.50      0.50       0.50   14.0%   0.0%   14%   14%   141/1020     6%    24%
+      0.00      0.00       0.50   14.0%   0.8%   13%   15%   146/1020     6%    31%
+      1.00      0.00       0.50   14.0%   0.8%   13%   15%   146/1020     6%    31%
+
+```
