@@ -65,6 +65,7 @@ Array of node definitions. Each node becomes an independent MeshCore instance.
 | `radio.sf` | int | *(global)* | Per-node override for LoRa spreading factor (7-12). Falls back to `simulation.radio.sf`. |
 | `radio.bw` | int | *(global)* | Per-node override for bandwidth in Hz. Falls back to `simulation.radio.bw`. |
 | `radio.cr` | int | *(global)* | Per-node override for coding rate (1-4). Falls back to `simulation.radio.cr`. |
+| `tx_fail_prob` | float | 0.0 | TX failure probability [0.0-1.0]. Models SPI/hardware errors per RadioLib error path. When `startSendRaw()` fails, the radio transitions to IDLE and the packet is dropped (or requeued with MeshCore PR #2141). Generates `tx_fail` NDJSON events. |
 
 **Adversarial testing** (optional per-node):
 

@@ -41,6 +41,7 @@ struct OrchestratorConfig {
         double lon = 0.0;
         bool has_location = false;
         AdversarialConfig adversarial;
+        float tx_fail_prob = 0.0f;
     };
     std::vector<NodeDef> nodes;
 
@@ -134,7 +135,7 @@ class Orchestrator {
 
     // Pre-built per-node event keys to avoid string alloc on hot path
     struct NodeEventKeys {
-        std::string tx, rx, collision, drop_halfduplex, drop_weak, drop_loss;
+        std::string tx, rx, collision, drop_halfduplex, drop_weak, drop_loss, tx_fail;
     };
     std::vector<NodeEventKeys> _node_event_keys;
 

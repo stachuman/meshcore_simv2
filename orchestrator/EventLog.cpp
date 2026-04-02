@@ -183,6 +183,11 @@ void dropLoss(unsigned long time_ms, const char* from, const char* to, float los
             time_ms, from, to, loss_prob, pkt, pt, rt);
 }
 
+void txFail(unsigned long time_ms, const char* node, uint32_t count) {
+    fprintf(stdout, "{\"type\":\"tx_fail\",\"time_ms\":%lu,\"node\":\"%s\",\"count\":%u}\n",
+            time_ms, node, (unsigned)count);
+}
+
 void adversarialDrop(unsigned long time_ms, const char* node, const uint8_t* data, int len) {
     char pkt[9];
     packetHashHex(pkt, data, len);

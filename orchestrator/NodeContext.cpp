@@ -56,6 +56,7 @@ void NodeContext::initMesh(uint64_t global_seed) {
         name_hash *= FNV1A_PRIME;
     }
     rng.seed(name_hash ^ global_seed);
+    radio.seed(name_hash ^ global_seed ^ 0xDEADBEEF);  // different sequence from SimRNG
 
     if (role == NodeRole::Companion) {
         mesh = createCompanionMesh(*this);

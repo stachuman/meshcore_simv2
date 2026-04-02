@@ -57,6 +57,7 @@ void Orchestrator::configure(const OrchestratorConfig& cfg) {
         ctx->lat = nd.lat;
         ctx->lon = nd.lon;
         ctx->has_location = nd.has_location;
+        ctx->radio.setTxFailProb(nd.tx_fail_prob);
         _nodes.push_back(std::move(ctx));
     }
 
@@ -66,7 +67,8 @@ void Orchestrator::configure(const OrchestratorConfig& cfg) {
         const std::string& nm = _nodes[i]->name;
         _node_event_keys[i] = {
             "tx:" + nm, "rx:" + nm, "collision:" + nm,
-            "drop_halfduplex:" + nm, "drop_weak:" + nm, "drop_loss:" + nm
+            "drop_halfduplex:" + nm, "drop_weak:" + nm, "drop_loss:" + nm,
+            "tx_fail:" + nm
         };
     }
 
@@ -755,9 +757,21 @@ bool Orchestrator::run() {
             deliverReceptions(current_ms);
         }
 
-        for (auto& node : _nodes) {
+        for (size_t i = 0; i < _nodes.size(); i++) {
+            auto& node = _nodes[i];
             node->activate();
+            uint32_t fail_before = node->radio.getTxFailCount();
             node->mesh->loop();
+            uint32_t new_fails = node->radio.getTxFailCount() - fail_before;
+            if (new_fails > 0) {
+                _event_counts["tx_fail"] += new_fails;
+                _event_counts[_node_event_keys[i].tx_fail] += new_fails;
+                if (_verbose) {
+                    fprintf(stderr, "[%8.3fs] TX-FAIL %s (%u failures)\n",
+                            current_ms / 1000.0, node->name.c_str(), (unsigned)new_fails);
+                }
+                EventLog::txFail(current_ms, node->name.c_str(), new_fails);
+            }
         }
 
         if (in_warmup) {

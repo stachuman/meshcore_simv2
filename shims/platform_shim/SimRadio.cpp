@@ -42,7 +42,7 @@ uint32_t SimRadio::getPreambleDetectMs() const {
 }
 
 bool SimRadio::isReceiving() {
-    if (_tx_pending) return false;
+    if (_state == RadioState::TX_WAIT) return false;
     unsigned long now = _ms.getMillis();
     if (now < _rx_active_until) return true;
 
@@ -71,15 +71,24 @@ void SimRadio::enqueue(const uint8_t* data, int len, float snr, float rssi) {
 }
 
 int SimRadio::recvRaw(uint8_t* bytes, int sz) {
-    if (_rx_queue.empty()) return 0;
-    IncomingPacket& front = _rx_queue.front();
-    int len = (int)std::min((size_t)sz, front.data.size());
-    memcpy(bytes, front.data.data(), len);
-    _last_snr  = front.snr;
-    _last_rssi = front.rssi;
-    _rx_queue.pop();
-    _packets_recv++;
-    return len;
+    if (!_rx_queue.empty()) {
+        // Step 1: Read packet (RadioLib: state = STATE_IDLE after read)
+        IncomingPacket& front = _rx_queue.front();
+        int len = (int)std::min((size_t)sz, front.data.size());
+        memcpy(bytes, front.data.data(), len);
+        _last_snr  = front.snr;
+        _last_rssi = front.rssi;
+        _rx_queue.pop();
+        _packets_recv++;
+        // Step 2: Restart RX (RadioLib: startRecv() → STATE_RX)
+        _state = RadioState::RX;
+        return len;
+    }
+    // No packet — ensure RX mode (RadioLib: if state != STATE_RX → startRecv)
+    if (_state != RadioState::TX_WAIT) {
+        _state = RadioState::RX;
+    }
+    return 0;
 }
 
 uint32_t SimRadio::getEstAirtimeFor(int len_bytes) {
@@ -114,7 +123,23 @@ float SimRadio::packetScore(float snr, int packet_len) {
 }
 
 bool SimRadio::startSendRaw(const uint8_t* bytes, int len) {
-    _rx_active_until = 0;  // TX aborts any ongoing RX
+    // TX failure (models SPI/hardware errors per RadioLib error path)
+    if (_tx_fail_prob > 0.0f) {
+        // xorshift32 PRNG — avoids <random> header (min/max macro clash)
+        _rng_state ^= _rng_state << 13;
+        _rng_state ^= _rng_state >> 17;
+        _rng_state ^= _rng_state << 5;
+        float roll = (_rng_state & 0xFFFFFFu) / (float)0x1000000u;
+        if (roll < _tx_fail_prob) {
+            _state = RadioState::IDLE;  // RadioLib calls idle() on failure
+            _tx_fail_count_stat++;
+            return false;
+        }
+    }
+
+    _rx_active_until = 0;  // TX aborts any ongoing RX demodulation
+    _state = RadioState::TX_WAIT;
+
     uint32_t airtime = getEstAirtimeFor(len);
 #ifdef ORCHESTRATOR_BUILD
     if (_tx_callback) {
@@ -126,15 +151,22 @@ bool SimRadio::startSendRaw(const uint8_t* bytes, int len) {
     fprintf(stdout, "{\"type\":\"tx\",\"hex\":\"%s\",\"airtime_ms\":%u}\n", hex_buf, (unsigned)airtime);
     fflush(stdout);
 #endif
-    _tx_pending = true;
     _tx_done_at = _ms.getMillis() + airtime;
     _packets_sent++;
     return true;
 }
 
 bool SimRadio::isSendComplete() {
-    if (!_tx_pending) return false;
+    if (_state != RadioState::TX_WAIT) return false;
     if (_ms.getMillis() < _tx_done_at) return false;
-    _tx_pending = false;
+    _state = RadioState::IDLE;  // TX done → IDLE (RadioLib clears to STATE_IDLE)
     return true;
+}
+
+void SimRadio::onSendFinished() {
+    _state = RadioState::IDLE;  // Stays IDLE until recvRaw() restarts RX
+}
+
+bool SimRadio::isInRecvMode() const {
+    return _state == RadioState::RX;
 }

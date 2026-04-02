@@ -441,6 +441,19 @@ class MapHandler(BaseHTTPRequestHandler):
                 self._json_response({"root_pkt": pkt, "hops": []})
         elif path == "/api/messages":
             self._json_response(self._get_messages())
+        elif path.startswith("/api/node_events/"):
+            node = path.split("/")[-1]
+            params = parse_qs(parsed.query)
+            from_ms = int(params.get("from", [self.index.time_min if self.index else 0])[0])
+            to_ms = int(params.get("to", [self.index.time_max if self.index else 0])[0])
+            limit = int(params.get("limit", [5000])[0])
+            if self.index:
+                events = self.index.query_node_range(node, from_ms, to_ms)
+                if len(events) > limit:
+                    events = events[:limit]
+                self._json_response({"node": node, "events": events, "count": len(events)})
+            else:
+                self._json_response({"node": node, "events": [], "count": 0})
         else:
             self.send_error(404)
 
@@ -452,16 +465,42 @@ class MapHandler(BaseHTTPRequestHandler):
             ev = self.index.events[idx]
             reply = ev.get("reply", "")
             if "msg sent" in reply.lower() or "channel msg sent" in reply.lower():
-                cmd = ev.get("cmd", "")
+                cmd = ev.get("command", ev.get("cmd", ""))
                 node = ev.get("node", "")
                 time_ms = ev.get("time_ms", 0)
                 tx = self.index.find_msg_tx(node, time_ms)
                 pkt = tx.get("pkt") if tx else None
+
+                # Parse command for dest/text: "msga <dest> <text>" or "msgc <chan> <text>"
+                parts = cmd.split(None, 2)  # split max 3 parts
+                cmd_verb = parts[0] if parts else ""
+                dest = parts[1] if len(parts) > 1 else ""
+                text = parts[2] if len(parts) > 2 else ""
+
+                is_channel = "channel" in reply.lower() or cmd_verb == "msgc"
+                msg_type = "channel" if is_channel else "dm"
+
+                # Enrich from TX event
+                route = tx.get("route", "") if tx else ""
+                airtime_ms = tx.get("airtime_ms", 0) if tx else 0
+                pkt_type = tx.get("pkt_type", "") if tx else ""
+
+                # Parse reply for ack info
+                ack_tracked = "ack tracked" in reply.lower()
+
                 messages.append({
                     "time_ms": time_ms,
                     "node": node,
                     "command": cmd,
                     "pkt": pkt,
+                    "dest": dest,
+                    "text": text,
+                    "msg_type": msg_type,
+                    "pkt_type": pkt_type,
+                    "route": route,
+                    "airtime_ms": airtime_ms,
+                    "ack_tracked": ack_tracked,
+                    "reply": reply,
                 })
         return messages
 

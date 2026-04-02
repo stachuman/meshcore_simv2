@@ -26,7 +26,14 @@ class SimRadio : public mesh::Radio {
     std::queue<IncomingPacket> _rx_queue;
     float _last_snr   = 0.0f;
     float _last_rssi  = -100.0f;
-    bool  _tx_pending = false;
+
+    // Radio state machine (matches RadioLib STATE_IDLE/STATE_RX/STATE_TX_WAIT)
+    enum class RadioState : uint8_t {
+        IDLE,      // Standby — not listening, not transmitting
+        RX,        // Continuous receive mode
+        TX_WAIT,   // Transmitting, waiting for completion
+    };
+    RadioState _state = RadioState::RX;  // Radio starts in receive mode
 
     unsigned long _rx_active_until = 0;
 
@@ -49,6 +56,11 @@ class SimRadio : public mesh::Radio {
     uint32_t _packets_sent = 0;
     uint32_t _packets_recv_errors = 0;
 
+    // TX failure probability (models SPI/hardware errors per RadioLib error path)
+    float _tx_fail_prob = 0.0f;
+    uint32_t _rng_state = 1;  // xorshift32 state (avoids <random> / min/max macro clash)
+    uint32_t _tx_fail_count_stat = 0;
+
     // Rx boosted gain mode (no-op in simulator)
     bool _rx_boosted_gain = false;
 
@@ -67,8 +79,8 @@ public:
     float    packetScore(float snr, int packet_len)      override;
     bool     startSendRaw(const uint8_t* bytes, int len) override;
     bool     isSendComplete()                            override;
-    void     onSendFinished()                            override {}
-    bool     isInRecvMode() const                        override { return !_tx_pending; }
+    void     onSendFinished()                            override;
+    bool     isInRecvMode() const                        override;
     bool     isReceiving()                               override;
     float    getLastSNR()  const                         override { return _last_snr;  }
     float    getLastRSSI() const                         override { return _last_rssi; }
@@ -89,6 +101,11 @@ public:
     // Rx boosted gain mode (no-op in simulator)
     void setRxBoostedGainMode(bool enable) { _rx_boosted_gain = enable; }
     bool getRxBoostedGainMode() const { return _rx_boosted_gain; }
+
+    // TX failure simulation
+    void setTxFailProb(float p) { _tx_fail_prob = p; }
+    void seed(uint64_t s) { _rng_state = static_cast<uint32_t>(s) | 1u; } // ensure non-zero
+    uint32_t getTxFailCount() const { return _tx_fail_count_stat; }
 
 #ifdef ORCHESTRATOR_BUILD
     void setTxCallback(TxCallback cb) { _tx_callback = std::move(cb); }

@@ -69,6 +69,8 @@ static OrchestratorConfig parseJson(const json& j) {
                 def.lon = nd["lon"].get<double>();
                 def.has_location = true;
             }
+            if (nd.contains("tx_fail_prob"))
+                def.tx_fail_prob = nd["tx_fail_prob"].get<float>();
             if (nd.contains("adversarial")) {
                 auto& adv = nd["adversarial"];
                 if (adv.contains("mode"))
@@ -269,6 +271,10 @@ static void validateConfig(const OrchestratorConfig& cfg) {
             if (nd.adversarial.mode == AdversarialMode::Corrupt && nd.adversarial.corrupt_bits <= 0)
                 errors.push_back(pfx + "adversarial.corrupt_bits must be > 0 when mode=corrupt");
         }
+
+        if (nd.tx_fail_prob < 0.0f || nd.tx_fail_prob > 1.0f)
+            errors.push_back(pfx + "tx_fail_prob must be [0.0, 1.0] (got " +
+                             std::to_string(nd.tx_fail_prob) + ")");
     }
 
     // Link cross-validation

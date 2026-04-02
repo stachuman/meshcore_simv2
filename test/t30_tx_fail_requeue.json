@@ -1,0 +1,33 @@
+{
+  "simulation": {
+    "duration_ms": 300000,
+    "step_ms": 5,
+    "hot_start": true,
+    "seed": 42
+  },
+  "nodes": [
+    {"name": "alice", "role": "companion", "tx_fail_prob": 0.5},
+    {"name": "hub", "role": "repeater"},
+    {"name": "bob", "role": "companion"}
+  ],
+  "topology": {
+    "links": [
+      {"from": "alice", "to": "hub", "snr": 10, "rssi": -70},
+      {"from": "hub", "to": "bob", "snr": 10, "rssi": -70}
+    ]
+  },
+  "message_schedule": [
+    {
+      "from": "alice",
+      "to": "bob",
+      "start_ms": 5000,
+      "interval_ms": 15000,
+      "count": 10,
+      "message": "requeue_test_{n}"
+    }
+  ],
+  "expect": [
+    {"type": "event_count", "event_type": "tx_fail", "node": "alice", "min": 1},
+    {"type": "cmd_reply_contains", "node": "alice", "command": "msg", "value": "sent"}
+  ]
+}

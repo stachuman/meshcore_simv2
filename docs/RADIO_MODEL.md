@@ -339,7 +339,67 @@ The orchestrator emits a warning to stderr when `step_ms` exceeds the minimum sy
 
 ---
 
-## 13. What Is NOT Modeled
+## 13. Radio State Machine
+
+SimRadio implements a 3-state machine matching RadioLib's hardware model (`RadioLibWrappers.cpp`):
+
+```
+    +------+   startSendRaw (success)    +----------+
+    | IDLE | --------------------------> | TX_WAIT  |
+    +------+                             +----------+
+       ^  ^                                |      |
+       |  |   isSendComplete (true)        |      |
+       |  +--------------------------------+      |
+       |  |   onSendFinished                      |
+       |  +---------------------------------------+
+       |                                          |
+       |        recvRaw (empty, not TX)           |
+       +---------------------------+              |
+       |                           |              |
+    +------+   recvRaw (packet)    |              |
+    |  RX  | <---------------------+              |
+    +------+                                      |
+       ^                                          |
+       |        startSendRaw (failure)            |
+       +------------------------------------------+
+                 (-> IDLE, then recvRaw -> RX)
+```
+
+### States
+
+| State | RadioLib equivalent | Description |
+|---|---|---|
+| `IDLE` | `STATE_IDLE (0)` | Standby -- not listening, not transmitting |
+| `RX` | `STATE_RX (1)` | Continuous receive mode |
+| `TX_WAIT` | `STATE_TX_WAIT (3)` | Transmitting, waiting for completion interrupt |
+
+### Key transitions
+
+- **Constructor -> RX**: Radio starts in receive mode (ready immediately after init)
+- **startSendRaw (success)**: any -> TX_WAIT. TX callback fires, airtime timer starts.
+- **startSendRaw (failure)**: any -> IDLE. No TX callback, no packet sent. Counter incremented.
+- **isSendComplete (true)**: TX_WAIT -> IDLE. Airtime elapsed.
+- **onSendFinished**: any -> IDLE. Hardware cleanup (stays IDLE, does NOT restart RX).
+- **recvRaw (packet)**: any -> RX. Reads packet from queue, restarts receive.
+- **recvRaw (empty, not TX)**: IDLE -> RX. Ensures RX mode on each Dispatcher checkRecv cycle.
+
+### isInRecvMode / isReceiving accuracy
+
+With the state machine, `isInRecvMode()` returns `_state == RX` (not `!transmitting`), matching RadioLib's `(state & ~STATE_INT_READY) == STATE_RX`. This means the radio correctly reports IDLE between TX completion and the next `recvRaw()` call.
+
+### TX Failure Model
+
+Per-node `tx_fail_prob` [0.0-1.0] models SPI/hardware errors. When `startSendRaw()` rolls a failure:
+- Radio transitions to IDLE (RadioLib calls `idle()` on `startTransmit` error)
+- No TX callback fires (no packet enters the air)
+- `tx_fail` event is emitted
+- Current MeshCore: Dispatcher drops the packet. MeshCore PR #2141: Dispatcher requeues for retry.
+
+Configuration: `"tx_fail_prob": 0.5` at node level. See CONFIG_FORMAT.md.
+
+---
+
+## 14. What Is NOT Modeled
 
 | Feature | Why omitted |
 |---|---|
@@ -354,7 +414,7 @@ The orchestrator emits a warning to stderr when `step_ms` exceeds the minimum sy
 
 ---
 
-## References
+## 15. References
 
 - Semtech AN1200.13 -- LoRa Modem Designer's Guide (airtime formulas)
 - Semtech AN1200.22 -- LoRa Modulation Basics (inter-SF isolation matrix, co-SF capture)

@@ -59,8 +59,17 @@ body { font-family: 'SF Mono', 'Consolas', 'Menlo', monospace; font-size: 12px; 
 #trace-panel .msg-item { padding: 4px 6px; cursor: pointer; border-radius: 3px; font-size: 11px; border-bottom: 1px solid #222; }
 #trace-panel .msg-item:hover { background: #2a2a4e; }
 #trace-panel .msg-item.active { background: #3a3a5e; border-color: #88f; }
-#trace-panel .msg-item .time { color: #888; }
+#trace-panel .msg-item .time { color: #888; margin-right: 4px; }
 #trace-panel .msg-item .route { color: #ccc; }
+#trace-panel .msg-item .msg-meta { display: flex; gap: 4px; align-items: center; margin-top: 2px; }
+#trace-panel .msg-item .badge { padding: 0 4px; border-radius: 2px; font-size: 9px; font-weight: bold; }
+#trace-panel .msg-item .badge.dm { background: #2a2a5e; color: #88aaff; }
+#trace-panel .msg-item .badge.channel { background: #2a4a2a; color: #88dd88; }
+#trace-panel .msg-item .badge.flood { background: #3a2a1a; color: #ddaa66; }
+#trace-panel .msg-item .badge.direct { background: #1a3a3a; color: #66cccc; }
+#trace-panel .msg-item .badge.ack { background: #3a1a3a; color: #cc88cc; }
+#trace-panel .msg-item .msg-text { color: #777; font-size: 10px; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 290px; }
+#trace-panel .msg-item .airtime { color: #666; font-size: 10px; }
 #trace-panel .trace-detail { padding: 6px; font-size: 11px; }
 #trace-panel .trace-detail .hop-row { padding: 2px 4px; cursor: pointer; border-radius: 2px; }
 #trace-panel .trace-detail .hop-row:hover { background: #2a2a4e; }
@@ -71,6 +80,41 @@ body { font-family: 'SF Mono', 'Consolas', 'Menlo', monospace; font-size: 12px; 
 #trace-panel .trace-detail .hop-type.relay { background: #002244; color: #4488ff; }
 #trace-panel .trace-detail .hop-type.collision { background: #440000; color: #ff4444; }
 #trace-panel .trace-detail .hop-type.drop { background: #440022; color: #ff4488; }
+/* Node events modal */
+#events-modal { display: none; position: fixed; inset: 0; z-index: 2000; }
+#events-modal .backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.6); }
+#events-modal .dialog { position: absolute; top: 5%; left: 10%; right: 10%; bottom: 5%; background: #1a1a2e; border: 1px solid #444; border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; }
+#events-modal .dialog-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 14px; background: #16213e; border-bottom: 1px solid #333; flex-shrink: 0; }
+#events-modal .dialog-header h2 { color: #aaf; font-size: 14px; font-weight: bold; margin: 0; }
+#events-modal .dialog-header button { background: none; border: none; color: #888; cursor: pointer; font-size: 18px; padding: 0 4px; }
+#events-modal .dialog-header button:hover { color: #fff; }
+#events-modal .dialog-toolbar { display: flex; align-items: center; gap: 8px; padding: 6px 14px; background: #16213e; border-bottom: 1px solid #222; flex-shrink: 0; flex-wrap: wrap; }
+#events-modal .dialog-toolbar label { color: #888; font-size: 10px; cursor: pointer; display: flex; align-items: center; gap: 3px; }
+#events-modal .dialog-toolbar label input { margin: 0; }
+#events-modal .dialog-toolbar .sep { width: 1px; height: 14px; background: #333; }
+#events-modal .density-bar { height: 24px; padding: 0 14px; background: #111; flex-shrink: 0; position: relative; }
+#events-modal .density-bar canvas { width: 100%; height: 100%; display: block; }
+#events-modal .dialog-body { flex: 1; overflow-y: auto; }
+#events-modal .ev-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+#events-modal .ev-table th { position: sticky; top: 0; background: #16213e; color: #888; padding: 4px 8px; text-align: left; border-bottom: 1px solid #333; cursor: pointer; user-select: none; white-space: nowrap; }
+#events-modal .ev-table th:hover { color: #ccc; }
+#events-modal .ev-table th .sort-arrow { color: #88f; margin-left: 2px; }
+#events-modal .ev-table td { padding: 3px 8px; border-bottom: 1px solid #1a1a2e; white-space: nowrap; }
+#events-modal .ev-table tr:hover { background: #222244; }
+#events-modal .ev-table tr.type-tx { color: #eebb66; }
+#events-modal .ev-table tr.type-rx { color: #88dd88; }
+#events-modal .ev-table tr.type-collision { color: #ff6666; }
+#events-modal .ev-table tr.type-drop { color: #cc6688; }
+#events-modal .ev-table tr.type-cmd { color: #8888cc; }
+#events-modal .ev-table .pkt-link { color: #88ccff; cursor: pointer; text-decoration: underline; }
+#events-modal .ev-table .pkt-link:hover { color: #bbddff; }
+#events-modal .ev-table .ev-badge { padding: 1px 4px; border-radius: 2px; font-size: 9px; font-weight: bold; }
+#events-modal .ev-table .ev-badge.tx { background: #553300; color: #ffaa33; }
+#events-modal .ev-table .ev-badge.rx { background: #003322; color: #44cc66; }
+#events-modal .ev-table .ev-badge.collision { background: #440000; color: #ff4444; }
+#events-modal .ev-table .ev-badge.drop { background: #440022; color: #ff4488; }
+#events-modal .ev-table .ev-badge.cmd { background: #222244; color: #8888cc; }
+#events-modal .dialog-footer { display: flex; align-items: center; gap: 12px; padding: 4px 14px; background: #16213e; border-top: 1px solid #333; flex-shrink: 0; font-size: 11px; color: #888; }
 .leaflet-container { background: #1a1a2e !important; }
 .leaflet-tile-pane { filter: brightness(0.7) contrast(1.1) saturate(0.4) hue-rotate(180deg) invert(1); }
 </style>
@@ -132,6 +176,20 @@ body { font-family: 'SF Mono', 'Consolas', 'Menlo', monospace; font-size: 12px; 
 </div>
 
 <div id="summary-bar"></div>
+
+<div id="events-modal">
+    <div class="backdrop"></div>
+    <div class="dialog">
+        <div class="dialog-header">
+            <h2 id="events-modal-title">Node Events</h2>
+            <button id="events-modal-close">&times;</button>
+        </div>
+        <div class="dialog-toolbar" id="events-modal-toolbar"></div>
+        <div class="density-bar"><canvas id="events-density-canvas"></canvas></div>
+        <div class="dialog-body" id="events-modal-body"></div>
+        <div class="dialog-footer" id="events-modal-footer"></div>
+    </div>
+</div>
 
 <script>
 const COL_REPEATER = '#4488ff';
@@ -803,6 +861,9 @@ function selectNode(name) {
                 html += `<div class="stat-row"><span class="key">Delivery</span><span class="val${recv < sent ? ' bad' : ' good'}">${delPct}%</span></div>`;
             }
         }
+
+        // Events button
+        html += `<div style="margin-top:6px"><button class="events-btn" data-node="${name}" style="background:#2a2a4e;color:#ccc;border:1px solid #444;padding:4px 12px;font-size:11px;font-family:inherit;border-radius:3px;cursor:pointer;width:100%">Show Events (${ns.tx + ns.rx + ns.collision + ns.drop})</button></div>`;
     }
 
     html += `<h3>Neighbors</h3>`;
@@ -822,6 +883,10 @@ function selectNode(name) {
     content.querySelectorAll('.node-link').forEach(el => {
         el.addEventListener('click', () => selectNode(el.dataset.node));
     });
+    const evBtn = content.querySelector('.events-btn');
+    if (evBtn) {
+        evBtn.addEventListener('click', () => openNodeEventsModal(evBtn.dataset.node));
+    }
 
     highlightNode(name);
 }
@@ -936,15 +1001,32 @@ function populateTracePanel() {
     for (let i = 0; i < messages.length; i++) {
         const m = messages[i];
         const timeS = (m.time_ms / 1000).toFixed(1);
-        // Parse command to extract destination and text
-        const parts = (m.command || '').split(' ');
-        const cmd = parts[0] || '';
-        const dest = parts[1] || '?';
-        const text = parts.slice(2).join(' ') || '';
-        const label = text ? `${m.node} -> ${dest}: ${text}` : m.command;
+        const dest = m.dest || '?';
+        const isDM = m.msg_type === 'dm';
+        const arrow = `${m.node} -> ${dest}`;
+        const textSnip = m.text ? (m.text.length > 40 ? m.text.slice(0, 40) + '...' : m.text) : '';
+
         html += `<div class="msg-item" data-idx="${i}" data-pkt="${m.pkt || ''}">`;
-        html += `<span class="time">${timeS}s</span> `;
-        html += `<span class="route">${label}</span>`;
+        // First line: time, type badge, route
+        html += `<span class="time">${timeS}s</span>`;
+        html += `<span class="route">${arrow}</span>`;
+        // Second line: badges + airtime
+        html += `<div class="msg-meta">`;
+        html += `<span class="badge ${m.msg_type}">${isDM ? 'DM' : 'CH'}</span>`;
+        if (m.route) {
+            html += `<span class="badge ${m.route}">${m.route}</span>`;
+        }
+        if (m.ack_tracked) {
+            html += `<span class="badge ack">ack</span>`;
+        }
+        if (m.airtime_ms) {
+            html += `<span class="airtime">${m.airtime_ms}ms air</span>`;
+        }
+        html += `</div>`;
+        // Third line: message text (if any)
+        if (textSnip) {
+            html += `<div class="msg-text">${escapeHtml(textSnip)}</div>`;
+        }
         html += `</div>`;
     }
     body.innerHTML = html;
@@ -953,7 +1035,6 @@ function populateTracePanel() {
         el.addEventListener('click', () => {
             const pkt = el.dataset.pkt;
             if (!pkt) return;
-            // Mark active
             body.querySelectorAll('.msg-item').forEach(e => e.classList.remove('active'));
             el.classList.add('active');
             loadTrace(pkt);
@@ -961,18 +1042,24 @@ function populateTracePanel() {
     });
 }
 
+function escapeHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
 async function loadTrace(pkt) {
     try {
         const resp = await fetch(`/api/trace/${pkt}`);
         const trace = await resp.json();
         activeTrace = trace;
-        renderTrace(trace);
+        // Find the corresponding message for metadata
+        const msg = messages.find(m => m.pkt === pkt);
+        renderTrace(trace, msg);
     } catch (e) {
         console.error('Failed to load trace:', e);
     }
 }
 
-function renderTrace(trace) {
+function renderTrace(trace, msg) {
     // Build hop list with source->dest for each event
     const hops = [];
     let hopNum = 0;
@@ -1018,7 +1105,7 @@ function renderTrace(trace) {
     }
 
     // Show hop detail in trace panel
-    showTraceDetail(trace, hops);
+    showTraceDetail(trace, hops, msg);
 }
 
 function drawLeafletTrace(hops) {
@@ -1118,12 +1205,56 @@ function drawForceTrace() {
     }
 }
 
-function showTraceDetail(trace, hops) {
+function showTraceDetail(trace, hops, msg) {
     const body = document.getElementById('trace-body');
     let html = '<div class="trace-detail">';
     html += `<div style="margin-bottom:6px"><strong style="color:#aaf">Trace: ${trace.root_pkt}</strong>`;
     html += ` <button onclick="clearTrace()" style="float:right;background:#442222;color:#ff8888;border:1px solid #663333;border-radius:3px;cursor:pointer;font-size:10px;padding:1px 6px">Clear</button></div>`;
-    html += `<div style="margin-bottom:4px;color:#888">${trace.hops.length} hops</div>`;
+
+    // Message summary
+    if (msg) {
+        const isDM = msg.msg_type === 'dm';
+        html += `<div style="margin-bottom:6px;padding:4px 6px;background:#1a1a3e;border-radius:3px">`;
+        html += `<div style="color:#ccc">${msg.node} -> ${msg.dest || '?'}</div>`;
+        if (msg.text) {
+            html += `<div style="color:#888;font-size:10px;margin-top:1px">${escapeHtml(msg.text.length > 60 ? msg.text.slice(0, 60) + '...' : msg.text)}</div>`;
+        }
+        html += `<div style="margin-top:2px;display:flex;gap:4px;align-items:center">`;
+        html += `<span class="badge ${msg.msg_type}" style="padding:0 4px;border-radius:2px;font-size:9px;font-weight:bold;background:${isDM ? '#2a2a5e' : '#2a4a2a'};color:${isDM ? '#88aaff' : '#88dd88'}">${isDM ? 'DM' : 'CH'}</span>`;
+        if (msg.route) {
+            html += `<span style="padding:0 4px;border-radius:2px;font-size:9px;font-weight:bold;background:#3a2a1a;color:#ddaa66">${msg.route}</span>`;
+        }
+        if (msg.ack_tracked) {
+            html += `<span style="padding:0 4px;border-radius:2px;font-size:9px;font-weight:bold;background:#3a1a3a;color:#cc88cc">ack</span>`;
+        }
+        if (msg.airtime_ms) {
+            html += `<span style="color:#666;font-size:10px">${msg.airtime_ms}ms air</span>`;
+        }
+        html += `</div>`;
+        html += `</div>`;
+    }
+
+    // Compute trace stats
+    const rxNodes = new Set();
+    const collNodes = new Set();
+    let firstTxTime = Infinity, lastRxTime = 0;
+    for (const h of hops) {
+        if (h.type === 'rx' && h.to) { rxNodes.add(h.to); lastRxTime = Math.max(lastRxTime, h.time_ms); }
+        if (h.type === 'collision' && h.to) collNodes.add(h.to);
+        if (h.type === 'tx' && h.time_ms < firstTxTime) firstTxTime = h.time_ms;
+    }
+    const latencyMs = lastRxTime > firstTxTime ? lastRxTime - firstTxTime : 0;
+
+    html += `<div style="margin-bottom:4px;color:#888">`;
+    html += `${trace.hops.length} relay hops`;
+    html += ` &middot; ${rxNodes.size} receivers`;
+    if (collNodes.size > 0) {
+        html += ` &middot; <span style="color:#ff6666">${collNodes.size} collisions</span>`;
+    }
+    if (latencyMs > 0) {
+        html += ` &middot; ${(latencyMs / 1000).toFixed(2)}s e2e`;
+    }
+    html += `</div>`;
 
     let lineNum = 0;
     for (const hop of hops) {
@@ -1250,6 +1381,272 @@ function setupControls() {
         }
     });
 }
+
+// ── Node Events Modal ─────────────────────────────────────────
+
+let evModalEvents = [];    // raw events for current node
+let evModalFiltered = [];  // after type filter
+let evModalNode = '';
+let evModalSort = { col: 'time_ms', asc: true };
+let evModalTypeFilter = { tx: true, rx: true, collision: true, drop: true, cmd: true };
+
+function categorizeEvent(ev) {
+    const t = ev.type || '';
+    if (t === 'tx') return 'tx';
+    if (t === 'rx') return 'rx';
+    if (t.startsWith('collision')) return 'collision';
+    if (t.startsWith('drop') || t.startsWith('adversarial')) return 'drop';
+    if (t === 'cmd_reply') return 'cmd';
+    return 'cmd';
+}
+
+function evPeer(ev, nodeName) {
+    const t = ev.type || '';
+    if (t === 'tx') return '';
+    // For RX/collision/drop: return the other node (not us)
+    const fr = ev.from || ev.node || '';
+    const to = ev.to || '';
+    if (fr === nodeName) return to;
+    if (to === nodeName) return fr;
+    return fr || to;
+}
+
+function evDirection(ev, nodeName) {
+    const t = ev.type || '';
+    if (t === 'tx') return 'out';
+    const to = ev.to || '';
+    const fr = ev.from || ev.node || '';
+    if (t === 'rx') return to === nodeName ? 'in' : (fr === nodeName ? 'out' : '');
+    if (t.startsWith('collision') || t.startsWith('drop')) return to === nodeName ? 'in' : '';
+    return '';
+}
+
+async function openNodeEventsModal(nodeName) {
+    evModalNode = nodeName;
+    document.getElementById('events-modal').style.display = 'block';
+    document.getElementById('events-modal-title').textContent = `Events: ${nodeName}`;
+    document.getElementById('events-modal-body').innerHTML = '<div style="padding:20px;color:#666;text-align:center">Loading...</div>';
+
+    try {
+        const resp = await fetch(`/api/node_events/${encodeURIComponent(nodeName)}`);
+        const data = await resp.json();
+        evModalEvents = data.events || [];
+    } catch (e) {
+        document.getElementById('events-modal-body').innerHTML = `<div style="padding:20px;color:#ff6666">Failed: ${e.message}</div>`;
+        return;
+    }
+
+    // Build toolbar with type filter checkboxes + counts
+    const counts = { tx: 0, rx: 0, collision: 0, drop: 0, cmd: 0 };
+    for (const ev of evModalEvents) counts[categorizeEvent(ev)]++;
+
+    let tbHtml = '';
+    for (const [cat, label, col] of [['tx','TX','#ffaa33'],['rx','RX','#44cc66'],['collision','Coll','#ff4444'],['drop','Drop','#ff4488'],['cmd','Cmd','#8888cc']]) {
+        const checked = evModalTypeFilter[cat] ? 'checked' : '';
+        tbHtml += `<label style="color:${col}"><input type="checkbox" data-cat="${cat}" ${checked}> ${label} (${counts[cat]})</label>`;
+    }
+    tbHtml += `<span class="sep"></span>`;
+    tbHtml += `<span style="color:#666;font-size:10px">${evModalEvents.length} total</span>`;
+    document.getElementById('events-modal-toolbar').innerHTML = tbHtml;
+
+    // Checkbox listeners
+    document.querySelectorAll('#events-modal-toolbar input[type=checkbox]').forEach(cb => {
+        cb.addEventListener('change', () => {
+            evModalTypeFilter[cb.dataset.cat] = cb.checked;
+            applyEvModalFilter();
+        });
+    });
+
+    applyEvModalFilter();
+    drawEvDensity();
+}
+
+function applyEvModalFilter() {
+    evModalFiltered = evModalEvents.filter(ev => evModalTypeFilter[categorizeEvent(ev)]);
+    sortEvModal();
+    renderEvTable();
+}
+
+function sortEvModal() {
+    const col = evModalSort.col;
+    const dir = evModalSort.asc ? 1 : -1;
+    evModalFiltered.sort((a, b) => {
+        let va, vb;
+        if (col === 'time_ms') { va = a.time_ms || 0; vb = b.time_ms || 0; }
+        else if (col === 'type') { va = categorizeEvent(a); vb = categorizeEvent(b); }
+        else if (col === 'peer') { va = evPeer(a, evModalNode); vb = evPeer(b, evModalNode); }
+        else if (col === 'pkt_type') { va = a.pkt_type || ''; vb = b.pkt_type || ''; }
+        else if (col === 'route') { va = a.route || ''; vb = b.route || ''; }
+        else if (col === 'snr') { va = a.snr ?? -999; vb = b.snr ?? -999; }
+        else if (col === 'airtime') { va = a.airtime_ms || 0; vb = b.airtime_ms || 0; }
+        else { va = 0; vb = 0; }
+        if (typeof va === 'string') return dir * va.localeCompare(vb);
+        return dir * (va - vb);
+    });
+}
+
+function renderEvTable() {
+    const cols = [
+        { key: 'time_ms', label: 'Time' },
+        { key: 'type', label: 'Type' },
+        { key: 'dir', label: 'Dir' },
+        { key: 'peer', label: 'Peer' },
+        { key: 'pkt_type', label: 'Pkt Type' },
+        { key: 'route', label: 'Route' },
+        { key: 'snr', label: 'SNR' },
+        { key: 'airtime', label: 'Airtime' },
+        { key: 'pkt', label: 'Pkt' },
+    ];
+
+    let html = '<table class="ev-table"><thead><tr>';
+    for (const c of cols) {
+        const arrow = evModalSort.col === c.key ? (evModalSort.asc ? ' ▲' : ' ▼') : '';
+        html += `<th data-col="${c.key}">${c.label}${arrow ? `<span class="sort-arrow">${arrow}</span>` : ''}</th>`;
+    }
+    html += '</tr></thead><tbody>';
+
+    for (const ev of evModalFiltered) {
+        const cat = categorizeEvent(ev);
+        const timeS = (ev.time_ms / 1000).toFixed(2);
+        const peer = evPeer(ev, evModalNode);
+        const dir = evDirection(ev, evModalNode);
+        const dirIcon = dir === 'in' ? '←' : dir === 'out' ? '→' : '';
+        const snr = ev.snr != null ? ev.snr.toFixed(1) : '';
+        const airtime = ev.airtime_ms ? ev.airtime_ms + 'ms' : '';
+        const pkt = ev.pkt || '';
+        const pktType = ev.pkt_type || '';
+        const route = ev.route || '';
+        const typeLabel = ev.type || '';
+
+        // For cmd_reply, show command+reply instead of peer/pkt_type
+        let extra = '';
+        if (cat === 'cmd') {
+            extra = ev.command ? escapeHtml(ev.command.length > 30 ? ev.command.slice(0, 30) + '..' : ev.command) : '';
+            if (ev.reply) extra += ' → ' + escapeHtml(ev.reply.length > 30 ? ev.reply.slice(0, 30) + '..' : ev.reply);
+        }
+
+        html += `<tr class="type-${cat}">`;
+        html += `<td>${timeS}s</td>`;
+        html += `<td><span class="ev-badge ${cat}">${typeLabel}</span></td>`;
+        html += `<td>${dirIcon}</td>`;
+        html += `<td>${cat === 'cmd' ? '' : (peer ? `<span class="node-link" data-node="${peer}">${peer}</span>` : '')}</td>`;
+        html += `<td>${cat === 'cmd' ? `<span style="color:#777;font-size:10px" title="${escapeHtml(extra)}">${extra}</span>` : pktType}</td>`;
+        html += `<td>${route}</td>`;
+        html += `<td>${snr}</td>`;
+        html += `<td>${airtime}</td>`;
+        html += `<td>${pkt ? `<span class="pkt-link" data-pkt="${pkt}">${pkt}</span>` : ''}</td>`;
+        html += `</tr>`;
+    }
+    html += '</tbody></table>';
+
+    document.getElementById('events-modal-body').innerHTML = html;
+
+    // Footer
+    document.getElementById('events-modal-footer').textContent =
+        `Showing ${evModalFiltered.length} of ${evModalEvents.length} events`;
+
+    // Column sort click
+    document.querySelectorAll('#events-modal .ev-table th').forEach(th => {
+        th.addEventListener('click', () => {
+            const col = th.dataset.col;
+            if (col === 'dir' || col === 'pkt') return; // not sortable
+            if (evModalSort.col === col) evModalSort.asc = !evModalSort.asc;
+            else { evModalSort.col = col; evModalSort.asc = true; }
+            sortEvModal();
+            renderEvTable();
+        });
+    });
+
+    // Pkt hash click -> close modal, trigger trace
+    document.querySelectorAll('#events-modal .pkt-link').forEach(el => {
+        el.addEventListener('click', () => {
+            const pkt = el.dataset.pkt;
+            closeEventsModal();
+            // Open trace panel and load this trace
+            document.getElementById('trace-panel').style.display = 'block';
+            document.getElementById('btn-trace').classList.add('active');
+            loadTrace(pkt);
+        });
+    });
+
+    // Peer node click -> close modal, select that node
+    document.querySelectorAll('#events-modal .node-link').forEach(el => {
+        el.addEventListener('click', () => {
+            const node = el.dataset.node;
+            closeEventsModal();
+            selectNode(node);
+        });
+    });
+}
+
+function drawEvDensity() {
+    const canvas = document.getElementById('events-density-canvas');
+    const rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width * devicePixelRatio;
+    canvas.height = rect.height * devicePixelRatio;
+    canvas.style.width = rect.width + 'px';
+    canvas.style.height = rect.height + 'px';
+    const ctx = canvas.getContext('2d');
+    ctx.scale(devicePixelRatio, devicePixelRatio);
+    const W = rect.width, H = rect.height;
+
+    ctx.clearRect(0, 0, W, H);
+    if (evModalEvents.length === 0) return;
+
+    const tMin = evModalEvents[0].time_ms || 0;
+    const tMax = evModalEvents[evModalEvents.length - 1].time_ms || tMin + 1;
+    const nBuckets = Math.min(Math.max(40, Math.floor(W / 4)), 200);
+    const bucketMs = Math.max(1, (tMax - tMin) / nBuckets);
+
+    const catColors = { tx: '#ffaa33', rx: '#44cc66', collision: '#ff4444', drop: '#ff4488', cmd: '#8888cc' };
+    const buckets = {};
+    for (const cat of Object.keys(catColors)) buckets[cat] = new Array(nBuckets).fill(0);
+
+    for (const ev of evModalEvents) {
+        const cat = categorizeEvent(ev);
+        const b = Math.min(Math.floor((ev.time_ms - tMin) / bucketMs), nBuckets - 1);
+        buckets[cat][b]++;
+    }
+
+    // Find max for scaling
+    let maxVal = 1;
+    for (let i = 0; i < nBuckets; i++) {
+        let sum = 0;
+        for (const cat of Object.keys(catColors)) sum += buckets[cat][i];
+        maxVal = Math.max(maxVal, sum);
+    }
+
+    // Draw stacked bars
+    const barW = W / nBuckets;
+    for (let i = 0; i < nBuckets; i++) {
+        let y = H;
+        for (const cat of ['rx', 'tx', 'collision', 'drop', 'cmd']) {
+            const v = buckets[cat][i];
+            if (v === 0) continue;
+            const barH = (v / maxVal) * (H - 2);
+            y -= barH;
+            ctx.fillStyle = catColors[cat];
+            ctx.globalAlpha = 0.8;
+            ctx.fillRect(i * barW, y, Math.max(1, barW - 0.5), barH);
+        }
+    }
+    ctx.globalAlpha = 1;
+}
+
+function closeEventsModal() {
+    document.getElementById('events-modal').style.display = 'none';
+    evModalEvents = [];
+    evModalFiltered = [];
+}
+
+// Modal close handlers
+document.getElementById('events-modal-close').addEventListener('click', closeEventsModal);
+document.querySelector('#events-modal .backdrop').addEventListener('click', closeEventsModal);
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.getElementById('events-modal').style.display === 'block') {
+        closeEventsModal();
+    }
+});
 
 init();
 </script>

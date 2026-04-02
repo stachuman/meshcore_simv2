@@ -28,6 +28,9 @@ void dropWeak(unsigned long time_ms, const char* from, const char* to, float snr
 void dropLoss(unsigned long time_ms, const char* from, const char* to, float loss_prob,
               const uint8_t* data, int len);
 
+// TX failure events
+void txFail(unsigned long time_ms, const char* node, uint32_t count);
+
 // Adversarial events
 void adversarialDrop(unsigned long time_ms, const char* node, const uint8_t* data, int len);
 void adversarialCorrupt(unsigned long time_ms, const char* node, const uint8_t* data, int len,
