@@ -7,6 +7,9 @@
 #include "NodeContext.h"
 #include "MeshWrapper.h"
 
+static constexpr uint64_t FNV1A_OFFSET_BASIS = 0xcbf29ce484222325ULL;
+static constexpr uint64_t FNV1A_PRIME        = 0x100000001b3ULL;
+
 // Factory functions (defined in RepeaterNode.cpp / CompanionNode.cpp)
 std::unique_ptr<MeshWrapper> createRepeaterMesh(NodeContext& ctx);
 std::unique_ptr<MeshWrapper> createCompanionMesh(NodeContext& ctx);
@@ -47,10 +50,10 @@ void NodeContext::initMesh(uint64_t global_seed) {
     // Seed RNG deterministically from global seed XOR'd with node name hash.
     // Different global seeds produce different per-node sequences;
     // same-name nodes still differ from each other.
-    uint64_t name_hash = 0xcbf29ce484222325ULL;  // FNV-1a offset basis
+    uint64_t name_hash = FNV1A_OFFSET_BASIS;
     for (char c : name) {
         name_hash ^= static_cast<uint8_t>(c);
-        name_hash *= 0x100000001b3ULL;  // FNV-1a prime
+        name_hash *= FNV1A_PRIME;
     }
     rng.seed(name_hash ^ global_seed);
 

@@ -60,11 +60,28 @@ Links can be unidirectional (`bidir: false`) or bidirectional. Bidirectional lin
 
 ### Per-reception SNR sampling
 
-When `snr_std_dev > 0`:
+Two fading modes are available, controlled by `snr_coherence_ms`:
+
+**i.i.d. Gaussian** (`snr_coherence_ms = 0`, default):
 
     rx_snr ~ Normal(snr_mean, snr_std_dev)
 
-using the global seeded `std::mt19937` (default seed=42). Models real-world fading and interference variation.
+Each reception draws an independent sample. Simple but unrealistic: consecutive packets on the same link see uncorrelated channel conditions.
+
+**Ornstein-Uhlenbeck correlated fading** (`snr_coherence_ms > 0`):
+
+    offset(t) = alpha * offset(t-dt) + sqrt(1 - alpha^2) * snr_std_dev * N(0,1)
+    alpha = exp(-dt / snr_coherence_ms)
+    rx_snr = snr_mean + offset
+
+Properties:
+- Marginal distribution: N(0, snr_std_dev^2) -- same variance as i.i.d.
+- Autocorrelation: exp(-|dt| / snr_coherence_ms)
+- Higher coherence time = slower fading (channel changes less between packets)
+- Each directed link (A->B, B->A) has independent fading state
+- First sample after initialization is effectively independent (large dt drives alpha to 0)
+
+This models real-world small-scale fading where the channel varies slowly relative to packet rate. Typical urban LoRa coherence times are 0.5-5 seconds.
 
 ### Receiver sensitivity (SNR threshold)
 
@@ -79,7 +96,7 @@ Each SF has a minimum decodable SNR (from Semtech SX1276 datasheet):
 | 11 | -17.5 |
 | 12 | -20.0 |
 
-Signals below threshold are dropped as `drop_weak` — no RF energy contribution, no LBT notification (below CAD detection level).
+Signals below threshold are dropped as `drop_weak` -- no RF energy contribution, no LBT notification (below CAD detection level).
 
 Implementation: `SimRadio::getSnrThreshold()`, `SimRadio::packetScore()`.
 
@@ -96,11 +113,11 @@ For each TX captured from a node's `pending_tx` queue:
 1. **Adversarial pre-pass**: Drop/Corrupt/Replay modifications (if configured)
 2. **Half-duplex pre-pass**: Set `tx_busy_until` for all senders; mark any active RX on senders as `halfduplex_abort`
 3. **Per-receiver processing**:
-   - Sample per-reception SNR from Gaussian
-   - Check SNR threshold → `drop_weak` if below
-   - Notify LBT (channel busy window on receiver)
-   - Check half-duplex (receiver transmitting → `drop_halfduplex`)
-   - Roll stochastic link loss (mark `link_loss`, but still create PendingRx — lost packets still occupy the channel as RF energy for collision detection)
+   - Sample per-reception SNR (i.i.d. or O-U correlated)
+   - Check SNR threshold -> `drop_weak` if below
+   - Notify LBT (channel busy window on receiver), subject to CAD miss probability
+   - Check half-duplex (receiver transmitting -> `drop_halfduplex`)
+   - Roll stochastic link loss (mark `link_loss`, but still create PendingRx -- lost packets still occupy the channel as RF energy for collision detection)
    - Create `PendingRx` entry with `rx_start_ms = current_ms`, `rx_end_ms = current_ms + airtime`
    - **Collision detection**: test against all existing `active_rx` entries on this receiver (see Section 4)
    - Notify receiver's `SimRadio` of active reception (`notifyRxStart`)
@@ -110,10 +127,10 @@ For each TX captured from a node's `pending_tx` queue:
 
 When `current_ms >= rx_end_ms`, process the `PendingRx`:
 
-- **Not collided/lost/aborted** → deliver to radio queue (successful `rx` event)
-- **`halfduplex_abort`** → `drop_halfduplex` event
-- **`link_loss`** → `drop_loss` event
-- **`collided`** → `collision` event
+- **Not collided/lost/aborted** -> deliver to radio queue (successful `rx` event)
+- **`halfduplex_abort`** -> `drop_halfduplex` event
+- **`link_loss`** -> `drop_loss` event
+- **`collided`** -> `collision` event
 
 All events use `rx_start_ms` as the NDJSON timestamp (not `current_ms`) so visualization bars align with TX bars.
 
@@ -131,21 +148,21 @@ Real SX1276/SX1262 receivers lock onto the first detected preamble. The capture 
 
     lock_time = primary.rx_start_ms + 5 * T_sym
 
-**Threshold selection**:
+**Threshold selection** (configurable via `simulation.radio`):
 
-| Scenario | Threshold | Rationale |
-|---|---|---|
-| Primary locked (`interferer.rx_start_ms >= lock_time`) | **1 dB** | Semtech AN1200.22: co-SF capture at 1 dB SIR when receiver is synchronized |
-| Preambles overlap (`interferer.rx_start_ms < lock_time`) | **6 dB** | Classic LoRaSim model: uncertain lock, power must dominate |
+| Scenario | Default | Config field | Rationale |
+|---|---|---|---|
+| Primary locked (`interferer.rx_start_ms >= lock_time`) | **3 dB** | `capture_locked_db` | Conservative estimate based on CSS capture literature. Range 1-6 dB depending on receiver implementation. |
+| Preambles overlap (`interferer.rx_start_ms < lock_time`) | **6 dB** | `capture_unlocked_db` | Classic LoRaSim model: uncertain lock, power must dominate. |
 
 **Capture check**:
 
     if primary.snr >= interferer.snr + threshold:
         primary survives (not destroyed)
 
-This is evaluated for each `(primary, interferer)` pair in both directions. The evaluation is naturally asymmetric when packets arrive at different times: the first arrival gets the low threshold (lock advantage), the later arrival faces the high threshold. When both arrive in the same simulation step (`rx_start_ms` equal), both directions use 6 dB.
+This is evaluated for each `(primary, interferer)` pair in both directions. The evaluation is naturally asymmetric when packets arrive at different times: the first arrival gets the low threshold (lock advantage), the later arrival faces the high threshold. When both arrive in the same simulation step (`rx_start_ms` equal), both directions use the unlocked threshold.
 
-**Why not always 1 dB?** When preambles overlap, the receiver's correlator sees two concurrent chirp patterns. It cannot cleanly lock onto either unless one dominates by ~6 dB. The timing-dependent threshold reflects this physical reality.
+**Why configurable?** Empirical capture thresholds vary widely in the literature: Semtech AN1200.22 suggests ~1 dB for a fully synchronized receiver, LoRaSim uses 6 dB uniformly, and the Dense LoRa Deployment study (PMC7865706) found limited practical capture benefit. The default 3 dB is a conservative middle ground.
 
 ### 4.2 Preamble Grace Period
 
@@ -161,12 +178,14 @@ If the interferer only overlaps the non-critical early portion of the primary's 
 
 If the overlap is small and occurs entirely within the payload portion (after preamble), forward error correction may recover the data. The tolerance depends on coding rate:
 
-| Coding Rate | FEC Symbols | Tolerance |
-|---|---|---|
-| CR 4/5 | 0 | 0 ms |
-| CR 4/6 | 0 | 0 ms |
-| CR 4/7 | 1 | 1 * T_sym |
-| CR 4/8 | 2 | 2 * T_sym |
+| Coding Rate | Hamming Code | Correction | FEC Symbols | Tolerance |
+|---|---|---|---|---|
+| CR 4/5 | (5,4) | detection only | 0 | 0 ms |
+| CR 4/6 | (6,4) | detection only | 0 | 0 ms |
+| CR 4/7 | (7,4) | corrects 1 bit/codeword | 1 | 1 * T_sym |
+| CR 4/8 | (8,4) extended | corrects 1 bit/codeword | 1 | 1 * T_sym |
+
+Note: CR 4/8 uses (8,4) extended Hamming which corrects 1 bit per codeword -- the same correction capacity as CR 4/7's (7,4) Hamming. The extra parity bit adds error detection (2-bit detection) but not additional correction. Through LoRa's diagonal interleaver, 1 corrupted symbol maps to 1 bit error per codeword, which is correctable. 2 corrupted symbols exceed the correction capacity of both codes.
 
     overlap = [max(primary.start, interferer.start), min(primary.end, interferer.end)]
 
@@ -197,7 +216,7 @@ When a node is transmitting (`tx_busy_from` to `tx_busy_until`), incoming packet
 
 ### 5.2 RX blocks TX (LBT / isReceiving)
 
-When a node is receiving (active `PendingRx` or LBT busy window), `SimRadio::isReceiving()` returns true. MeshCore's `Dispatcher` checks this before attempting TX — if the channel is busy, TX is deferred.
+When a node is receiving (active `PendingRx` or LBT busy window), `SimRadio::isReceiving()` returns true. MeshCore's `Dispatcher` checks this before attempting TX -- if the channel is busy, TX is deferred.
 
 ### 5.3 TX aborts RX
 
@@ -211,11 +230,25 @@ Channel activity is detected after a preamble detection delay:
 
     preamble_detect_delay = 5 * T_sym
 
-This matches the preamble lock time — the receiver needs ~5 symbol periods to detect and classify an incoming preamble via Channel Activity Detection (CAD).
+This matches the preamble lock time -- the receiver needs ~5 symbol periods to detect and classify an incoming preamble via Channel Activity Detection (CAD).
 
 The channel is marked busy from `node_now + preamble_detect_delay` until `node_now + airtime`. Only signals above the SNR threshold trigger LBT notification (weak signals are invisible to CAD).
 
 **Clock domain**: LBT timestamps are converted from orchestrator time to **node-clock domain** (which includes per-node stagger offset) to ensure correct comparison with `SimRadio::isReceiving()`.
+
+### 6.1 CAD Miss Probability
+
+Real CAD has a non-zero false-negative rate (Semtech AN1200.85 documents typical missed detection probabilities). When `cad_miss_prob > 0` (default 0.05 = 5%), each LBT detection event has a probability of being missed. A missed detection means the receiver does not see the channel as busy and may proceed to transmit, potentially causing a collision.
+
+    for each above-threshold reception at a receiver:
+        if random() < cad_miss_prob:
+            skip LBT notification (receiver unaware)
+        else:
+            notifyChannelBusy(from, until)
+
+The missed detection only affects the LBT/`isReceiving()` mechanism. The actual RF energy still participates in collision detection -- if the receiver does transmit, the collision model correctly handles the resulting interference.
+
+Configuration: `simulation.radio.cad_miss_prob` (0.0 = perfect detection, 1.0 = CAD always misses).
 
 ---
 
@@ -223,14 +256,19 @@ The channel is marked busy from `node_now + preamble_detect_delay` until `node_n
 
 ### Per-link SNR variance
 
-When `snr_std_dev > 0`, each reception draws a Gaussian-sampled SNR. This affects:
+When `snr_std_dev > 0`, each reception's SNR is sampled from a distribution. Two modes:
+
+- **i.i.d. Gaussian** (`snr_coherence_ms = 0`): Independent draw per reception. Simple, suitable for average-case analysis.
+- **Ornstein-Uhlenbeck** (`snr_coherence_ms > 0`): Time-correlated fading. Consecutive receptions on the same directed link see correlated SNR. Models real-world small-scale fading where the channel varies slowly.
+
+This affects:
 - Whether the signal exceeds the receiver sensitivity threshold (drop_weak)
 - The effective SNR used in capture effect comparisons
 - LBT notification (only above-threshold signals trigger it)
 
 ### Per-link packet loss
 
-When `loss > 0`, packets are dropped with the given probability at registration time. Lost packets still occupy the channel as RF energy — they create `PendingRx` entries that participate in collision detection and LBT notification, but are not delivered to the application layer.
+When `loss > 0`, packets are dropped with the given probability at registration time. Lost packets still occupy the channel as RF energy -- they create `PendingRx` entries that participate in collision detection and LBT notification, but are not delivered to the application layer.
 
 ---
 
@@ -268,39 +306,61 @@ Key insight: a constant clock **offset** doesn't stagger timers (cancels in `nex
 
 ---
 
-## 11. Constants Summary
+## 11. Time Resolution
+
+The simulation advances in discrete `step_ms` increments (default 5 ms). All events within the same step are treated as simultaneous. This affects timing-sensitive effects:
+
+| Radio config | T_sym | Recommended step_ms |
+|---|---|---|
+| SF7 / BW 125 kHz | 1.024 ms | 1 |
+| SF8 / BW 125 kHz | 2.048 ms | 2 |
+| SF8 / BW 62.5 kHz | 4.096 ms | 4 |
+| SF9 / BW 125 kHz | 4.096 ms | 4 |
+| SF10+ | >= 8.192 ms | 5 (default OK) |
+
+The orchestrator emits a warning to stderr when `step_ms` exceeds the minimum symbol time across all nodes. For best accuracy, use `step_ms <= T_sym`.
+
+---
+
+## 12. Constants Summary
 
 | Constant | Value | Source | Location |
 |---|---|---|---|
-| CAPTURE_LOCKED_DB | 1.0 dB | Semtech AN1200.22 | Orchestrator.cpp |
-| CAPTURE_UNLOCKED_DB | 6.0 dB | LoRaSim | Orchestrator.cpp |
+| capture_locked_db | **3.0 dB** (configurable) | Conservative CSS capture estimate | OrchestratorConfig |
+| capture_unlocked_db | **6.0 dB** (configurable) | LoRaSim | OrchestratorConfig |
+| cad_miss_prob | **0.05** (configurable) | Typical CAD false-negative rate | OrchestratorConfig |
+| snr_coherence_ms | **0.0** (configurable) | 0 = i.i.d., >0 = O-U process | OrchestratorConfig |
 | PREAMBLE_LOCK_SYMBOLS | 5 symbols | SX1276 empirical | Orchestrator.cpp |
 | Preamble symbols (N_pre) | 8 | SX1276 default | SimRadio.h |
 | Preamble grace | (N_pre - 5) * T_sym = 3 * T_sym | Derived | Orchestrator.cpp |
-| FEC tolerance | {0, 0, 1, 2} symbols for CR 4/5..4/8 | Derived | Orchestrator.cpp |
+| FEC tolerance | {0, 0, 1, 1} symbols for CR 4/5..4/8 | LoRa Hamming codes | Orchestrator.cpp |
 | Preamble detect delay | 5 * T_sym | SX1276 CAD | SimRadio.cpp |
 | SNR thresholds | SF7:-7.5 ... SF12:-20.0 dB | SX1276 datasheet | SimRadio.cpp |
 
 ---
 
-## 12. What Is NOT Modeled
+## 13. What Is NOT Modeled
 
 | Feature | Why omitted |
 |---|---|
 | **Inter-SF interference** | MeshCore uses a single SF across all nodes. The Semtech AN1200.22 inter-SF isolation matrix (1-25 dB rejection) would apply if mixed SFs were used. |
 | **Frequency offset** | All nodes share one channel. LoRaSim checks +-30kHz (BW125), but irrelevant for single-channel. |
-| **Multipath / slow fading** | SNR variance is static Gaussian, not time-correlated. No Rayleigh/Rician channel model. |
+| **Rayleigh/Rician fading** | The O-U correlated fading model captures temporal correlation but assumes Gaussian marginals, not Rayleigh/Rician. Adequate for protocol-level analysis, not for absolute link budget prediction. |
 | **Duty cycle limits** | EU 868MHz requires 1% duty cycle. Not enforced. |
 | **Near-far desensitization** | Receiver sensitivity is not degraded by strong nearby transmitters beyond the collision model. |
 | **Clock drift** | Node clocks advance in lockstep (no drift). Only stagger offsets differentiate timing. |
 | **Terrain / propagation** | SNR comes from the link table (measured or gap-filled). No ray-tracing or path-loss calculation. |
+| **CAD false alarms** | Only CAD misses (false negatives) are modeled. CAD false positives (phantom busy) are not implemented. |
 
 ---
 
 ## References
 
-- Semtech AN1200.13 — LoRa Modem Designer's Guide (airtime formulas)
-- Semtech AN1200.22 — LoRa Modulation Basics (inter-SF isolation matrix, co-SF capture)
-- [LoRaSim](https://github.com/adwaitnd/lorasim) — Original 6 dB capture model
-- [Dense LoRa Deployment: CAD and Capture Effect](https://pmc.ncbi.nlm.nih.gov/articles/PMC7865706/) — Empirical timing-dependent capture measurements
-- [Simulating LoRaWAN: Inter-SF Interference (ICC 2019)](https://ieeexplore.ieee.org/document/8761055/) — Three collision model comparison
+- Semtech AN1200.13 -- LoRa Modem Designer's Guide (airtime formulas)
+- Semtech AN1200.22 -- LoRa Modulation Basics (inter-SF isolation matrix, co-SF capture)
+- Semtech AN1200.85 -- Introduction to Channel Activity Detection
+- [LoRaSim](https://github.com/adwaitnd/lorasim) -- Original 6 dB capture model
+- [Dense LoRa Deployment: CAD and Capture Effect](https://pmc.ncbi.nlm.nih.gov/articles/PMC7865706/) -- Empirical timing-dependent capture measurements
+- [Simulating LoRaWAN: Inter-SF Interference (ICC 2019)](https://ieeexplore.ieee.org/document/8761055/) -- Three collision model comparison
+- [Coded LoRa FEC Analysis](https://arxiv.org/pdf/1911.10245) -- LoRa Hamming code correction capacity
+- [LoRa Propagation Models Review](https://pmc.ncbi.nlm.nih.gov/articles/PMC11207269/) -- Small-scale fading characterization

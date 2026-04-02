@@ -1,6 +1,9 @@
 #include "SimRNG.h"
 #include <cstring>
 
+static constexpr uint64_t FNV1A_OFFSET_BASIS = 0xcbf29ce484222325ULL;
+static constexpr uint64_t FNV1A_PRIME        = 0x100000001b3ULL;
+
 // SplitMix64 -- used to expand a short seed into xoshiro256** state.
 uint64_t SimRNG::_splitmix64(uint64_t& state) {
     uint64_t z = (state += 0x9e3779b97f4a7c15ULL);
@@ -41,10 +44,10 @@ void SimRNG::seed(uint64_t s) {
 }
 
 void SimRNG::seed(const uint8_t* key, size_t key_len) {
-    uint64_t h = 0xcbf29ce484222325ULL;  // FNV-1a offset basis
+    uint64_t h = FNV1A_OFFSET_BASIS;
     for (size_t i = 0; i < key_len; i++) {
         h ^= key[i];
-        h *= 0x100000001b3ULL;  // FNV-1a prime
+        h *= FNV1A_PRIME;
     }
     seed(h);
 }

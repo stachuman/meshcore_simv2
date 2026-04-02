@@ -40,6 +40,7 @@ class EventIndex:
 
     def _load(self, path: str):
         print(f"Loading {path}...", file=sys.stderr)
+        parse_errors = 0
         with open(path, "r") as f:
             for line in f:
                 line = line.strip()
@@ -48,8 +49,12 @@ class EventIndex:
                 try:
                     ev = json.loads(line)
                 except json.JSONDecodeError:
+                    parse_errors += 1
                     continue
                 self._index_event(ev)
+
+        if parse_errors:
+            print(f"WARNING: skipped {parse_errors} malformed JSON lines", file=sys.stderr)
 
         if self.events:
             self.time_min = self.times[0]
@@ -349,8 +354,68 @@ def load_topology(path: str) -> dict:
     return {"nodes": nodes, "links": links, "has_geo": has_geo}
 
 
+def compute_map_stats(index: EventIndex) -> dict:
+    """Compute per-node and per-link simulation statistics for the map view."""
+    nodes: dict[str, dict[str, int]] = {}
+    links: dict[str, dict[str, int]] = {}
+    totals = {"tx": 0, "rx": 0, "collision": 0, "drop": 0}
+
+    for ev in index.events:
+        etype = ev.get("type", "")
+        if etype == "tx":
+            node = ev.get("node", "")
+            if node:
+                nodes.setdefault(node, {"tx": 0, "rx": 0, "collision": 0, "drop": 0})
+                nodes[node]["tx"] += 1
+                totals["tx"] += 1
+        elif etype == "rx":
+            to_node = ev.get("to", "")
+            from_node = ev.get("node", ev.get("from", ""))
+            if to_node:
+                nodes.setdefault(to_node, {"tx": 0, "rx": 0, "collision": 0, "drop": 0})
+                nodes[to_node]["rx"] += 1
+                totals["rx"] += 1
+            if from_node and to_node:
+                lk = f"{from_node}>{to_node}"
+                links.setdefault(lk, {"rx": 0, "collision": 0, "drop": 0})
+                links[lk]["rx"] += 1
+        elif etype.startswith("collision"):
+            to_node = ev.get("to", "")
+            from_node = ev.get("node", ev.get("from", ""))
+            if to_node:
+                nodes.setdefault(to_node, {"tx": 0, "rx": 0, "collision": 0, "drop": 0})
+                nodes[to_node]["collision"] += 1
+                totals["collision"] += 1
+            if from_node and to_node:
+                lk = f"{from_node}>{to_node}"
+                links.setdefault(lk, {"rx": 0, "collision": 0, "drop": 0})
+                links[lk]["collision"] += 1
+        elif etype.startswith("drop"):
+            to_node = ev.get("to", ev.get("node", ""))
+            from_node = ev.get("node", ev.get("from", ""))
+            if to_node:
+                nodes.setdefault(to_node, {"tx": 0, "rx": 0, "collision": 0, "drop": 0})
+                nodes[to_node]["drop"] += 1
+                totals["drop"] += 1
+            if from_node and to_node and from_node != to_node:
+                lk = f"{from_node}>{to_node}"
+                links.setdefault(lk, {"rx": 0, "collision": 0, "drop": 0})
+                links[lk]["drop"] += 1
+
+    return {
+        "nodes": nodes,
+        "links": links,
+        "totals": totals,
+        "msg_stats": index.stats,
+        "time_min": index.time_min,
+        "time_max": index.time_max,
+    }
+
+
 class MapHandler(BaseHTTPRequestHandler):
-    topology: dict  # set by server factory
+    topology: dict    # set by server factory
+    index: EventIndex | None = None
+    stats: dict | None = None
 
     def log_message(self, format, *args):
         pass
@@ -363,8 +428,42 @@ class MapHandler(BaseHTTPRequestHandler):
             self._serve_html()
         elif path == "/api/topology":
             self._json_response(self.topology)
+        elif path == "/api/stats":
+            if self.stats:
+                self._json_response(self.stats)
+            else:
+                self._json_response({})
+        elif path.startswith("/api/trace/"):
+            pkt = path.split("/")[-1]
+            if self.index:
+                self._json_response(self.index.deep_trace(pkt))
+            else:
+                self._json_response({"root_pkt": pkt, "hops": []})
+        elif path == "/api/messages":
+            self._json_response(self._get_messages())
         else:
             self.send_error(404)
+
+    def _get_messages(self) -> list:
+        if not self.index:
+            return []
+        messages = []
+        for idx in self.index.cmd_replies:
+            ev = self.index.events[idx]
+            reply = ev.get("reply", "")
+            if "msg sent" in reply.lower() or "channel msg sent" in reply.lower():
+                cmd = ev.get("cmd", "")
+                node = ev.get("node", "")
+                time_ms = ev.get("time_ms", 0)
+                tx = self.index.find_msg_tx(node, time_ms)
+                pkt = tx.get("pkt") if tx else None
+                messages.append({
+                    "time_ms": time_ms,
+                    "node": node,
+                    "command": cmd,
+                    "pkt": pkt,
+                })
+        return messages
 
     def _json_response(self, data):
         body = json.dumps(data).encode()
@@ -478,6 +577,8 @@ def main():
             sys.exit(1)
         topo = load_topology(args.config)
         MapHandler.topology = topo
+        MapHandler.index = index
+        MapHandler.stats = compute_map_stats(index)
         map_port = args.port + 1
         map_server = HTTPServer((args.bind, map_port), MapHandler)
         map_url = f"http://127.0.0.1:{map_port}"

@@ -36,12 +36,8 @@ def parse_range(s):
     lo, hi, step = float(parts[0]), float(parts[1]), float(parts[2])
     if step <= 0:
         raise ValueError(f"Step must be > 0, got: {step}")
-    vals = []
-    v = lo
-    while v <= hi + step * 0.01:  # small epsilon for float rounding
-        vals.append(round(v, 4))
-        v += step
-    return vals
+    n = max(0, int(round((hi - lo) / step)) + 1)
+    return [round(lo + i * step, 4) for i in range(n)]
 
 
 def run_single(orchestrator_path, config, rxd, txd, dtxd, seed, run_id):
@@ -82,6 +78,8 @@ def run_single(orchestrator_path, config, rxd, txd, dtxd, seed, run_id):
             pct = int(m.group(3))
         else:
             delivered, sent, pct = 0, 0, 0
+            print(f"WARNING: run_id={run_id} seed={seed} — Delivery regex did not match",
+                  file=sys.stderr)
 
         ack_m = re.search(r"Acks:\s+(\d+)/(\d+)\s+received\s+\((\d+)%\)", stderr)
         ack_pct = int(ack_m.group(3)) if ack_m else -1
@@ -222,7 +220,7 @@ def main():
         total_sent = sum(r[1] for r in runs)
 
         mean_pct = sum(pcts) / len(pcts)
-        std_pct = math.sqrt(sum((p - mean_pct) ** 2 for p in pcts) / len(pcts)) if len(pcts) > 1 else 0.0
+        std_pct = math.sqrt(sum((p - mean_pct) ** 2 for p in pcts) / (len(pcts) - 1)) if len(pcts) > 1 else 0.0
         min_pct = min(pcts)
         max_pct = max(pcts)
         mean_ack = sum(ack_pcts) / len(ack_pcts) if ack_pcts else -1

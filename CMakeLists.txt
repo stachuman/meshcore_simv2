@@ -6,6 +6,10 @@ set(CMAKE_C_STANDARD 11)
 # MeshCore source directory — override with -DMESHCORE_DIR=/path/to/fork
 set(MESHCORE_DIR "${CMAKE_SOURCE_DIR}/MeshCore" CACHE PATH "Path to MeshCore source tree")
 message(STATUS "Using MeshCore from: ${MESHCORE_DIR}")
+if(NOT EXISTS "${MESHCORE_DIR}/src/Mesh.h")
+    message(FATAL_ERROR "MESHCORE_DIR does not point to a valid MeshCore tree: ${MESHCORE_DIR}\n"
+                        "  Expected to find ${MESHCORE_DIR}/src/Mesh.h")
+endif()
 
 # Find OpenSSL
 find_package(OpenSSL REQUIRED)
@@ -26,7 +30,9 @@ set(COMMON_DEFS
     OFFLINE_QUEUE_SIZE=16
 )
 
-# ---- Common include directories (shims first) ----
+# ---- Common include directories ----
+# Shim directories MUST come before MESHCORE_DIR so that our Arduino.h, FS.h,
+# target.h etc. shadow the real platform headers that MeshCore expects.
 set(COMMON_INCLUDES
     ${CMAKE_SOURCE_DIR}/shims/arduino_shim
     ${CMAKE_SOURCE_DIR}/shims/lib_shim

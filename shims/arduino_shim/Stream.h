@@ -73,7 +73,7 @@ public:
           _wbuf(wbuf), _wmax(wmax), _wpos(0) {}
 
     int    read()              override { return _rpos < _rlen ? _rbuf[_rpos++] : -1; }
-    int    available()         override { return (int)(_rlen - _rpos); }
+    int    available()         override { return (int)(_rlen > _rpos ? _rlen - _rpos : 0); }
     int    peek()              override { return _rpos < _rlen ? _rbuf[_rpos] : -1; }
     size_t write(uint8_t c)    override { if (_wpos < _wmax) { _wbuf[_wpos++] = c; return 1; } return 0; }
     size_t bytesWritten() const { return _wpos; }

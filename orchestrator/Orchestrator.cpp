@@ -3,19 +3,16 @@
 #include <vector>
 #include <memory>
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 
 #include "Orchestrator.h"
 #include "MeshWrapper.h"
 #include "SimClock.h"
 
-// Timing-dependent capture thresholds (Semtech AN1200.22, SX1276/SX1262).
-// Once the receiver locks onto a preamble (~5 symbols), a later interferer
-// needs far less power advantage to be rejected.  When preambles overlap,
-// the receiver hasn't locked to either signal and classic 6 dB capture applies.
-static constexpr float CAPTURE_LOCKED_DB     = 1.0f;  // primary locked before interferer
-static constexpr float CAPTURE_UNLOCKED_DB   = 6.0f;  // preambles overlap
-static constexpr int   PREAMBLE_LOCK_SYMBOLS = 5;     // symbols needed for preamble lock
+// Symbols needed for receiver preamble lock (SX1276 empirical).
+// Capture thresholds (locked/unlocked) are configurable via OrchestratorConfig.
+static constexpr int PREAMBLE_LOCK_SYMBOLS = 5;
 
 int Orchestrator::findNode(const std::string& name) const {
     for (size_t i = 0; i < _nodes.size(); i++) {
@@ -39,6 +36,11 @@ void Orchestrator::configure(const OrchestratorConfig& cfg) {
     _rng.seed(static_cast<std::mt19937::result_type>(cfg.seed));
     _clock = VirtualClock(cfg.epoch_start);
 
+    _capture_locked_db = cfg.capture_locked_db;
+    _capture_unlocked_db = cfg.capture_unlocked_db;
+    _cad_miss_prob = cfg.cad_miss_prob;
+    _snr_coherence_ms = cfg.snr_coherence_ms;
+
     _pending_replays.clear();
     _reply_log.clear();
     _assertions = cfg.assertions;
@@ -58,6 +60,16 @@ void Orchestrator::configure(const OrchestratorConfig& cfg) {
         _nodes.push_back(std::move(ctx));
     }
 
+    // Pre-build per-node event keys to avoid string concatenation on hot path
+    _node_event_keys.resize(_nodes.size());
+    for (size_t i = 0; i < _nodes.size(); i++) {
+        const std::string& nm = _nodes[i]->name;
+        _node_event_keys[i] = {
+            "tx:" + nm, "rx:" + nm, "collision:" + nm,
+            "drop_halfduplex:" + nm, "drop_weak:" + nm, "drop_loss:" + nm
+        };
+    }
+
     // Build link model
     int n = (int)_nodes.size();
     _link_model = std::make_unique<MatrixLinkModel>(n);
@@ -75,6 +87,10 @@ void Orchestrator::configure(const OrchestratorConfig& cfg) {
             _link_model->setLink(from, to, lk.snr, lk.rssi, lk.snr_std_dev, lk.loss);
         }
     }
+
+    // Initialize per-directed-link fading state for O-U process
+    _fading_state.clear();
+    _fading_state.resize(n * n);
 
     _hot_start = cfg.hot_start;
 
@@ -135,7 +151,8 @@ void Orchestrator::routePackets(unsigned long current_ms) {
 // Returns true if primary is destroyed by interferer.
 static bool isDestroyedBy(const PendingRx& primary, const PendingRx& interferer,
                           double preamble_grace_ms, double fec_tolerance_ms,
-                          double t_preamble_ms, double t_sym) {
+                          double t_preamble_ms, double t_sym,
+                          float capture_locked_db, float capture_unlocked_db) {
     // No temporal overlap → no interference
     if (interferer.rx_end_ms <= primary.rx_start_ms ||
         primary.rx_end_ms <= interferer.rx_start_ms)
@@ -143,19 +160,19 @@ static bool isDestroyedBy(const PendingRx& primary, const PendingRx& interferer,
 
     // Stage 1: Timing-dependent capture effect.
     // If the primary's preamble was fully locked (5 symbols received cleanly)
-    // before the interferer arrived, the receiver is synchronized to the
-    // primary's chirps and only 1 dB SIR is needed (Semtech AN1200.22).
-    // If preambles overlap, neither has lock priority — 6 dB needed.
+    // before the interferer arrived, the receiver is synchronized and the
+    // locked threshold applies. If preambles overlap, the unlocked threshold
+    // applies (classic power-dominance model).
     double lock_time_ms = primary.rx_start_ms + PREAMBLE_LOCK_SYMBOLS * t_sym;
     float capture_threshold = ((double)interferer.rx_start_ms >= lock_time_ms)
-                              ? CAPTURE_LOCKED_DB : CAPTURE_UNLOCKED_DB;
+                              ? capture_locked_db : capture_unlocked_db;
 
     if (primary.snr >= interferer.snr + capture_threshold)
         return false;
 
     // Stage 2: Preamble grace — primary survives if interferer only
     // hits the non-critical part of primary's preamble (first 3 of 8 symbols)
-    unsigned long critical = primary.rx_start_ms + (unsigned long)preamble_grace_ms;
+    unsigned long critical = primary.rx_start_ms + (unsigned long)std::lround(preamble_grace_ms);
     if (interferer.rx_end_ms <= critical)
         return false;
 
@@ -168,7 +185,7 @@ static bool isDestroyedBy(const PendingRx& primary, const PendingRx& interferer,
                                     ? primary.rx_end_ms : interferer.rx_end_ms;
         double overlap_ms = (double)(overlap_end - overlap_start);
         if (overlap_ms <= fec_tolerance_ms) {
-            unsigned long payload_start = primary.rx_start_ms + (unsigned long)t_preamble_ms;
+            unsigned long payload_start = primary.rx_start_ms + (unsigned long)std::lround(t_preamble_ms);
             if (overlap_start >= payload_start)
                 return false;
         }
@@ -182,6 +199,8 @@ void Orchestrator::registerTransmissions(unsigned long current_ms) {
 
     // Adversarial pre-pass: modify pending_tx before routing.
     // Only applies to non-replay TXes from adversarial nodes.
+    std::uniform_real_distribution<float> prob(0.0f, 1.0f);
+    std::uniform_int_distribution<int> bit_dist(0, 7);
     for (int sender = 0; sender < n; sender++) {
         auto& tx_list = _nodes[sender]->pending_tx;
         if (tx_list.empty()) continue;
@@ -193,7 +212,6 @@ void Orchestrator::registerTransmissions(unsigned long current_ms) {
             if (it->is_replay) { ++it; continue; }
 
             // Roll probability
-            std::uniform_real_distribution<float> prob(0.0f, 1.0f);
             if (prob(_rng) >= adv.probability) { ++it; continue; }
 
             const char* sname = _nodes[sender]->name.c_str();
@@ -215,7 +233,6 @@ void Orchestrator::registerTransmissions(unsigned long current_ms) {
                 // Flip N random bits
                 for (int b = 0; b < bits && !it->data.empty(); b++) {
                     std::uniform_int_distribution<int> byte_dist(0, (int)it->data.size() - 1);
-                    std::uniform_int_distribution<int> bit_dist(0, 7);
                     it->data[byte_dist(_rng)] ^= (1 << bit_dist(_rng));
                 }
                 if (_verbose) {
@@ -279,7 +296,7 @@ void Orchestrator::registerTransmissions(unsigned long current_ms) {
 
             _tx_count++;
             _event_counts["tx"]++;
-            _event_counts["tx:" + _nodes[sender]->name]++;
+            _event_counts[_node_event_keys[sender].tx]++;
             _tx_log.push_back({_nodes[sender]->name, cap.airtime_ms});
             EventLog::tx(current_ms, _nodes[sender]->name.c_str(),
                          cap.data.data(), (int)cap.data.size(), cap.airtime_ms);
@@ -297,11 +314,27 @@ void Orchestrator::registerTransmissions(unsigned long current_ms) {
                 const char* sname = _nodes[sender]->name.c_str();
                 const char* rname = _nodes[receiver]->name.c_str();
 
-                // Sample per-reception SNR from Gaussian(mean, std_dev)
+                // Sample per-reception SNR: i.i.d. Gaussian or correlated O-U
                 float rx_snr = lp.snr;
                 if (lp.snr_std_dev > 0.0f) {
-                    std::normal_distribution<float> dist(lp.snr, lp.snr_std_dev);
-                    rx_snr = dist(_rng);
+                    if (_snr_coherence_ms > 0.0f) {
+                        // Ornstein-Uhlenbeck (continuous-time AR(1)) correlated fading.
+                        // Consecutive receptions on the same link see correlated SNR.
+                        auto& fs = _fading_state[sender * n + receiver];
+                        float dt = (float)(current_ms - fs.last_ms);
+                        float alpha = std::exp(-dt / _snr_coherence_ms);
+                        float alpha_sq = alpha * alpha;
+                        if (alpha_sq > 1.0f) alpha_sq = 1.0f;  // float precision guard
+                        std::normal_distribution<float> unit(0.0f, 1.0f);
+                        fs.offset = alpha * fs.offset
+                                  + std::sqrt(1.0f - alpha_sq) * lp.snr_std_dev * unit(_rng);
+                        fs.last_ms = current_ms;
+                        rx_snr = lp.snr + fs.offset;
+                    } else {
+                        // i.i.d. Gaussian (original behavior)
+                        std::normal_distribution<float> dist(lp.snr, lp.snr_std_dev);
+                        rx_snr = dist(_rng);
+                    }
                 }
 
                 // SNR check: use receiver's radio SF threshold.
@@ -311,7 +344,7 @@ void Orchestrator::registerTransmissions(unsigned long current_ms) {
                 if (score <= 0.0f) {
                     float thr = _nodes[receiver]->radio.getSnrThreshold();
                     _event_counts["drop_weak"]++;
-                    _event_counts["drop_weak:" + std::string(rname)]++;
+                    _event_counts[_node_event_keys[receiver].drop_weak]++;
                     EventLog::dropWeak(current_ms, sname, rname, rx_snr, thr,
                                        cap.data.data(), (int)cap.data.size());
                     if (_verbose) {
@@ -330,13 +363,21 @@ void Orchestrator::registerTransmissions(unsigned long current_ms) {
                 unsigned long lbt_from = node_now + preamble_detect_ms;
                 unsigned long lbt_until = node_now + airtime32;
                 if (lbt_from < lbt_until) {
-                    _nodes[receiver]->radio.notifyChannelBusy(lbt_from, lbt_until);
+                    // Probabilistic CAD: real receivers have a false-negative rate
+                    if (_cad_miss_prob > 0.0f && prob(_rng) < _cad_miss_prob) {
+                        if (_verbose) {
+                            fprintf(stderr, "[%8.3fs]   ~  %s CAD miss (p=%.3f)\n",
+                                    current_ms / 1000.0, rname, _cad_miss_prob);
+                        }
+                    } else {
+                        _nodes[receiver]->radio.notifyChannelBusy(lbt_from, lbt_until);
+                    }
                 }
 
                 // Half-duplex check: receiver is currently transmitting
                 if (_nodes[receiver]->tx_busy_until > current_ms) {
                     _event_counts["drop_halfduplex"]++;
-                    _event_counts["drop_halfduplex:" + std::string(rname)]++;
+                    _event_counts[_node_event_keys[receiver].drop_halfduplex]++;
                     EventLog::dropHalfDuplex(current_ms, sname, rname,
                                              cap.data.data(), (int)cap.data.size(),
                                              cap.airtime_ms);
@@ -370,7 +411,13 @@ void Orchestrator::registerTransmissions(unsigned long current_ms) {
                 double t_sym = _nodes[receiver]->radio.getSymbolMs();
                 double t_preamble = _nodes[receiver]->radio.getPreambleMs();
                 int cr = _nodes[receiver]->radio.getCR();
-                static const int fec_sym_table[] = {0, 0, 1, 2};  // CR4/5..CR4/8
+                // FEC tolerance in symbols per coding rate (LoRa Hamming codes):
+                // CR4/5 (5,4): 1 parity bit, detection only → 0
+                // CR4/6 (6,4): detection only → 0
+                // CR4/7 (7,4) Hamming: corrects 1 bit/codeword → 1 symbol through interleaver
+                // CR4/8 (8,4) extended Hamming: also corrects 1 bit/codeword → 1 symbol
+                //   (extra parity bit adds detection, not correction capacity)
+                static const int fec_sym_table[] = {0, 0, 1, 1};  // CR4/5..CR4/8
                 int fec_sym = (cr >= 1 && cr <= 4) ? fec_sym_table[cr - 1] : 0;
                 double fec_tolerance_ms = fec_sym * t_sym;
                 int pre_sym = _nodes[receiver]->radio.getPreambleSymbols();
@@ -378,9 +425,11 @@ void Orchestrator::registerTransmissions(unsigned long current_ms) {
 
                 // Collision check: test each direction independently
                 for (auto& existing : _nodes[receiver]->active_rx) {
-                    if (isDestroyedBy(prx, existing, preamble_grace_ms, fec_tolerance_ms, t_preamble, t_sym))
+                    if (isDestroyedBy(prx, existing, preamble_grace_ms, fec_tolerance_ms, t_preamble, t_sym,
+                                      _capture_locked_db, _capture_unlocked_db))
                         prx.collided = true;
-                    if (isDestroyedBy(existing, prx, preamble_grace_ms, fec_tolerance_ms, t_preamble, t_sym))
+                    if (isDestroyedBy(existing, prx, preamble_grace_ms, fec_tolerance_ms, t_preamble, t_sym,
+                                      _capture_locked_db, _capture_unlocked_db))
                         existing.collided = true;
                 }
 
@@ -425,7 +474,7 @@ void Orchestrator::deliverReceptions(unsigned long current_ms) {
                 if (!it->collided && !it->link_loss && !it->halfduplex_abort) {
                     _rx_count++;
                     _event_counts["rx"]++;
-                    _event_counts["rx:" + std::string(rname)]++;
+                    _event_counts[_node_event_keys[i].rx]++;
                     _nodes[i]->activate();
                     _nodes[i]->radio.enqueue(
                         it->data.data(), (int)it->data.size(), it->snr, it->rssi);
@@ -440,7 +489,7 @@ void Orchestrator::deliverReceptions(unsigned long current_ms) {
                     }
                 } else if (it->halfduplex_abort) {
                     _event_counts["drop_halfduplex"]++;
-                    _event_counts["drop_halfduplex:" + std::string(rname)]++;
+                    _event_counts[_node_event_keys[i].drop_halfduplex]++;
                     EventLog::dropHalfDuplex(it->rx_start_ms, sname, rname,
                                              it->data.data(), (int)it->data.size(),
                                              (uint32_t)(it->rx_end_ms - it->rx_start_ms));
@@ -450,7 +499,7 @@ void Orchestrator::deliverReceptions(unsigned long current_ms) {
                     }
                 } else if (it->link_loss) {
                     _event_counts["drop_loss"]++;
-                    _event_counts["drop_loss:" + std::string(rname)]++;
+                    _event_counts[_node_event_keys[i].drop_loss]++;
                     EventLog::dropLoss(it->rx_start_ms, sname, rname, 0.0f,
                                        it->data.data(), (int)it->data.size());
                     if (_verbose) {
@@ -459,7 +508,7 @@ void Orchestrator::deliverReceptions(unsigned long current_ms) {
                     }
                 } else {
                     _event_counts["collision"]++;
-                    _event_counts["collision:" + std::string(rname)]++;
+                    _event_counts[_node_event_keys[i].collision]++;
                     EventLog::collision(it->rx_start_ms, sname, rname, it->snr, it->rssi,
                                         it->data.data(), (int)it->data.size());
                     if (_verbose) {
@@ -658,15 +707,33 @@ bool Orchestrator::run() {
         }
     }
 
+    // Warn if step_ms exceeds minimum symbol time (timing accuracy check)
+    {
+        double min_t_sym = 1e9;
+        for (const auto& node : _nodes) {
+            double t_sym = node->radio.getSymbolMs();
+            if (t_sym < min_t_sym) min_t_sym = t_sym;
+        }
+        if (min_t_sym < 1e9 && _step_ms > min_t_sym) {
+            int recommended = (int)std::floor(min_t_sym);
+            if (recommended < 1) recommended = 1;
+            fprintf(stderr, "WARNING: step_ms=%d exceeds minimum symbol time %.1fms. "
+                    "Recommend step_ms <= %d for timing accuracy.\n",
+                    _step_ms, min_t_sym, recommended);
+        }
+    }
+
     // Stagger node clocks to prevent synchronized periodic timers.
     // Each node runs loop() independently for a random duration (TX suppressed)
     // so MeshCore processes time naturally — internal timers, scheduled events
     // etc. all fire correctly during the stagger.
     {
-        std::uniform_int_distribution<unsigned long> stagger_dist(0, 119999);
+        std::uniform_int_distribution<unsigned long> stagger_dist(0, 120000);
         for (auto& node : _nodes) {
             unsigned long stagger = stagger_dist(_rng);
-            for (unsigned long ms = 0; ms < stagger; ms += _step_ms) {
+            // Round to step boundary for deterministic advancement
+            unsigned long steps = stagger / _step_ms;
+            for (unsigned long s = 0; s < steps; s++) {
                 node->activate();
                 node->mesh->loop();
                 node->pending_tx.clear();
@@ -869,7 +936,9 @@ bool Orchestrator::checkAssertions() {
 
         if (a.type == "cmd_reply_contains") {
             for (const auto& r : _reply_log) {
+                // Match command prefix with word boundary (exact or followed by space)
                 if (r.node == a.node && r.command.find(a.command) == 0
+                    && (r.command.size() == a.command.size() || r.command[a.command.size()] == ' ')
                     && r.reply.find(a.value) != std::string::npos) {
                     ok = true;
                     break;
@@ -879,6 +948,7 @@ bool Orchestrator::checkAssertions() {
             ok = true;  // passes unless we find a match
             for (const auto& r : _reply_log) {
                 if (r.node == a.node && r.command.find(a.command) == 0
+                    && (r.command.size() == a.command.size() || r.command[a.command.size()] == ' ')
                     && r.reply.find(a.value) != std::string::npos) {
                     ok = false;
                     break;

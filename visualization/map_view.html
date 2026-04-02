@@ -8,7 +8,7 @@
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: 'SF Mono', 'Consolas', 'Menlo', monospace; font-size: 12px; background: #1a1a2e; color: #e0e0e0; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
-#toolbar { display: flex; align-items: center; gap: 12px; padding: 6px 12px; background: #16213e; border-bottom: 1px solid #333; flex-shrink: 0; z-index: 1000; }
+#toolbar { display: flex; align-items: center; gap: 12px; padding: 6px 12px; background: #16213e; border-bottom: 1px solid #333; flex-shrink: 0; z-index: 1000; flex-wrap: wrap; }
 #toolbar label { color: #8888aa; font-size: 11px; }
 #toolbar select, #toolbar input { background: #1a1a2e; color: #e0e0e0; border: 1px solid #444; padding: 3px 6px; font-size: 11px; font-family: inherit; border-radius: 3px; }
 #toolbar .sep { width: 1px; height: 20px; background: #333; }
@@ -33,11 +33,44 @@ body { font-family: 'SF Mono', 'Consolas', 'Menlo', monospace; font-size: 12px; 
 #sidebar td { border-bottom: 1px solid #222; }
 #sidebar .node-link { color: #88ccff; cursor: pointer; text-decoration: underline; }
 #sidebar .node-link:hover { color: #bbddff; }
-#legend { position: absolute; bottom: 20px; left: 20px; background: #16213eee; border: 1px solid #444; border-radius: 6px; padding: 8px 12px; z-index: 1000; font-size: 11px; }
+#sidebar .stat-row { display: flex; justify-content: space-between; padding: 1px 0; }
+#sidebar .stat-row .key { color: #888; }
+#sidebar .stat-row .val { color: #ddd; }
+#sidebar .stat-row .val.bad { color: #ff6666; }
+#sidebar .stat-row .val.good { color: #66ff88; }
+#legend { position: absolute; bottom: 40px; left: 20px; background: #16213eee; border: 1px solid #444; border-radius: 6px; padding: 8px 12px; z-index: 1000; font-size: 11px; }
 #legend .item { display: flex; align-items: center; gap: 6px; margin: 2px 0; }
 #legend .dot { width: 10px; height: 10px; border-radius: 50%; }
 #legend .line { width: 20px; height: 2px; }
+#legend .gradient { width: 60px; height: 10px; border-radius: 2px; }
 #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #666; font-size: 16px; z-index: 500; }
+#summary-bar { display: flex; align-items: center; gap: 16px; padding: 4px 12px; background: #16213e; border-top: 1px solid #333; flex-shrink: 0; z-index: 1000; font-size: 11px; color: #8888aa; }
+#summary-bar .stat { display: flex; gap: 4px; }
+#summary-bar .stat .label { color: #666; }
+#summary-bar .stat .value { color: #ccc; }
+#summary-bar .stat .value.warn { color: #ff8844; }
+#summary-bar .sep { width: 1px; height: 14px; background: #333; }
+#trace-panel { display: none; position: absolute; top: 40px; right: 10px; width: 320px; max-height: 60vh; background: #16213eee; border: 1px solid #444; border-radius: 6px; z-index: 1001; overflow: hidden; }
+#trace-panel .header { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: #1a1a3e; border-bottom: 1px solid #333; }
+#trace-panel .header span { color: #aaf; font-size: 12px; font-weight: bold; }
+#trace-panel .header button { background: none; border: none; color: #888; cursor: pointer; font-size: 14px; }
+#trace-panel .header button:hover { color: #fff; }
+#trace-panel .body { overflow-y: auto; max-height: calc(60vh - 32px); padding: 6px; }
+#trace-panel .msg-item { padding: 4px 6px; cursor: pointer; border-radius: 3px; font-size: 11px; border-bottom: 1px solid #222; }
+#trace-panel .msg-item:hover { background: #2a2a4e; }
+#trace-panel .msg-item.active { background: #3a3a5e; border-color: #88f; }
+#trace-panel .msg-item .time { color: #888; }
+#trace-panel .msg-item .route { color: #ccc; }
+#trace-panel .trace-detail { padding: 6px; font-size: 11px; }
+#trace-panel .trace-detail .hop-row { padding: 2px 4px; cursor: pointer; border-radius: 2px; }
+#trace-panel .trace-detail .hop-row:hover { background: #2a2a4e; }
+#trace-panel .trace-detail .hop-num { color: #ffaa33; font-weight: bold; }
+#trace-panel .trace-detail .hop-type { padding: 1px 4px; border-radius: 2px; font-size: 10px; }
+#trace-panel .trace-detail .hop-type.tx { background: #553300; color: #ffaa33; }
+#trace-panel .trace-detail .hop-type.rx { background: #003322; color: #44cc66; }
+#trace-panel .trace-detail .hop-type.relay { background: #002244; color: #4488ff; }
+#trace-panel .trace-detail .hop-type.collision { background: #440000; color: #ff4444; }
+#trace-panel .trace-detail .hop-type.drop { background: #440022; color: #ff4488; }
 .leaflet-container { background: #1a1a2e !important; }
 .leaflet-tile-pane { filter: brightness(0.7) contrast(1.1) saturate(0.4) hue-rotate(180deg) invert(1); }
 </style>
@@ -50,16 +83,31 @@ body { font-family: 'SF Mono', 'Consolas', 'Menlo', monospace; font-size: 12px; 
     <label>Filter:</label>
     <input id="node-filter" type="text" placeholder="node name..." style="width:120px">
     <div class="sep"></div>
+    <label>Nodes:</label>
+    <select id="node-color-mode">
+        <option value="role">Role</option>
+        <option value="tx">TX count</option>
+        <option value="collision">Collisions</option>
+        <option value="delivery">Delivery %</option>
+    </select>
+    <div class="sep"></div>
     <label>Links:</label>
     <select id="link-display">
         <option value="all">All</option>
         <option value="snr-high">SNR > 5</option>
-        <option value="snr-low">SNR <= 5</option>
+        <option value="snr-low">SNR &lt;= 5</option>
         <option value="none">None</option>
+    </select>
+    <label>Color:</label>
+    <select id="link-color-mode">
+        <option value="snr">SNR</option>
+        <option value="traffic">Traffic</option>
+        <option value="collision">Collision rate</option>
     </select>
     <div class="sep"></div>
     <button id="btn-labels" title="Toggle node labels">Labels</button>
     <button id="btn-snr-labels" title="Toggle SNR labels on links">SNR</button>
+    <button id="btn-trace" title="Show message traces">Trace</button>
     <div class="sep"></div>
     <span class="info" id="stats-info"></span>
 </div>
@@ -69,16 +117,21 @@ body { font-family: 'SF Mono', 'Consolas', 'Menlo', monospace; font-size: 12px; 
         <div id="leaflet-map"></div>
         <canvas id="force-canvas" style="display:none"></canvas>
         <div id="loading">Loading topology...</div>
-        <div id="legend">
-            <div class="item"><div class="dot" style="background:#4488ff"></div> Repeater</div>
-            <div class="item"><div class="dot" style="background:#44cc66"></div> Companion</div>
-            <div class="item"><div class="line" style="background:#666"></div> Link (thickness = SNR)</div>
+        <div id="legend"></div>
+        <div id="trace-panel">
+            <div class="header">
+                <span>Message Traces</span>
+                <button id="trace-close">&times;</button>
+            </div>
+            <div class="body" id="trace-body"></div>
         </div>
     </div>
     <div id="sidebar">
         <div id="sidebar-content"></div>
     </div>
 </div>
+
+<div id="summary-bar"></div>
 
 <script>
 const COL_REPEATER = '#4488ff';
@@ -97,6 +150,13 @@ let labelMarkers = [];
 let snrLabelMarkers = [];
 let selectedNode = null;
 
+// Simulation stats
+let simStats = null;
+let messages = [];
+let activeTrace = null;     // current deep_trace result
+let traceLayer = null;      // L.layerGroup for trace overlays
+let traceForceData = null;  // trace data for force canvas
+
 // Force-directed state
 let forceNodes = [];
 let forceLinks = [];
@@ -104,14 +164,107 @@ let forceCanvas = null;
 let forceCtx = null;
 let forceDrag = null;
 
+// ── Color helpers ────────────────────────────────────────────
+
+function lerpColor(val, min, max, colLow, colHigh) {
+    if (max <= min) return colLow;
+    const t = Math.max(0, Math.min(1, (val - min) / (max - min)));
+    const r = Math.round(colLow[0] + t * (colHigh[0] - colLow[0]));
+    const g = Math.round(colLow[1] + t * (colHigh[1] - colLow[1]));
+    const b = Math.round(colLow[2] + t * (colHigh[2] - colLow[2]));
+    return `rgb(${r},${g},${b})`;
+}
+
+function getNodeColor(name, role) {
+    const mode = document.getElementById('node-color-mode').value;
+    if (!simStats || mode === 'role') {
+        return role === 'companion' ? COL_COMPANION : COL_REPEATER;
+    }
+    const ns = simStats.nodes[name] || { tx: 0, rx: 0, collision: 0, drop: 0 };
+    const allNodes = Object.values(simStats.nodes);
+    if (mode === 'tx') {
+        const vals = allNodes.map(n => n.tx);
+        const mn = Math.min(...vals, 0), mx = Math.max(...vals, 1);
+        return lerpColor(ns.tx, mn, mx, [100, 180, 255], [255, 60, 60]);
+    }
+    if (mode === 'collision') {
+        const vals = allNodes.map(n => n.collision);
+        const mx = Math.max(...vals, 1);
+        return lerpColor(ns.collision, 0, mx, [60, 200, 80], [255, 60, 60]);
+    }
+    if (mode === 'delivery') {
+        if (role !== 'companion') return '#555';
+        const ms = simStats.msg_stats.find(s => s.node === name);
+        if (!ms) return '#555';
+        const sent = (ms.msg_sent || 0) + (ms.chan_msg_sent || 0);
+        const recv = (ms.msg_recv || 0) + (ms.chan_msg_recv || 0);
+        if (sent === 0 && recv === 0) return '#555';
+        const pct = sent > 0 ? (recv / sent) * 100 : 100;
+        return lerpColor(pct, 0, 100, [255, 60, 60], [60, 220, 80]);
+    }
+    return role === 'companion' ? COL_COMPANION : COL_REPEATER;
+}
+
+function getLinkStyle(link) {
+    const mode = document.getElementById('link-color-mode').value;
+    if (!simStats || mode === 'snr') {
+        return {
+            color: link.snr > 5 ? COL_LINK : COL_LINK_WEAK,
+            weight: Math.max(1, Math.min(5, link.snr / 4)),
+            opacity: Math.max(0.2, Math.min(0.8, link.snr / 15)),
+        };
+    }
+    // Aggregate both directions for undirected display
+    const k1 = `${link.from}>${link.to}`, k2 = `${link.to}>${link.from}`;
+    const ls1 = simStats.links[k1] || { rx: 0, collision: 0, drop: 0 };
+    const ls2 = simStats.links[k2] || { rx: 0, collision: 0, drop: 0 };
+    const rx = ls1.rx + ls2.rx;
+    const coll = ls1.collision + ls2.collision;
+    const drop = ls1.drop + ls2.drop;
+    const total = rx + coll + drop;
+
+    if (mode === 'traffic') {
+        if (total === 0) return { color: '#333', weight: 1, opacity: 0.2 };
+        const allLinks = Object.values(simStats.links);
+        const maxTraffic = Math.max(...allLinks.map(l => l.rx + l.collision + l.drop), 1);
+        const t = total / maxTraffic;
+        return {
+            color: lerpColor(t, 0, 1, [40, 60, 100], [80, 160, 255]),
+            weight: Math.max(1, Math.min(6, 1 + t * 5)),
+            opacity: Math.max(0.3, Math.min(0.9, 0.3 + t * 0.6)),
+        };
+    }
+    if (mode === 'collision') {
+        if (total === 0) return { color: '#333', weight: 1, opacity: 0.2 };
+        const rate = (coll + drop) / total;
+        return {
+            color: lerpColor(rate, 0, 0.3, [60, 200, 80], [255, 60, 60]),
+            weight: Math.max(1, Math.min(5, 1 + total / 10)),
+            opacity: Math.max(0.3, 0.9),
+        };
+    }
+    return { color: COL_LINK, weight: 2, opacity: 0.5 };
+}
+
+// ── Init ─────────────────────────────────────────────────────
+
 async function init() {
     try {
-        const resp = await fetch('/api/topology');
-        topology = await resp.json();
+        const [topoResp, statsResp, msgResp] = await Promise.all([
+            fetch('/api/topology'),
+            fetch('/api/stats'),
+            fetch('/api/messages'),
+        ]);
+        topology = await topoResp.json();
+        simStats = await statsResp.json();
+        messages = await msgResp.json();
     } catch (e) {
-        document.getElementById('loading').textContent = 'Failed to load topology: ' + e.message;
+        document.getElementById('loading').textContent = 'Failed to load: ' + e.message;
         return;
     }
+
+    // If stats is empty object (no simulation data), null it out
+    if (!simStats || !simStats.totals) simStats = null;
 
     document.getElementById('loading').style.display = 'none';
     document.getElementById('stats-info').textContent =
@@ -124,6 +277,79 @@ async function init() {
     }
 
     setupControls();
+    updateSummaryBar();
+    updateLegend();
+}
+
+// ── Summary bar ──────────────────────────────────────────────
+
+function updateSummaryBar() {
+    const bar = document.getElementById('summary-bar');
+    if (!simStats) {
+        bar.innerHTML = '<span class="stat"><span class="label">No simulation data</span></span>';
+        return;
+    }
+    const t = simStats.totals;
+    const dur = ((simStats.time_max - simStats.time_min) / 1000).toFixed(1);
+    const rxPct = t.tx > 0 ? ((t.rx / t.tx) * 100).toFixed(0) : '-';
+    const collPct = t.tx > 0 ? ((t.collision / t.tx) * 100).toFixed(0) : '-';
+
+    let html = '';
+    html += `<span class="stat"><span class="label">TX:</span><span class="value">${t.tx}</span></span>`;
+    html += `<span class="sep"></span>`;
+    html += `<span class="stat"><span class="label">RX:</span><span class="value">${t.rx} (${rxPct}%)</span></span>`;
+    html += `<span class="sep"></span>`;
+    html += `<span class="stat"><span class="label">Collisions:</span><span class="value${t.collision > 0 ? ' warn' : ''}">${t.collision} (${collPct}%)</span></span>`;
+    html += `<span class="sep"></span>`;
+    html += `<span class="stat"><span class="label">Drops:</span><span class="value${t.drop > 0 ? ' warn' : ''}">${t.drop}</span></span>`;
+    html += `<span class="sep"></span>`;
+    html += `<span class="stat"><span class="label">Duration:</span><span class="value">${dur}s</span></span>`;
+
+    // Message stats from companions
+    if (simStats.msg_stats && simStats.msg_stats.length > 0) {
+        let totalSent = 0, totalRecv = 0;
+        for (const ms of simStats.msg_stats) {
+            totalSent += (ms.msg_sent || 0) + (ms.chan_msg_sent || 0);
+            totalRecv += (ms.msg_recv || 0) + (ms.chan_msg_recv || 0);
+        }
+        if (totalSent > 0 || totalRecv > 0) {
+            const delPct = totalSent > 0 ? ((totalRecv / totalSent) * 100).toFixed(0) : '-';
+            html += `<span class="sep"></span>`;
+            html += `<span class="stat"><span class="label">Messages:</span><span class="value">${totalSent} sent, ${totalRecv} delivered (${delPct}%)</span></span>`;
+        }
+    }
+    bar.innerHTML = html;
+}
+
+// ── Legend ────────────────────────────────────────────────────
+
+function updateLegend() {
+    const legend = document.getElementById('legend');
+    const nodeMode = document.getElementById('node-color-mode').value;
+    const linkMode = document.getElementById('link-color-mode').value;
+    let html = '';
+
+    if (nodeMode === 'role') {
+        html += `<div class="item"><div class="dot" style="background:${COL_REPEATER}"></div> Repeater</div>`;
+        html += `<div class="item"><div class="dot" style="background:${COL_COMPANION}"></div> Companion</div>`;
+    } else if (nodeMode === 'tx') {
+        html += `<div class="item"><div class="gradient" style="background:linear-gradient(to right,rgb(100,180,255),rgb(255,60,60))"></div> TX count</div>`;
+    } else if (nodeMode === 'collision') {
+        html += `<div class="item"><div class="gradient" style="background:linear-gradient(to right,rgb(60,200,80),rgb(255,60,60))"></div> Collisions</div>`;
+    } else if (nodeMode === 'delivery') {
+        html += `<div class="item"><div class="gradient" style="background:linear-gradient(to right,rgb(255,60,60),rgb(60,220,80))"></div> Delivery %</div>`;
+        html += `<div class="item"><div class="dot" style="background:#555"></div> Repeater/no data</div>`;
+    }
+
+    if (linkMode === 'snr') {
+        html += `<div class="item"><div class="line" style="background:${COL_LINK}"></div> Link (SNR)</div>`;
+    } else if (linkMode === 'traffic') {
+        html += `<div class="item"><div class="gradient" style="background:linear-gradient(to right,rgb(40,60,100),rgb(80,160,255))"></div> Link traffic</div>`;
+    } else if (linkMode === 'collision') {
+        html += `<div class="item"><div class="gradient" style="background:linear-gradient(to right,rgb(60,200,80),rgb(255,60,60))"></div> Link collision rate</div>`;
+    }
+
+    legend.innerHTML = html;
 }
 
 // ── Leaflet geo mode ──────────────────────────────────────────
@@ -141,13 +367,11 @@ function initLeaflet() {
         maxZoom: 19,
     }).addTo(leafletMap);
 
-    // Build neighbor lookup
-    const neighbors = buildNeighborMap();
+    traceLayer = L.layerGroup().addTo(leafletMap);
 
-    // Draw links first (under markers)
+    const neighbors = buildNeighborMap();
     drawLeafletLinks();
 
-    // Draw node markers
     const bounds = L.latLngBounds();
     for (const node of topology.nodes) {
         if (node.lat == null || node.lon == null) continue;
@@ -156,7 +380,7 @@ function initLeaflet() {
 
         const nLinks = (neighbors[node.name] || []).length;
         const radius = Math.max(4, Math.min(12, 4 + nLinks));
-        const color = node.role === 'companion' ? COL_COMPANION : COL_REPEATER;
+        const color = getNodeColor(node.name, node.role);
 
         const marker = L.circleMarker(ll, {
             radius: radius,
@@ -180,15 +404,12 @@ function initLeaflet() {
 }
 
 function drawLeafletLinks() {
-    // Remove existing
     for (const ll of linkLines) {
         leafletMap.removeLayer(ll.line);
     }
     linkLines = [];
 
     const filter = document.getElementById('link-display').value;
-
-    // Deduplicate bidir links for drawing
     const drawn = new Set();
     for (const link of topology.links) {
         const key = [link.from, link.to].sort().join('|');
@@ -203,21 +424,42 @@ function drawLeafletLinks() {
         const toNode = topology.nodes.find(n => n.name === link.to);
         if (!fromNode || !toNode || fromNode.lat == null || toNode.lat == null) continue;
 
-        const weight = Math.max(1, Math.min(5, link.snr / 4));
-        const opacity = Math.max(0.2, Math.min(0.8, link.snr / 15));
-        const color = link.snr > 5 ? COL_LINK : COL_LINK_WEAK;
+        const style = getLinkStyle(link);
 
         const line = L.polyline(
             [[fromNode.lat, fromNode.lon], [toNode.lat, toNode.lon]],
-            { color, weight, opacity }
+            style
         ).addTo(leafletMap);
 
         line.on('click', () => selectLink(link));
-        line.bindTooltip(`${link.from} ↔ ${link.to}: SNR=${link.snr}dB`, {
+        line.bindTooltip(`${link.from} <-> ${link.to}: SNR=${link.snr}dB`, {
             sticky: true, className: 'dark-tooltip',
         });
         linkLines.push({ line, link });
     }
+}
+
+function recolorNodes() {
+    if (topology.has_geo) {
+        for (const node of topology.nodes) {
+            if (!markers[node.name]) continue;
+            const color = getNodeColor(node.name, node.role);
+            markers[node.name].setStyle({ color, fillColor: color });
+        }
+    }
+    updateLegend();
+    if (!topology.has_geo) drawForce();
+}
+
+function restyleLinks() {
+    if (topology.has_geo) {
+        for (const ll of linkLines) {
+            const style = getLinkStyle(ll.link);
+            ll.line.setStyle(style);
+        }
+    }
+    updateLegend();
+    if (!topology.has_geo) drawForce();
 }
 
 function toggleLabels() {
@@ -296,7 +538,6 @@ function initForceLayout() {
     const W = rect.width, H = rect.height;
     const neighbors = buildNeighborMap();
 
-    // Initialize node positions in a circle
     forceNodes = topology.nodes.map((n, i) => {
         const angle = (2 * Math.PI * i) / topology.nodes.length;
         const r = Math.min(W, H) * 0.35;
@@ -313,7 +554,6 @@ function initForceLayout() {
     const nodeIdx = {};
     forceNodes.forEach((n, i) => nodeIdx[n.name] = i);
 
-    // Deduplicate links
     const drawn = new Set();
     forceLinks = [];
     for (const link of topology.links) {
@@ -326,7 +566,6 @@ function initForceLayout() {
         }
     }
 
-    // Run simulation
     const iterations = 300;
     const repulsion = 2000;
     const attraction = 0.005;
@@ -334,7 +573,6 @@ function initForceLayout() {
     const centerPull = 0.001;
 
     for (let iter = 0; iter < iterations; iter++) {
-        // Repulsion
         for (let i = 0; i < forceNodes.length; i++) {
             for (let j = i + 1; j < forceNodes.length; j++) {
                 let dx = forceNodes[j].x - forceNodes[i].x;
@@ -350,7 +588,6 @@ function initForceLayout() {
                 forceNodes[j].vy += fy;
             }
         }
-        // Attraction along links
         for (const fl of forceLinks) {
             const s = forceNodes[fl.source], t = forceNodes[fl.target];
             const dx = t.x - s.x, dy = t.y - s.y;
@@ -361,12 +598,10 @@ function initForceLayout() {
             s.vx += fx; s.vy += fy;
             t.vx -= fx; t.vy -= fy;
         }
-        // Center pull
         for (const n of forceNodes) {
             n.vx += (W / 2 - n.x) * centerPull;
             n.vy += (H / 2 - n.y) * centerPull;
         }
-        // Apply velocity
         for (const n of forceNodes) {
             n.vx *= damping; n.vy *= damping;
             n.x += n.vx; n.y += n.vy;
@@ -377,7 +612,6 @@ function initForceLayout() {
 
     drawForce();
 
-    // Interaction
     forceCanvas.addEventListener('click', (e) => {
         const rect = forceCanvas.getBoundingClientRect();
         const mx = e.clientX - rect.left, my = e.clientY - rect.top;
@@ -390,7 +624,6 @@ function initForceLayout() {
             selectNode(closest.name);
             drawForce();
         } else {
-            // Check link hit
             for (const fl of forceLinks) {
                 const s = forceNodes[fl.source], t = forceNodes[fl.target];
                 const d = pointToSegmentDist(mx, my, s.x, s.y, t.x, t.y);
@@ -431,14 +664,12 @@ function drawForce() {
         if (filter === 'snr-low' && fl.snr > 5) continue;
 
         const s = forceNodes[fl.source], t = forceNodes[fl.target];
-        const lw = Math.max(1, Math.min(4, fl.snr / 4));
-        const alpha = Math.max(0.15, Math.min(0.6, fl.snr / 15));
         const isHighlight = selectedNode && (s.name === selectedNode || t.name === selectedNode);
+        const style = getLinkStyle(fl.link);
 
-        forceCtx.strokeStyle = isHighlight ? COL_HIGHLIGHT :
-            (fl.snr > 5 ? COL_LINK : COL_LINK_WEAK);
-        forceCtx.lineWidth = isHighlight ? lw + 1 : lw;
-        forceCtx.globalAlpha = isHighlight ? 0.9 : alpha;
+        forceCtx.strokeStyle = isHighlight ? COL_HIGHLIGHT : style.color;
+        forceCtx.lineWidth = isHighlight ? style.weight + 1 : style.weight;
+        forceCtx.globalAlpha = isHighlight ? 0.9 : style.opacity;
         forceCtx.beginPath();
         forceCtx.moveTo(s.x, s.y);
         forceCtx.lineTo(t.x, t.y);
@@ -454,13 +685,20 @@ function drawForce() {
     }
     forceCtx.globalAlpha = 1;
 
+    // Draw trace lines if active
+    if (traceForceData) {
+        drawForceTrace();
+    }
+
     // Draw nodes
     for (const n of forceNodes) {
         const r = Math.max(4, Math.min(12, 4 + n.nLinks));
         const isSel = n.name === selectedNode;
+        const color = getNodeColor(n.name, n.role);
+
         forceCtx.beginPath();
         forceCtx.arc(n.x, n.y, r, 0, 2 * Math.PI);
-        forceCtx.fillStyle = n.role === 'companion' ? COL_COMPANION : COL_REPEATER;
+        forceCtx.fillStyle = color;
         forceCtx.globalAlpha = isSel ? 1 : 0.7;
         forceCtx.fill();
         if (isSel) {
@@ -499,6 +737,18 @@ function buildNeighborMap() {
     return neighbors;
 }
 
+function getNodePos(name) {
+    // Return position for geo or force mode
+    if (topology.has_geo) {
+        const node = topology.nodes.find(n => n.name === name);
+        if (node && node.lat != null) return { lat: node.lat, lon: node.lon };
+    } else {
+        const fn = forceNodes.find(n => n.name === name);
+        if (fn) return { x: fn.x, y: fn.y };
+    }
+    return null;
+}
+
 function selectNode(name) {
     selectedNode = name;
     const sidebar = document.getElementById('sidebar');
@@ -511,7 +761,6 @@ function selectNode(name) {
     const neighbors = buildNeighborMap();
     const nodeNeighbors = neighbors[name] || [];
 
-    // Also find links TO this node
     const inLinks = topology.links.filter(l => l.to === name);
     const allPeers = new Map();
     for (const n of nodeNeighbors) {
@@ -531,8 +780,33 @@ function selectNode(name) {
     }
     html += `<div class="field"><span class="key">Links: </span><span class="val">${allPeers.size}</span></div>`;
 
+    // Simulation stats
+    if (simStats) {
+        const ns = simStats.nodes[name] || { tx: 0, rx: 0, collision: 0, drop: 0 };
+        html += `<h3>Simulation Stats</h3>`;
+        html += `<div class="stat-row"><span class="key">TX</span><span class="val">${ns.tx}</span></div>`;
+        html += `<div class="stat-row"><span class="key">RX</span><span class="val">${ns.rx}</span></div>`;
+        const collPct = (ns.rx + ns.collision) > 0 ? ((ns.collision / (ns.rx + ns.collision)) * 100).toFixed(1) : '0.0';
+        html += `<div class="stat-row"><span class="key">Collisions</span><span class="val${ns.collision > 0 ? ' bad' : ''}">${ns.collision} (${collPct}%)</span></div>`;
+        html += `<div class="stat-row"><span class="key">Drops</span><span class="val${ns.drop > 0 ? ' bad' : ''}">${ns.drop}</span></div>`;
+
+        // Message stats for companions
+        const ms = simStats.msg_stats.find(s => s.node === name);
+        if (ms) {
+            html += `<h3>Messages</h3>`;
+            const sent = (ms.msg_sent || 0) + (ms.chan_msg_sent || 0);
+            const recv = (ms.msg_recv || 0) + (ms.chan_msg_recv || 0);
+            html += `<div class="stat-row"><span class="key">Sent</span><span class="val">${sent}</span></div>`;
+            html += `<div class="stat-row"><span class="key">Received</span><span class="val">${recv}</span></div>`;
+            if (sent > 0) {
+                const delPct = ((recv / sent) * 100).toFixed(0);
+                html += `<div class="stat-row"><span class="key">Delivery</span><span class="val${recv < sent ? ' bad' : ' good'}">${delPct}%</span></div>`;
+            }
+        }
+    }
+
     html += `<h3>Neighbors</h3>`;
-    html += `<table><tr><th>Node</th><th>SNR→</th><th>RSSI→</th><th>SNR←</th><th>RSSI←</th></tr>`;
+    html += `<table><tr><th>Node</th><th>SNR-></th><th>RSSI-></th><th>SNR<-</th><th>RSSI<-</th></tr>`;
     for (const [peer, info] of allPeers) {
         html += `<tr>`;
         html += `<td><span class="node-link" data-node="${peer}">${peer}</span></td>`;
@@ -545,13 +819,10 @@ function selectNode(name) {
     html += `</table>`;
 
     content.innerHTML = html;
-
-    // Click handlers for neighbor links
     content.querySelectorAll('.node-link').forEach(el => {
         el.addEventListener('click', () => selectNode(el.dataset.node));
     });
 
-    // Highlight on map
     highlightNode(name);
 }
 
@@ -575,6 +846,20 @@ function selectLink(link) {
         html += `<div class="field"><span class="key">Bidirectional: </span><span class="val">${link.bidir ? 'yes' : 'no'}</span></div>`;
     }
 
+    // Link simulation stats
+    if (simStats) {
+        const k1 = `${link.from}>${link.to}`, k2 = `${link.to}>${link.from}`;
+        const ls1 = simStats.links[k1] || { rx: 0, collision: 0, drop: 0 };
+        const ls2 = simStats.links[k2] || { rx: 0, collision: 0, drop: 0 };
+        html += `<h3>Simulation Stats</h3>`;
+        html += `<div class="stat-row"><span class="key">RX (${link.from}->${link.to})</span><span class="val">${ls1.rx}</span></div>`;
+        html += `<div class="stat-row"><span class="key">RX (${link.to}->${link.from})</span><span class="val">${ls2.rx}</span></div>`;
+        const totalColl = ls1.collision + ls2.collision;
+        const totalDrop = ls1.drop + ls2.drop;
+        html += `<div class="stat-row"><span class="key">Collisions</span><span class="val${totalColl > 0 ? ' bad' : ''}">${totalColl}</span></div>`;
+        html += `<div class="stat-row"><span class="key">Drops</span><span class="val${totalDrop > 0 ? ' bad' : ''}">${totalDrop}</span></div>`;
+    }
+
     content.innerHTML = html;
     content.querySelectorAll('.node-link').forEach(el => {
         el.addEventListener('click', () => selectNode(el.dataset.node));
@@ -585,23 +870,18 @@ function clearSelection() {
     selectedNode = null;
     document.getElementById('sidebar').classList.remove('open');
 
-    // Reset marker styles
     if (topology.has_geo) {
-        for (const [name, marker] of Object.entries(markers)) {
-            const node = topology.nodes.find(n => n.name === name);
-            const color = node && node.role === 'companion' ? COL_COMPANION : COL_REPEATER;
-            marker.setStyle({ color, fillColor: color, weight: 1 });
-        }
+        recolorNodes();
     }
 }
 
 function highlightNode(name) {
     if (topology.has_geo) {
-        // Reset all
-        for (const [n, m] of Object.entries(markers)) {
-            const node = topology.nodes.find(nd => nd.name === n);
-            const color = node && node.role === 'companion' ? COL_COMPANION : COL_REPEATER;
-            m.setStyle({ color, fillColor: color, weight: 1 });
+        // Reset all to current color mode
+        for (const node of topology.nodes) {
+            if (!markers[node.name]) continue;
+            const color = getNodeColor(node.name, node.role);
+            markers[node.name].setStyle({ color, fillColor: color, weight: 1 });
         }
         // Highlight selected
         if (markers[name]) {
@@ -610,7 +890,6 @@ function highlightNode(name) {
         // Highlight neighbors
         const neighbors = buildNeighborMap();
         const peers = neighbors[name] || [];
-        // Also reverse links
         const inPeers = topology.links.filter(l => l.to === name).map(l => l.from);
         const allPeerNames = new Set([...peers.map(p => p.peer), ...inPeers]);
         for (const peer of allPeerNames) {
@@ -625,13 +904,269 @@ function highlightNode(name) {
             if (isConnected) {
                 ll.line.setStyle({ color: COL_HIGHLIGHT, weight: 3, opacity: 0.9 });
             } else {
-                const w = Math.max(1, Math.min(5, l.snr / 4));
-                const o = Math.max(0.2, Math.min(0.8, l.snr / 15));
-                ll.line.setStyle({ color: l.snr > 5 ? COL_LINK : COL_LINK_WEAK, weight: w, opacity: o });
+                const style = getLinkStyle(l);
+                ll.line.setStyle(style);
             }
         }
     }
 }
+
+// ── Message Trace ────────────────────────────────────────────
+
+function toggleTracePanel() {
+    const panel = document.getElementById('trace-panel');
+    const btn = document.getElementById('btn-trace');
+    const visible = panel.style.display === 'block';
+    panel.style.display = visible ? 'none' : 'block';
+    btn.classList.toggle('active', !visible);
+
+    if (!visible) {
+        populateTracePanel();
+    }
+}
+
+function populateTracePanel() {
+    const body = document.getElementById('trace-body');
+    if (messages.length === 0) {
+        body.innerHTML = '<div style="padding:8px;color:#888">No messages found in simulation</div>';
+        return;
+    }
+
+    let html = '';
+    for (let i = 0; i < messages.length; i++) {
+        const m = messages[i];
+        const timeS = (m.time_ms / 1000).toFixed(1);
+        // Parse command to extract destination and text
+        const parts = (m.command || '').split(' ');
+        const cmd = parts[0] || '';
+        const dest = parts[1] || '?';
+        const text = parts.slice(2).join(' ') || '';
+        const label = text ? `${m.node} -> ${dest}: ${text}` : m.command;
+        html += `<div class="msg-item" data-idx="${i}" data-pkt="${m.pkt || ''}">`;
+        html += `<span class="time">${timeS}s</span> `;
+        html += `<span class="route">${label}</span>`;
+        html += `</div>`;
+    }
+    body.innerHTML = html;
+
+    body.querySelectorAll('.msg-item').forEach(el => {
+        el.addEventListener('click', () => {
+            const pkt = el.dataset.pkt;
+            if (!pkt) return;
+            // Mark active
+            body.querySelectorAll('.msg-item').forEach(e => e.classList.remove('active'));
+            el.classList.add('active');
+            loadTrace(pkt);
+        });
+    });
+}
+
+async function loadTrace(pkt) {
+    try {
+        const resp = await fetch(`/api/trace/${pkt}`);
+        const trace = await resp.json();
+        activeTrace = trace;
+        renderTrace(trace);
+    } catch (e) {
+        console.error('Failed to load trace:', e);
+    }
+}
+
+function renderTrace(trace) {
+    // Build hop list with source->dest for each event
+    const hops = [];
+    let hopNum = 0;
+
+    for (const hop of trace.hops) {
+        for (const ev of hop.events) {
+            const etype = ev.type;
+            let from = null, to = null, type = 'tx';
+            if (etype === 'tx') {
+                from = ev.node;
+                type = hop.relay_from ? 'relay' : (hop.response_from ? 'response' : 'tx');
+            } else if (etype === 'rx') {
+                from = ev.node || ev.from;
+                to = ev.to;
+                type = 'rx';
+            } else if (etype.startsWith('collision')) {
+                from = ev.node || ev.from;
+                to = ev.to;
+                type = 'collision';
+            } else if (etype.startsWith('drop')) {
+                from = ev.node || ev.from;
+                to = ev.to || ev.node;
+                type = 'drop';
+            }
+
+            hops.push({
+                num: hopNum,
+                time_ms: ev.time_ms,
+                from, to, type,
+                pkt: hop.pkt,
+                snr: ev.snr,
+            });
+        }
+        hopNum++;
+    }
+
+    // Draw on map
+    if (topology.has_geo) {
+        drawLeafletTrace(hops);
+    } else {
+        traceForceData = hops;
+        drawForce();
+    }
+
+    // Show hop detail in trace panel
+    showTraceDetail(trace, hops);
+}
+
+function drawLeafletTrace(hops) {
+    traceLayer.clearLayers();
+
+    let lineNum = 0;
+    for (const hop of hops) {
+        if (!hop.from || !hop.to) continue;
+        const fromPos = getNodePos(hop.from);
+        const toPos = getNodePos(hop.to);
+        if (!fromPos || !toPos || fromPos.lat == null || toPos.lat == null) continue;
+
+        let color, weight, dashArray;
+        if (hop.type === 'tx' || hop.type === 'response') {
+            color = '#ffaa33'; weight = 4; dashArray = null;
+        } else if (hop.type === 'relay') {
+            color = '#4488ff'; weight = 3; dashArray = null;
+        } else if (hop.type === 'rx') {
+            color = '#44cc66'; weight = 3; dashArray = null;
+        } else if (hop.type === 'collision') {
+            color = '#ff4444'; weight = 2; dashArray = '6,4';
+        } else if (hop.type === 'drop') {
+            color = '#ff4488'; weight = 2; dashArray = '4,4';
+        } else {
+            color = '#888'; weight = 2; dashArray = null;
+        }
+
+        const line = L.polyline(
+            [[fromPos.lat, fromPos.lon], [toPos.lat, toPos.lon]],
+            { color, weight, opacity: 0.85, dashArray }
+        );
+        traceLayer.addLayer(line);
+
+        // Hop number at midpoint
+        const midLat = (fromPos.lat + toPos.lat) / 2;
+        const midLon = (fromPos.lon + toPos.lon) / 2;
+        lineNum++;
+        const numMarker = L.marker([midLat, midLon], {
+            icon: L.divIcon({
+                className: 'hop-number',
+                html: `<div style="background:${color};color:#fff;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:bold;border:1px solid #000">${lineNum}</div>`,
+                iconSize: [16, 16],
+                iconAnchor: [8, 8],
+            }),
+            interactive: false,
+        });
+        traceLayer.addLayer(numMarker);
+    }
+}
+
+function drawForceTrace() {
+    if (!traceForceData || !forceCtx) return;
+    const nodeMap = {};
+    forceNodes.forEach(n => nodeMap[n.name] = n);
+
+    let lineNum = 0;
+    for (const hop of traceForceData) {
+        if (!hop.from || !hop.to) continue;
+        const s = nodeMap[hop.from], t = nodeMap[hop.to];
+        if (!s || !t) continue;
+
+        let color;
+        if (hop.type === 'tx' || hop.type === 'response') color = '#ffaa33';
+        else if (hop.type === 'relay') color = '#4488ff';
+        else if (hop.type === 'rx') color = '#44cc66';
+        else if (hop.type === 'collision') color = '#ff4444';
+        else if (hop.type === 'drop') color = '#ff4488';
+        else color = '#888';
+
+        forceCtx.save();
+        forceCtx.strokeStyle = color;
+        forceCtx.lineWidth = hop.type === 'tx' ? 4 : 3;
+        forceCtx.globalAlpha = 0.85;
+        if (hop.type === 'collision' || hop.type === 'drop') {
+            forceCtx.setLineDash([6, 4]);
+        }
+        forceCtx.beginPath();
+        forceCtx.moveTo(s.x, s.y);
+        forceCtx.lineTo(t.x, t.y);
+        forceCtx.stroke();
+        forceCtx.restore();
+
+        // Hop number
+        lineNum++;
+        const mx = (s.x + t.x) / 2, my = (s.y + t.y) / 2;
+        forceCtx.save();
+        forceCtx.fillStyle = color;
+        forceCtx.beginPath();
+        forceCtx.arc(mx, my, 8, 0, 2 * Math.PI);
+        forceCtx.fill();
+        forceCtx.fillStyle = '#fff';
+        forceCtx.font = 'bold 9px monospace';
+        forceCtx.textAlign = 'center';
+        forceCtx.textBaseline = 'middle';
+        forceCtx.fillText(lineNum, mx, my);
+        forceCtx.restore();
+    }
+}
+
+function showTraceDetail(trace, hops) {
+    const body = document.getElementById('trace-body');
+    let html = '<div class="trace-detail">';
+    html += `<div style="margin-bottom:6px"><strong style="color:#aaf">Trace: ${trace.root_pkt}</strong>`;
+    html += ` <button onclick="clearTrace()" style="float:right;background:#442222;color:#ff8888;border:1px solid #663333;border-radius:3px;cursor:pointer;font-size:10px;padding:1px 6px">Clear</button></div>`;
+    html += `<div style="margin-bottom:4px;color:#888">${trace.hops.length} hops</div>`;
+
+    let lineNum = 0;
+    for (const hop of hops) {
+        if (!hop.from && !hop.to) continue;
+        lineNum++;
+        const timeS = (hop.time_ms / 1000).toFixed(2);
+        const label = hop.to ? `${hop.from} -> ${hop.to}` : hop.from;
+        const snrStr = hop.snr != null ? ` SNR=${hop.snr.toFixed(1)}` : '';
+        html += `<div class="hop-row" data-node="${hop.to || hop.from}">`;
+        html += `<span class="hop-num">${lineNum}</span> `;
+        html += `<span class="hop-type ${hop.type}">${hop.type}</span> `;
+        html += `<span style="color:#ccc">${timeS}s</span> `;
+        html += `<span style="color:#aaa">${label}${snrStr}</span>`;
+        html += `</div>`;
+    }
+    html += '</div>';
+    body.innerHTML = html;
+
+    // Click hop to pan
+    body.querySelectorAll('.hop-row').forEach(el => {
+        el.addEventListener('click', () => {
+            const nodeName = el.dataset.node;
+            if (!nodeName) return;
+            if (topology.has_geo) {
+                const pos = getNodePos(nodeName);
+                if (pos && pos.lat != null) {
+                    leafletMap.panTo([pos.lat, pos.lon]);
+                }
+            }
+        });
+    });
+}
+
+function clearTrace() {
+    activeTrace = null;
+    traceForceData = null;
+    if (traceLayer) traceLayer.clearLayers();
+    if (!topology.has_geo) drawForce();
+    // Go back to message list
+    populateTracePanel();
+}
+
+// ── Controls ─────────────────────────────────────────────────
 
 function setupControls() {
     document.getElementById('link-display').addEventListener('change', () => {
@@ -641,6 +1176,18 @@ function setupControls() {
         } else {
             drawForce();
         }
+    });
+
+    document.getElementById('node-color-mode').addEventListener('change', () => {
+        recolorNodes();
+    });
+
+    document.getElementById('link-color-mode').addEventListener('change', () => {
+        if (topology.has_geo) {
+            drawLeafletLinks();
+            if (selectedNode) highlightNode(selectedNode);
+        }
+        restyleLinks();
     });
 
     document.getElementById('btn-labels').addEventListener('click', () => {
@@ -663,6 +1210,12 @@ function setupControls() {
         }
     });
 
+    document.getElementById('btn-trace').addEventListener('click', toggleTracePanel);
+    document.getElementById('trace-close').addEventListener('click', () => {
+        document.getElementById('trace-panel').style.display = 'none';
+        document.getElementById('btn-trace').classList.remove('active');
+    });
+
     document.getElementById('node-filter').addEventListener('input', (e) => {
         const q = e.target.value.toLowerCase();
         if (topology.has_geo) {
@@ -675,7 +1228,6 @@ function setupControls() {
             }
         } else {
             drawForce();
-            // dim non-matching in force
             if (q) {
                 for (const n of forceNodes) {
                     const match = n.name.toLowerCase().includes(q);
@@ -689,7 +1241,7 @@ function setupControls() {
                         forceCtx.globalAlpha = 0.15;
                         forceCtx.beginPath();
                         forceCtx.arc(n.x, n.y, r, 0, 2 * Math.PI);
-                        forceCtx.fillStyle = n.role === 'companion' ? COL_COMPANION : COL_REPEATER;
+                        forceCtx.fillStyle = getNodeColor(n.name, n.role);
                         forceCtx.fill();
                         forceCtx.globalAlpha = 1;
                     }

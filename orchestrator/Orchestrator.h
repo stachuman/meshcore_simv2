@@ -25,6 +25,12 @@ struct OrchestratorConfig {
     int bw = 62500;
     int cr = 4;
 
+    // Radio physics tuning
+    float capture_locked_db = 3.0f;    // capture threshold when primary locked
+    float capture_unlocked_db = 6.0f;  // capture threshold when preambles overlap
+    float cad_miss_prob = 0.05f;       // CAD false-negative probability [0,1]
+    float snr_coherence_ms = 0.0f;     // fading coherence time (0 = i.i.d.)
+
     struct NodeDef {
         std::string name;
         NodeRole role = NodeRole::Repeater;
@@ -89,6 +95,19 @@ class Orchestrator {
     uint64_t _seed = 42;
     std::mt19937 _rng;  // seeded in configure() from cfg.seed
 
+    // Radio physics parameters
+    float _capture_locked_db = 3.0f;
+    float _capture_unlocked_db = 6.0f;
+    float _cad_miss_prob = 0.05f;
+    float _snr_coherence_ms = 0.0f;
+
+    // Per-directed-link fading state (Ornstein-Uhlenbeck)
+    struct LinkFadingState {
+        float offset = 0.0f;         // current fading offset from mean SNR
+        unsigned long last_ms = 0;   // timestamp of last update
+    };
+    std::vector<LinkFadingState> _fading_state;  // n*n, sender*n+receiver
+
     struct PendingReplay {
         unsigned long emit_ms;
         int sender_idx;
@@ -112,6 +131,12 @@ class Orchestrator {
     int _tx_count = 0;
     int _rx_count = 0;
     std::map<std::string, int> _event_counts;  // "event_type" or "event_type:node" → count
+
+    // Pre-built per-node event keys to avoid string alloc on hot path
+    struct NodeEventKeys {
+        std::string tx, rx, collision, drop_halfduplex, drop_weak, drop_loss;
+    };
+    std::vector<NodeEventKeys> _node_event_keys;
 
     int findNode(const std::string& name) const;
     void routePackets(unsigned long current_ms);

@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+#include <vector>
 #endif
 
 // Global LittleFS instance
@@ -130,14 +131,38 @@ bool FS::info(FSInfo& info_out) {
 FS::FS() {}
 
 std::string FS::resolvePath(const char* path) const {
-    std::string full = _root;
-    if (path && path[0] == '/') {
-        full += path;
-    } else if (path) {
-        full += "/";
-        full += path;
+    if (!path || !path[0]) return _root;
+    // Build raw path
+    std::string raw = _root;
+    if (path[0] == '/') {
+        raw += path;
+    } else {
+        raw += "/";
+        raw += path;
     }
-    return full;
+    // Normalize: resolve . and .. components, prevent escaping _root
+    std::vector<std::string> parts;
+    std::string seg;
+    for (size_t i = 0; i <= raw.size(); i++) {
+        if (i == raw.size() || raw[i] == '/') {
+            if (seg == "..") {
+                if (!parts.empty()) parts.pop_back();
+            } else if (!seg.empty() && seg != ".") {
+                parts.push_back(seg);
+            }
+            seg.clear();
+        } else {
+            seg += raw[i];
+        }
+    }
+    std::string normalized = "/";
+    for (size_t i = 0; i < parts.size(); i++) {
+        if (i > 0) normalized += "/";
+        normalized += parts[i];
+    }
+    // Ensure result stays within _root
+    if (normalized.find(_root) != 0) return _root;
+    return normalized;
 }
 
 bool FS::begin(const char* root_dir) {
@@ -206,14 +231,15 @@ bool FS::format() {
     // Remove all files in the root directory (simulate format)
     DIR* dir = opendir(_root.c_str());
     if (!dir) return false;
+    bool all_ok = true;
     struct dirent* ent;
     while ((ent = readdir(dir)) != nullptr) {
         if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) continue;
         std::string full = _root + "/" + ent->d_name;
-        ::remove(full.c_str());
+        if (::remove(full.c_str()) != 0) all_ok = false;
     }
     closedir(dir);
-    return true;
+    return all_ok;
 }
 
 bool FS::info(FSInfo& info_out) {

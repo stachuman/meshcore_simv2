@@ -1,6 +1,6 @@
 {
   "_name": "t23_capture_first_arrival",
-  "_desc": "First-arrival capture: alice sends 100ms before bob. Both arrive at hub. Alice has 2dB SNR advantage (>1dB locked, <6dB unlocked). With old 6dB model both would collide. With timing-dependent model, alice's preamble locks before bob arrives, so alice survives at 1dB threshold.",
+  "_desc": "First-arrival capture (see RADIO_MODEL.md sec 4.1): alice sends 100ms before bob. Both arrive at hub. Alice has 4dB SNR advantage (>3dB locked threshold). Receiver locks onto alice's preamble before bob arrives, so alice survives via timing-dependent capture.",
   "simulation": {
     "duration_ms": 15000,
     "step_ms": 5,
@@ -14,7 +14,7 @@
   ],
   "topology": {
     "links": [
-      { "from": "alice", "to": "hub", "snr": 9.0, "rssi": -75.0, "bidir": true },
+      { "from": "alice", "to": "hub", "snr": 11.0, "rssi": -70.0, "bidir": true },
       { "from": "bob", "to": "hub", "snr": 7.0, "rssi": -85.0, "bidir": true }
     ]
   },
@@ -23,6 +23,6 @@
     { "at_ms": 6100, "node": "bob", "command": "msg alice hello from bob" }
   ],
   "expect": [
-    { "type": "event_count", "event_type": "rx", "node": "hub", "min": 1, "_comment": "alice's packet survives via first-arrival capture (2dB > 1dB locked threshold)" }
+    { "type": "event_count", "event_type": "rx", "node": "hub", "min": 1, "_comment": "alice's packet survives via first-arrival capture (4dB > 3dB locked threshold)" }
   ]
 }

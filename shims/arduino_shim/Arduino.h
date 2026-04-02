@@ -98,12 +98,21 @@ class String {
     size_t _len;
 public:
     String() : _buf(nullptr), _len(0) {}
-    String(const char* s) {
-        if (s) { _len = strlen(s); _buf = (char*)malloc(_len+1); memcpy(_buf, s, _len+1); }
-        else { _buf = nullptr; _len = 0; }
+    String(const char* s) : _buf(nullptr), _len(0) {
+        if (s) {
+            _len = strlen(s);
+            _buf = (char*)malloc(_len+1);
+            if (_buf) memcpy(_buf, s, _len+1);
+            else _len = 0;
+        }
     }
     String(const String& o) : _buf(nullptr), _len(0) {
-        if (o._buf) { _len = o._len; _buf = (char*)malloc(_len+1); memcpy(_buf, o._buf, _len+1); }
+        if (o._buf) {
+            _len = o._len;
+            _buf = (char*)malloc(_len+1);
+            if (_buf) memcpy(_buf, o._buf, _len+1);
+            else _len = 0;
+        }
     }
     ~String() { free(_buf); }
     String& operator=(const String& o) {

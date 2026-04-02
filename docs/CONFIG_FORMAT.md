@@ -41,6 +41,10 @@ The orchestrator reads a single JSON file that defines the network, radio links,
 | `radio.sf` | int | 8 | Global default LoRa spreading factor (7-12). Applied to all nodes unless overridden per-node. |
 | `radio.bw` | int | 62500 | Global default bandwidth in Hz. |
 | `radio.cr` | int | 4 | Global default coding rate (1-4). |
+| `radio.capture_locked_db` | float | 3.0 | Capture threshold (dB) when receiver has locked onto a preamble. See [RADIO_MODEL.md](RADIO_MODEL.md) sec 4.1. |
+| `radio.capture_unlocked_db` | float | 6.0 | Capture threshold (dB) when preambles overlap (no lock). |
+| `radio.cad_miss_prob` | float | 0.05 | CAD false-negative probability [0.0-1.0]. Fraction of LBT notifications silently dropped. 0 = perfect CAD. |
+| `radio.snr_coherence_ms` | float | 0.0 | Fading coherence time for Ornstein-Uhlenbeck correlated fading. 0 = i.i.d. Gaussian (original behavior). Requires `snr_std_dev > 0` on links to have effect. |
 
 **Typical setup**: For message-passing tests, use `hot_start: true` with `warmup_ms` long enough for the hot-start advert exchange to complete. Commands should fire after warmup ends.
 
@@ -96,7 +100,7 @@ Each entry defines a radio link between two nodes.
 | `to` | string | *required* | Destination node name |
 | `snr` | float | 8.0 | Signal-to-noise ratio in dB |
 | `rssi` | float | -80.0 | Received signal strength in dBm |
-| `snr_std_dev` | float | 0.0 | Per-reception Gaussian jitter on SNR (0 = deterministic) |
+| `snr_std_dev` | float | 0.0 | Per-reception SNR jitter std dev in dB (0 = deterministic). When `snr_coherence_ms > 0`, uses O-U correlated fading; otherwise i.i.d. Gaussian. |
 | `loss` | float | 0.0 | Packet loss probability [0.0-1.0], applied after collision detection |
 | `bidir` | bool | true | If true, creates both A->B and B->A with same parameters. If false, only from->to. |
 

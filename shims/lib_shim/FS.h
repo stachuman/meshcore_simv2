@@ -102,6 +102,7 @@ public:
     void flush() override {}
     bool seek(uint32_t pos) {
         if (!_data) return false;
+        if (pos > _data->size()) return false;
         _pos = pos;
         return true;
     }

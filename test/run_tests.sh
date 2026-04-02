@@ -13,7 +13,16 @@ pass=0
 fail=0
 errors=""
 
-for t in "$SCRIPT_DIR"/t*.json; do
+shopt -s nullglob
+tests=("$SCRIPT_DIR"/t*.json)
+shopt -u nullglob
+
+if [ ${#tests[@]} -eq 0 ]; then
+    echo "ERROR: no test files found in $SCRIPT_DIR"
+    exit 1
+fi
+
+for t in "${tests[@]}"; do
     name=$(basename "$t" .json)
     printf "  %-40s " "$name"
     if stderr=$("$ORCH" "$t" 2>&1 >/dev/null); then
@@ -31,6 +40,6 @@ echo ""
 echo "${pass}/${total} passed"
 
 if [ "$fail" -gt 0 ]; then
-    echo -e "\nFailure details:${errors}"
+    printf "\nFailure details:%b\n" "${errors}"
     exit 1
 fi

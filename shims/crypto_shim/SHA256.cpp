@@ -13,7 +13,11 @@ SHA256::SHA256()
 
     // Fetch the HMAC algorithm object once; it's ref-counted and cheap to keep.
     _mac = EVP_MAC_fetch(nullptr, "HMAC", nullptr);
-    if (!_mac) throw std::runtime_error("EVP_MAC_fetch(HMAC) failed");
+    if (!_mac) {
+        EVP_MD_CTX_free(_sha_ctx);
+        _sha_ctx = nullptr;
+        throw std::runtime_error("EVP_MAC_fetch(HMAC) failed");
+    }
 }
 
 SHA256::~SHA256() {

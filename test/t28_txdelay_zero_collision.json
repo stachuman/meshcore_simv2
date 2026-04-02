@@ -1,0 +1,45 @@
+{
+  "_name": "t28_txdelay_zero_collision",
+  "_desc": "Equal-SNR diamond with txdelay=0: both relays receive at same SNR (-5dB), both forward immediately (no random spread). Collision at dest (0dB diff < 6dB). rxdelay=0 too, so no SNR-based ordering either.",
+  "simulation": {
+    "duration_ms": 20000,
+    "step_ms": 5,
+    "warmup_ms": 5000,
+    "hot_start": true,
+    "radio": { "sf": 8, "bw": 62500, "cr": 4 }
+  },
+  "nodes": [
+    { "name": "alice", "role": "companion" },
+    { "name": "hub", "role": "repeater" },
+    { "name": "relay_a", "role": "repeater" },
+    { "name": "relay_b", "role": "repeater" },
+    { "name": "dest", "role": "repeater" },
+    { "name": "bob", "role": "companion" }
+  ],
+  "topology": {
+    "links": [
+      { "from": "alice", "to": "hub", "snr": 10.0, "rssi": -70.0, "bidir": true },
+      { "from": "hub", "to": "relay_a", "snr": -5.0, "rssi": -107.0, "bidir": true },
+      { "from": "hub", "to": "relay_b", "snr": -5.0, "rssi": -107.0, "bidir": true },
+      { "from": "relay_a", "to": "dest", "snr": 10.0, "rssi": -70.0, "bidir": true },
+      { "from": "relay_b", "to": "dest", "snr": 10.0, "rssi": -70.0, "bidir": true },
+      { "from": "dest", "to": "bob", "snr": 10.0, "rssi": -70.0, "bidir": true }
+    ]
+  },
+  "commands": [
+    { "at_ms": 5001, "node": "hub", "command": "set txdelay 0" },
+    { "at_ms": 5001, "node": "hub", "command": "set rxdelay 0" },
+    { "at_ms": 5001, "node": "relay_a", "command": "set txdelay 0" },
+    { "at_ms": 5001, "node": "relay_a", "command": "set rxdelay 0" },
+    { "at_ms": 5001, "node": "relay_b", "command": "set txdelay 0" },
+    { "at_ms": 5001, "node": "relay_b", "command": "set rxdelay 0" },
+    { "at_ms": 5001, "node": "dest", "command": "set txdelay 0" },
+    { "at_ms": 5001, "node": "dest", "command": "set rxdelay 0" },
+
+    { "at_ms": 8000, "node": "alice", "command": "msg bob txdelay-zero test" }
+  ],
+  "expect": [
+    { "type": "cmd_reply_contains", "node": "alice", "command": "msg bob", "value": "msg sent" },
+    { "type": "event_count", "event_type": "collision", "node": "dest", "min": 1, "_comment": "Both relays forward simultaneously → collision at dest" }
+  ]
+}

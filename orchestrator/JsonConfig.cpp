@@ -42,6 +42,10 @@ static OrchestratorConfig parseJson(const json& j) {
             if (r.contains("sf")) cfg.sf = r["sf"].get<int>();
             if (r.contains("bw")) cfg.bw = r["bw"].get<int>();
             if (r.contains("cr")) cfg.cr = r["cr"].get<int>();
+            if (r.contains("capture_locked_db"))   cfg.capture_locked_db = r["capture_locked_db"].get<float>();
+            if (r.contains("capture_unlocked_db")) cfg.capture_unlocked_db = r["capture_unlocked_db"].get<float>();
+            if (r.contains("cad_miss_prob"))        cfg.cad_miss_prob = r["cad_miss_prob"].get<float>();
+            if (r.contains("snr_coherence_ms"))     cfg.snr_coherence_ms = r["snr_coherence_ms"].get<float>();
         }
     }
 
@@ -229,6 +233,18 @@ static void validateConfig(const OrchestratorConfig& cfg) {
     if (cfg.warmup_ms >= cfg.duration_ms)
         errors.push_back("simulation.warmup_ms (" + std::to_string(cfg.warmup_ms) +
                          ") must be < duration_ms (" + std::to_string(cfg.duration_ms) + ")");
+    if (cfg.capture_locked_db < 0.0f)
+        errors.push_back("simulation.radio.capture_locked_db must be >= 0 (got " +
+                         std::to_string(cfg.capture_locked_db) + ")");
+    if (cfg.capture_unlocked_db < 0.0f)
+        errors.push_back("simulation.radio.capture_unlocked_db must be >= 0 (got " +
+                         std::to_string(cfg.capture_unlocked_db) + ")");
+    if (cfg.cad_miss_prob < 0.0f || cfg.cad_miss_prob > 1.0f)
+        errors.push_back("simulation.radio.cad_miss_prob must be [0.0, 1.0] (got " +
+                         std::to_string(cfg.cad_miss_prob) + ")");
+    if (cfg.snr_coherence_ms < 0.0f)
+        errors.push_back("simulation.radio.snr_coherence_ms must be >= 0 (got " +
+                         std::to_string(cfg.snr_coherence_ms) + ")");
 
     // Build node name set for cross-validation
     std::set<std::string> node_names;

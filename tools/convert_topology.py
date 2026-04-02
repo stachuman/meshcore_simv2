@@ -933,7 +933,7 @@ def convert(args):
         # Compute SNR variance
         snr_std_dev = 0.0
         if snr_min_db is not None and snr_min_db != snr_db:
-            snr_std_dev = round((snr_db - snr_min_db) / 2.0, 2)
+            snr_std_dev = round((snr_db - snr_min_db) / 4.0, 2)  # range ≈ ±2σ
             if snr_std_dev < 0:
                 snr_std_dev = 0.0
 
