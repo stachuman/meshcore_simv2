@@ -700,6 +700,180 @@ def fill_gaps(
 
 
 # ---------------------------------------------------------------------------
+# Island bridging: connect disconnected graph components
+# ---------------------------------------------------------------------------
+
+def find_connected_components(
+    links: list[dict],
+    node_names: set[str],
+) -> list[set[str]]:
+    """Find connected components in the link graph via BFS.
+
+    Returns list of sets, each set containing node names in one component.
+    """
+    # Build adjacency from links
+    adj: dict[str, set[str]] = defaultdict(set)
+    for link in links:
+        a = link["from"]
+        b = link["to"]
+        if a in node_names and b in node_names:
+            adj[a].add(b)
+            adj[b].add(a)
+
+    visited: set[str] = set()
+    components: list[set[str]] = []
+
+    for name in node_names:
+        if name in visited:
+            continue
+        # BFS
+        component: set[str] = set()
+        queue = [name]
+        while queue:
+            current = queue.pop()
+            if current in visited:
+                continue
+            visited.add(current)
+            component.add(current)
+            for nbr in adj.get(current, set()):
+                if nbr not in visited:
+                    queue.append(nbr)
+        components.append(component)
+
+    # Sort largest first
+    components.sort(key=len, reverse=True)
+    return components
+
+
+def bridge_islands(
+    links: list[dict],
+    nodes_out: list[dict],
+    nodes_in: dict,
+    prefix_to_name: dict[str, str],
+    model_a: float,
+    model_b: float,
+    sigma: float,
+    max_measured_snr: float,
+    verbose: bool = False,
+) -> list[dict]:
+    """Connect disconnected graph components with artificial bridge links.
+
+    Uses MST-like approach: repeatedly bridge the two closest components
+    until a single connected component remains.
+    """
+    name_to_prefix = {v: k for k, v in prefix_to_name.items()}
+
+    # Build coord lookup: name -> (lat, lon)
+    name_coords: dict[str, tuple[float, float]] = {}
+    for nd in nodes_out:
+        lat = nd.get("lat", 0.0)
+        lon = nd.get("lon", 0.0)
+        if lat != 0.0 or lon != 0.0:
+            name_coords[nd["name"]] = (lat, lon)
+
+    # Only consider repeater nodes with coords
+    repeater_names = set()
+    for nd in nodes_out:
+        if nd.get("role") == "repeater" and nd["name"] in name_coords:
+            repeater_names.add(nd["name"])
+
+    # All node names (for component analysis including companions)
+    all_names = {nd["name"] for nd in nodes_out}
+
+    components = find_connected_components(links, all_names)
+    if len(components) <= 1:
+        if verbose:
+            print(f"  Bridge islands: graph is already connected ({len(all_names)} nodes)",
+                  file=sys.stderr)
+        return links
+
+    if verbose:
+        print(f"  Bridge islands: found {len(components)} disconnected components:",
+              file=sys.stderr)
+        for i, comp in enumerate(components):
+            repeaters_in = [n for n in comp if n in repeater_names]
+            print(f"    Component {i}: {len(comp)} nodes "
+                  f"({len(repeaters_in)} repeaters with coords)",
+                  file=sys.stderr)
+
+    rng = random.Random(123)  # deterministic bridge placement
+    new_links = list(links)
+    bridges_added = 0
+
+    # Iterate: find two closest components, bridge them, re-merge
+    while len(components) > 1:
+        best_dist = float("inf")
+        best_pair = None  # (comp_i, comp_j, name_a, name_b)
+
+        # Find closest pair of nodes across any two components
+        for i in range(len(components)):
+            nodes_i = [n for n in components[i] if n in name_coords]
+            for j in range(i + 1, len(components)):
+                nodes_j = [n for n in components[j] if n in name_coords]
+                for na in nodes_i:
+                    lat_a, lon_a = name_coords[na]
+                    for nb in nodes_j:
+                        lat_b, lon_b = name_coords[nb]
+                        d = haversine_km(lat_a, lon_a, lat_b, lon_b)
+                        if d < best_dist:
+                            best_dist = d
+                            best_pair = (i, j, na, nb)
+
+        if best_pair is None:
+            # Components with no coords can't be bridged by distance
+            if verbose:
+                print(f"  Bridge islands: {len(components)} components remain "
+                      f"(no coords to bridge)", file=sys.stderr)
+            break
+
+        ci, cj, na, nb = best_pair
+
+        # Estimate SNR from propagation model (or use floor + margin for very long links)
+        if best_dist > 0.01:
+            snr_est = model_a + model_b * math.log10(best_dist) \
+                + rng.gauss(0.0, max(sigma, 1.0))
+        else:
+            snr_est = 10.0  # co-located
+
+        # Clamp: don't exceed max measured, but ensure at least demod floor + margin
+        if max_measured_snr > 0:
+            snr_est = min(snr_est, max_measured_snr)
+        snr_est = max(snr_est, _SNR_FLOOR + 3.0)  # ensure link is usable
+
+        rssi = max(-140.0, min(-20.0, _DEFAULT_NOISE_FLOOR + snr_est))
+
+        bridge_link = {
+            "from": na,
+            "to": nb,
+            "snr": round(snr_est, 2),
+            "rssi": round(rssi, 2),
+            "bidir": True,
+            "snr_std_dev": round(max(sigma, 1.0), 2),
+        }
+        loss = snr_to_loss(snr_est)
+        if loss > 0.0001:
+            bridge_link["loss"] = loss
+        new_links.append(bridge_link)
+        bridges_added += 1
+
+        if verbose:
+            print(f"    Bridge: {na} <-> {nb} "
+                  f"({best_dist:.1f} km, SNR={snr_est:.1f} dB)",
+                  file=sys.stderr)
+
+        # Merge the two components
+        merged = components[ci] | components[cj]
+        components = [c for k, c in enumerate(components) if k != ci and k != cj]
+        components.insert(0, merged)
+
+    if verbose:
+        print(f"  Bridge islands: {bridges_added} bridge links added",
+              file=sys.stderr)
+
+    return new_links
+
+
+# ---------------------------------------------------------------------------
 # Existing helpers
 # ---------------------------------------------------------------------------
 
@@ -957,7 +1131,7 @@ def convert(args):
 
     # --- [4] Fit propagation model (if --fill-gaps or --validate-coords) ---
     model_a = model_b = sigma = max_measured_dist = 0.0
-    if args.fill_gaps or args.validate_coords:
+    if args.fill_gaps or args.validate_coords or args.bridge_islands:
         model_a, model_b, sigma, max_measured_dist = fit_propagation_model(
             edges_in, nodes_in, prefix_to_name,
             sigma_override=args.gap_sigma,
@@ -990,6 +1164,17 @@ def convert(args):
             model_b=model_b,
             sigma=sigma,
             max_measured_dist=max_measured_dist,
+            max_measured_snr=max_measured_snr,
+            verbose=args.verbose,
+        )
+
+    # --- [7b] Bridge disconnected islands (--bridge-islands, default ON) ---
+    if args.bridge_islands:
+        links_out = bridge_islands(
+            links_out, nodes_out, nodes_in, prefix_to_name,
+            model_a=model_a,
+            model_b=model_b,
+            sigma=sigma,
             max_measured_snr=max_measured_snr,
             verbose=args.verbose,
         )
@@ -1083,11 +1268,10 @@ def convert(args):
     if args.merge_bidir:
         print(f"Bidir merge: enabled", file=sys.stderr)
     if args.fill_gaps:
-        gap_count = len(links_out) - surviving_edges
-        if args.merge_bidir:
-            gap_count = len([l for l in links_out if l.get("bidir", False)
-                             and l.get("snr", 0) != 10.0]) - surviving_edges
         print(f"Gap-fill: enabled", file=sys.stderr)
+    if args.bridge_islands:
+        # Count bridge links by checking connected components before bridging
+        print(f"Bridge islands: enabled", file=sys.stderr)
     if msg_schedules:
         print(f"Message schedules: {len(msg_schedules)}", file=sys.stderr)
     print(f"Total links in output: {len(links_out)}", file=sys.stderr)
@@ -1153,6 +1337,12 @@ def main():
                         help=f"Hard cap total edges per node (default: {_MAX_EDGES_PER_NODE})")
     parser.add_argument("--gap-sigma", type=float, default=None,
                         help="Override shadow fading sigma (dB)")
+
+    # Island bridging
+    parser.add_argument("--bridge-islands", action="store_true", default=True,
+                        help="Connect disconnected graph components with artificial links (default: on)")
+    parser.add_argument("--no-bridge-islands", action="store_false", dest="bridge_islands",
+                        help="Disable island bridging")
 
     # Companion injection
     parser.add_argument("--add-companion", action="append",

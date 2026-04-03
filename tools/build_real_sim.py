@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Build a complete simulation config from raw topology data.
 
-Automates: topology conversion + companion auto-placement + message schedules.
+Thin wrapper: runs convert_topology.py for topology conversion, then
+inject_test.py for companion placement and message schedules.
 
 Usage:
   python3 tools/build_real_sim.py simulation/topology.json \
@@ -11,138 +12,10 @@ Usage:
 """
 
 import argparse
-import json
-import math
 import os
-import random
 import subprocess
 import sys
 import tempfile
-
-
-def haversine_km(lat1, lon1, lat2, lon2):
-    R = 6371.0
-    dlat = math.radians(lat2 - lat1)
-    dlon = math.radians(lon2 - lon1)
-    a = (math.sin(dlat / 2) ** 2
-         + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2))
-         * math.sin(dlon / 2) ** 2)
-    return R * 2 * math.asin(math.sqrt(a))
-
-
-def farthest_point_sampling(repeaters, n, rng):
-    """Pick n repeaters maximizing geographic spread.
-
-    repeaters: list of {"name": ..., "lat": ..., "lon": ...}
-    Returns list of n selected repeaters.
-    """
-    if n >= len(repeaters):
-        return list(repeaters)
-
-    # Start with a random repeater
-    selected = [rng.choice(repeaters)]
-    remaining = [r for r in repeaters if r["name"] != selected[0]["name"]]
-
-    while len(selected) < n:
-        # For each remaining repeater, compute min distance to any selected
-        best = None
-        best_dist = -1
-        for r in remaining:
-            min_d = min(
-                haversine_km(r["lat"], r["lon"], s["lat"], s["lon"])
-                for s in selected
-            )
-            if min_d > best_dist:
-                best_dist = min_d
-                best = r
-
-        selected.append(best)
-        remaining = [r for r in remaining if r["name"] != best["name"]]
-
-    return selected
-
-
-def generate_schedules(companions, interval_ms, count, warmup_ms, rng):
-    """Generate diverse message schedules with random start offsets.
-
-    All patterns run concurrently from the same base time (warmup + 5s).
-    Each schedule gets a random offset within [0, interval_ms) for
-    desynchronization.
-
-    Patterns (all interleaved):
-    - 1-to-1: round-robin pairing (c01->c02, c02->c03, ..., cN->c01)
-    - 1-to-many: first companion broadcasts to all others
-    - many-to-1: all companions send to last companion
-
-    Returns (schedules, phase_base) — phase_base for channel schedule generation.
-    """
-    schedules = []
-    phase_base = warmup_ms + 5000
-    n = len(companions)
-
-    # 1-to-1: round-robin
-    for i in range(n):
-        j = (i + 1) % n
-        offset = rng.randint(0, interval_ms - 1)
-        schedules.append({
-            "from": companions[i],
-            "to": companions[j],
-            "start_ms": phase_base + offset,
-            "interval_ms": interval_ms,
-            "count": count,
-            "message": f"1to1 {companions[i]}->{companions[j]} seq={{n}} direct msg status ok signal good position hold steady",
-            "ack": True,
-        })
-
-    # 1-to-many: first companion sends to all others (same base time)
-    sender = companions[0]
-    for i in range(1, n):
-        offset = rng.randint(0, interval_ms - 1)
-        schedules.append({
-            "from": sender,
-            "to": companions[i],
-            "start_ms": phase_base + offset,
-            "interval_ms": interval_ms,
-            "count": count,
-            "message": f"1toN {sender}->{companions[i]} seq={{n}} broadcast update all stations check in report status",
-            "ack": True,
-        })
-
-    # many-to-1: all send to last companion (same base time)
-    target = companions[-1]
-    for i in range(n - 1):
-        offset = rng.randint(0, interval_ms - 1)
-        schedules.append({
-            "from": companions[i],
-            "to": target,
-            "start_ms": phase_base + offset,
-            "interval_ms": interval_ms,
-            "count": count,
-            "message": f"Nto1 {companions[i]}->{target} seq={{n}} converge report mesh node active all links nominal",
-            "ack": True,
-        })
-
-    return schedules, phase_base
-
-
-def generate_channel_schedules(companions, interval_ms, count, phase_base, rng):
-    """Generate channel broadcast schedule — runs concurrently with direct messages.
-
-    Each companion sends count messages on the public channel (channel 0).
-    """
-    schedules = []
-    n = len(companions)
-    for i in range(n):
-        offset = rng.randint(0, interval_ms - 1)
-        schedules.append({
-            "from": companions[i],
-            "channel": 0,
-            "start_ms": phase_base + offset,
-            "interval_ms": interval_ms,
-            "count": count,
-            "message": f"chan {companions[i]} seq={{n}} public channel broadcast mesh network status check all nodes",
-        })
-    return schedules
 
 
 def main():
@@ -152,7 +25,7 @@ def main():
     parser.add_argument("input", help="Path to topology.json")
     parser.add_argument("-o", "--output", required=True, help="Output config file")
 
-    # Companion placement
+    # Companion placement (passed to inject_test.py)
     parser.add_argument("--companions", type=int, default=10,
                         help="Number of companions to auto-place (default: 10)")
     parser.add_argument("--seed", type=int, default=42,
@@ -162,7 +35,7 @@ def main():
     parser.add_argument("--companion-rssi", type=float, default=-70.0,
                         help="RSSI for companion-to-repeater links (default: -70.0)")
 
-    # Radio parameters
+    # Radio parameters (injected into config after conversion)
     parser.add_argument("--sf", type=int, default=8,
                         help="LoRa spreading factor (default: 8)")
     parser.add_argument("--bw", type=int, default=62500,
@@ -170,7 +43,7 @@ def main():
     parser.add_argument("--cr", type=int, default=4,
                         help="Coding rate (default: 4)")
 
-    # Simulation
+    # Simulation (passed to convert_topology.py)
     parser.add_argument("--duration", type=int, default=300000,
                         help="Simulation duration in ms (default: 300000)")
     parser.add_argument("--warmup", type=int, default=5000,
@@ -178,13 +51,13 @@ def main():
     parser.add_argument("--step", type=int, default=5,
                         help="Step size in ms (default: 5)")
 
-    # Message schedule
+    # Message schedule (passed to inject_test.py)
     parser.add_argument("--msg-interval", type=int, default=30,
                         help="Message interval in seconds (default: 30)")
     parser.add_argument("--msg-count", type=int, default=5,
                         help="Messages per schedule entry (default: 5)")
 
-    # Channel schedule
+    # Channel schedule (passed to inject_test.py)
     parser.add_argument("--no-channel", action="store_true", default=False,
                         help="Disable channel broadcast messages")
     parser.add_argument("--chan-interval", type=int, default=None,
@@ -210,10 +83,11 @@ def main():
 
     args = parser.parse_args()
 
-    # Step 1: Run convert_topology.py to get base config
     tools_dir = os.path.dirname(os.path.abspath(__file__))
     convert_script = os.path.join(tools_dir, "convert_topology.py")
+    inject_script = os.path.join(tools_dir, "inject_test.py")
 
+    # --- Step 1: Run convert_topology.py to get base config ---
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False, mode="w") as tmp:
         tmp_path = tmp.name
 
@@ -246,10 +120,10 @@ def main():
             cmd.append("-v")
 
         if args.verbose:
-            print(f"Running: {' '.join(cmd)}", file=sys.stderr)
+            print(f"Step 1: convert_topology.py", file=sys.stderr)
+            print(f"  {' '.join(cmd)}", file=sys.stderr)
 
         result = subprocess.run(cmd, capture_output=True, text=True)
-        # convert_topology prints summary to stderr
         if result.stderr:
             print(result.stderr, file=sys.stderr, end="")
         if result.returncode != 0:
@@ -257,130 +131,59 @@ def main():
                   file=sys.stderr)
             sys.exit(1)
 
+        # --- Step 2: Inject radio params (not handled by inject_test.py) ---
+        # inject_test.py doesn't set radio params, so we patch the intermediate file
+        import json
         with open(tmp_path) as f:
             config = json.load(f)
+        config["simulation"]["radio"] = {
+            "sf": args.sf,
+            "bw": args.bw,
+            "cr": args.cr,
+        }
+        with open(tmp_path, "w") as f:
+            json.dump(config, f, indent=2)
+            f.write("\n")
+
+        # --- Step 3: Run inject_test.py for companions + schedules ---
+        cmd2 = [
+            sys.executable, inject_script, tmp_path,
+            "--companions", str(args.companions),
+            "--seed", str(args.seed),
+            "--companion-snr", str(args.companion_snr),
+            "--companion-rssi", str(args.companion_rssi),
+            "--auto-schedule",
+            "--msg-interval", str(args.msg_interval),
+            "--msg-count", str(args.msg_count),
+            "--duration", str(args.duration),
+            "-o", args.output,
+        ]
+        if not args.no_channel:
+            cmd2.append("--channel")
+            if args.chan_interval is not None:
+                cmd2.extend(["--chan-interval", str(args.chan_interval)])
+            if args.chan_count is not None:
+                cmd2.extend(["--chan-count", str(args.chan_count)])
+        if args.verbose:
+            cmd2.append("-v")
+
+        if args.verbose:
+            print(f"\nStep 2: inject_test.py", file=sys.stderr)
+            print(f"  {' '.join(cmd2)}", file=sys.stderr)
+
+        result2 = subprocess.run(cmd2, capture_output=True, text=True)
+        if result2.stderr:
+            print(result2.stderr, file=sys.stderr, end="")
+        if result2.returncode != 0:
+            print(f"ERROR: inject_test.py failed (exit {result2.returncode})",
+                  file=sys.stderr)
+            sys.exit(1)
+
     finally:
         if os.path.exists(tmp_path):
             os.unlink(tmp_path)
 
-    # Step 2: Extract repeaters with coordinates
-    repeaters_with_coords = []
-    for node in config["nodes"]:
-        if node.get("role") != "repeater":
-            continue
-        lat = node.get("lat", 0.0)
-        lon = node.get("lon", 0.0)
-        if lat != 0.0 or lon != 0.0:
-            repeaters_with_coords.append(node)
-
-    n_companions = args.companions
-    if n_companions > len(repeaters_with_coords):
-        print(f"WARNING: requested {n_companions} companions but only "
-              f"{len(repeaters_with_coords)} repeaters with coords available. "
-              f"Using {len(repeaters_with_coords)}.", file=sys.stderr)
-        n_companions = len(repeaters_with_coords)
-
-    if n_companions < 2:
-        print("ERROR: need at least 2 companions for message schedules",
-              file=sys.stderr)
-        sys.exit(1)
-
-    # Step 3: Farthest-point sampling
-    rng = random.Random(args.seed)
-    selected = farthest_point_sampling(repeaters_with_coords, n_companions, rng)
-
-    companion_names = []
-    for i, rpt in enumerate(selected):
-        cname = f"c{i+1:02d}"
-        companion_names.append(cname)
-        config["nodes"].append({"name": cname, "role": "companion"})
-        config["topology"]["links"].append({
-            "from": cname,
-            "to": rpt["name"],
-            "snr": args.companion_snr,
-            "rssi": args.companion_rssi,
-            "bidir": True,
-        })
-
-    if args.verbose:
-        print(f"\nCompanion placement ({n_companions} companions):", file=sys.stderr)
-        for i, (cname, rpt) in enumerate(zip(companion_names, selected)):
-            print(f"  {cname} -> {rpt['name']} "
-                  f"({rpt.get('lat', '?')}, {rpt.get('lon', '?')})",
-                  file=sys.stderr)
-
-    # Step 4: Add radio parameters
-    config["simulation"]["radio"] = {
-        "sf": args.sf,
-        "bw": args.bw,
-        "cr": args.cr,
-    }
-
-    # Step 5: Generate message schedules
-    interval_ms = args.msg_interval * 1000
-    schedules, phase_end_ms = generate_schedules(
-        companion_names, interval_ms, args.msg_count, args.warmup, rng
-    )
-    config["message_schedule"] = schedules
-
-    # Step 5b: Generate channel broadcast schedule
-    chan_schedules = []
-    if not args.no_channel:
-        chan_interval_ms = (args.chan_interval or args.msg_interval) * 1000
-        chan_count = args.chan_count or args.msg_count
-        chan_schedules = generate_channel_schedules(
-            companion_names, chan_interval_ms, chan_count, phase_end_ms, rng
-        )
-        config["channel_schedule"] = chan_schedules
-
-    # Ensure duration is long enough for all schedules
-    all_schedules = schedules + chan_schedules
-    max_end = 0
-    for s in all_schedules:
-        end = s["start_ms"] + s["interval_ms"] * s["count"]
-        if end > max_end:
-            max_end = end
-    # Add 30s buffer for delivery
-    needed = max_end + 30000
-    if needed > config["simulation"]["duration_ms"]:
-        config["simulation"]["duration_ms"] = needed
-        if args.verbose:
-            print(f"Adjusted duration to {needed}ms to fit all schedules",
-                  file=sys.stderr)
-
-    # Step 6: Write output
-    with open(args.output, "w") as f:
-        json.dump(config, f, indent=2)
-        f.write("\n")
-
-    # Summary
-    n_schedules = len(schedules)
-    total_msgs = sum(s["count"] for s in schedules)
-    n_chan_schedules = len(chan_schedules)
-    total_chan_msgs = sum(s["count"] for s in chan_schedules)
-    print(f"\n--- Build Summary ---", file=sys.stderr)
-    print(f"Repeaters: {len([n for n in config['nodes'] if n.get('role') == 'repeater'])}",
-          file=sys.stderr)
-    print(f"Companions: {n_companions} (farthest-point sampling, seed={args.seed})",
-          file=sys.stderr)
-    print(f"Radio: SF{args.sf} BW{args.bw} CR{args.cr}", file=sys.stderr)
-    print(f"Direct schedules: {n_schedules} entries, {total_msgs} total messages",
-          file=sys.stderr)
-    print(f"  1-to-1: {n_companions} pairs (round-robin)", file=sys.stderr)
-    print(f"  1-to-many: {n_companions - 1} targets from {companion_names[0]}",
-          file=sys.stderr)
-    print(f"  many-to-1: {n_companions - 1} senders to {companion_names[-1]}",
-          file=sys.stderr)
-    if chan_schedules:
-        print(f"Channel schedules: {n_chan_schedules} entries, {total_chan_msgs} total messages",
-              file=sys.stderr)
-        print(f"  channel broadcast: {n_companions} senders on channel 0",
-              file=sys.stderr)
-    else:
-        print(f"Channel schedules: disabled", file=sys.stderr)
-    print(f"Duration: {config['simulation']['duration_ms']}ms", file=sys.stderr)
-    print(f"Links: {len(config['topology']['links'])}", file=sys.stderr)
-    print(f"Written to {args.output}", file=sys.stderr)
+    print(f"\nWritten to {args.output}", file=sys.stderr)
 
 
 if __name__ == "__main__":

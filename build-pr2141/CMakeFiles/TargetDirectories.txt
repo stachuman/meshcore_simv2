@@ -1,0 +1,13 @@
+/home/staszek/meshcore_real_sim/build-pr2141/CMakeFiles/edit_cache.dir
+/home/staszek/meshcore_real_sim/build-pr2141/CMakeFiles/rebuild_cache.dir
+/home/staszek/meshcore_real_sim/build-pr2141/simple_repeater/CMakeFiles/simple_repeater.dir
+/home/staszek/meshcore_real_sim/build-pr2141/simple_repeater/CMakeFiles/edit_cache.dir
+/home/staszek/meshcore_real_sim/build-pr2141/simple_repeater/CMakeFiles/rebuild_cache.dir
+/home/staszek/meshcore_real_sim/build-pr2141/companion_radio/CMakeFiles/companion_radio.dir
+/home/staszek/meshcore_real_sim/build-pr2141/companion_radio/CMakeFiles/edit_cache.dir
+/home/staszek/meshcore_real_sim/build-pr2141/companion_radio/CMakeFiles/rebuild_cache.dir
+/home/staszek/meshcore_real_sim/build-pr2141/orchestrator/CMakeFiles/repeater_mesh_obj.dir
+/home/staszek/meshcore_real_sim/build-pr2141/orchestrator/CMakeFiles/companion_mesh_obj.dir
+/home/staszek/meshcore_real_sim/build-pr2141/orchestrator/CMakeFiles/orchestrator.dir
+/home/staszek/meshcore_real_sim/build-pr2141/orchestrator/CMakeFiles/edit_cache.dir
+/home/staszek/meshcore_real_sim/build-pr2141/orchestrator/CMakeFiles/rebuild_cache.dir

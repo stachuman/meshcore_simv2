@@ -1,0 +1,11 @@
+# MeshCore Real Sim - Python dependencies
+# Install: pip install -r requirements.txt
+
+# topology_generator: ITM propagation model
+itmlogic>=1.2
+
+# topology_generator: SRTM 30m elevation data
+SRTM.py>=0.3.7
+
+# topology_generator: MeshCore map API client
+requests>=2.28
