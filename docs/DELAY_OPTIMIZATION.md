@@ -153,7 +153,142 @@ Three MeshCore repeater parameters:
 - **Single topology**: Results are specific to this network topology. Different network shapes/sizes may have different optimal delays.
 - **Fixed radio params**: The sweep holds SF/BW/CR constant. Optimal delays may differ for SF7 vs SF12.
 - **No interaction with other settings**: Only delay parameters are swept. Other MeshCore settings (e.g., max hops, flood limits) stay at defaults.
-- **Uniform settings**: All repeaters are set to the exactly same delay settings - no distingtion for 'local/regional' repeaters. We are testing kind of 'default' settings.
+- **Uniform settings**: All repeaters are set to the exactly same delay settings - no distinction for 'local/regional' repeaters. We are testing kind of 'default' settings.
+
+## 5b. Auto-Tune Table Optimization
+
+### Background
+
+MeshCore supports **automatic delay tuning** where each repeater independently adjusts its delay parameters based on how many active neighbors it has. The mapping from neighbor count to delay values is stored in a compile-time lookup table (`DelayTuning.h`) with 13 entries (0-12+ neighbors), each containing three floats:
+
+```c
+struct DelayTuning {
+  float tx_delay;          // flood retransmission backoff factor
+  float direct_tx_delay;   // direct retransmission backoff factor
+  float rx_delay_base;     // base delay before processing received packets
+};
+```
+
+When `auto_tune_delays` is enabled (on by default), each repeater calls `recalcAutoTune()` periodically. This counts active neighbors (SNR > 0, heard within 7 days) and looks up the corresponding table entry. Sparse nodes (few neighbors) use lower delays for faster forwarding; dense nodes (many neighbors) use higher delays to reduce collisions.
+
+Unlike the static sweep (Section 5) which sets identical delays on all repeaters, auto-tuning lets each repeater adapt to its local topology — a more realistic and potentially better-performing approach.
+
+### Parameterization
+
+Optimizing all 39 table values (13 entries x 3 floats) directly would create an intractable search space. Instead, the table is parameterized as a **linear model** with 6 free parameters:
+
+```
+value(n) = clamp(base + slope * n, clamp_min, clamp_max)
+```
+
+where `n` is the neighbor count (0-12). Three (base, slope) pairs — one for each delay type:
+
+| Parameter | Meaning | Typical range |
+|---|---|---|
+| `tx_base` | tx_delay at 0 neighbors | 0.5 - 2.0 |
+| `tx_slope` | tx_delay increment per neighbor | 0.00 - 0.10 |
+| `dtx_base` | direct_tx_delay at 0 neighbors | 0.2 - 1.0 |
+| `dtx_slope` | direct_tx_delay increment per neighbor | 0.00 - 0.05 |
+| `rx_base` | rx_delay_base at 0 neighbors | 0.2 - 1.0 |
+| `rx_slope` | rx_delay_base increment per neighbor | 0.00 - 0.05 |
+
+Example: `tx_base=1.0, tx_slope=0.033` produces tx_delay values from 1.000 (0 neighbors) to 1.396 (12 neighbors).
+
+### Method (`tools/optimize_tuning.py`)
+
+The script operates differently from `optimize_delays.py` because it must recompile the MeshCore fork for each parameter variant:
+
+1. Parse 6 parameter ranges (each accepts `value` or `min:max:step` format)
+2. Backup original `DelayTuning.h`
+3. **For each parameter combination** (sequential — shared build directory):
+   a. Generate `DelayTuning.h` from linear formula
+   b. Rebuild the fork orchestrator (`cmake --build build-fork`, ~15-25s)
+   c. Run all seeds in parallel (via `-j` flag)
+   d. Parse delivery/ack/channel results
+4. Restore original `DelayTuning.h` (guaranteed via `try/finally`)
+5. Aggregate and rank results
+
+The config is sanitized before each run: any manual `set rxdelay`/`set txdelay`/`set direct.txdelay` commands are stripped (these disable auto-tune), and `set autotune on` is injected for all repeaters.
+
+### CLI
+
+```bash
+python3 tools/optimize_tuning.py simulation/real_network.json \
+  --tx-base 0.8:1.2:0.1 --tx-slope 0.02:0.05:0.01 \
+  --dtx-base 0.3:0.5:0.05 --dtx-slope 0.01:0.03:0.005 \
+  --rx-base 0.3:0.5:0.05 --rx-slope 0.01:0.03:0.005 \
+  --seeds 3 --build-dir build-fork \
+  --meshcore-dir ../MeshCore-stachuman \
+  -j 4 -o results.csv
+```
+
+| Flag | Default | Description |
+|---|---|---|
+| `config` (positional) | required | Simulation config JSON |
+| `--tx-base` | `1.0` | tx_delay intercept range |
+| `--tx-slope` | `0.02:0.04:0.005` | tx_delay per-neighbor slope range |
+| `--dtx-base` | `0.4` | direct_tx_delay intercept range |
+| `--dtx-slope` | `0.01:0.03:0.005` | direct_tx_delay slope range |
+| `--rx-base` | `0.4` | rx_delay_base intercept range |
+| `--rx-slope` | `0.01:0.03:0.005` | rx_delay_base slope range |
+| `--clamp-min` | `0.05` | Minimum value for any table entry |
+| `--clamp-max` | `5.0` | Maximum value for any table entry |
+| `--seeds` | `3` | Seeds per variant |
+| `--seed-base` | `42` | First seed value |
+| `--build-dir` | `build-fork` | CMake build directory |
+| `--meshcore-dir` | `../MeshCore-stachuman` | Path to MeshCore fork |
+| `-j` / `--jobs` | `1` | Parallel seed runs per variant |
+| `--top` | `10` | Show top N results |
+| `-o` / `--output` | none | CSV output path |
+| `-v` / `--verbose` | off | Per-run orchestrator summary |
+
+All range flags accept: `1.0` (constant), `1.0:1.0:0` (constant), or `0.0:5.0:1.0` (sweep).
+
+### Prerequisites
+
+The script requires a pre-configured CMake build directory pointing to the MeshCore fork:
+
+```bash
+cmake -S . -B build-fork -DMESHCORE_DIR=$(pwd)/../MeshCore-stachuman
+cmake --build build-fork
+```
+
+### Time estimation
+
+Each variant requires a rebuild (~15-25s) plus seed runs. For a simulation config that takes ~30s per seed:
+
+| Sweep dimensions | Variants | Seeds | Time per variant | Total |
+|---|---|---|---|---|
+| 1x1x1x1x1x1 | 1 | 3 | ~50s | ~1 min |
+| 3x3x1x1x1x1 | 9 | 3 | ~50s | ~8 min |
+| 5x4x3x3x3x3 | 1620 | 3 | ~50s | ~22 hours |
+
+Strategy: start with coarse sweeps on few parameters (fix others as constants), then refine around the best region.
+
+### Output
+
+The script prints a ranked table of all variants and, for the best result, outputs the full 13-entry C array ready to paste into `DelayTuning.h`:
+
+```
+Best: tx=1.1+0.04*n  dtx=0.4+0.025*n  rx=0.4+0.025*n
+  -> 15.0% mean delivery (std=0.0%, range 15-15%)
+
+  C array for DelayTuning.h:
+  static const DelayTuning DELAY_TUNING_TABLE[] = {
+    {1.100f, 0.400f, 0.400f},  // 0 neighbors
+    {1.140f, 0.425f, 0.425f},  // 1 neighbors
+    ...
+    {1.580f, 0.700f, 0.700f},  // 12 neighbors
+  };
+```
+
+### Limitations
+
+- **Linear model constraint**: Real optimal tables may be non-linear (e.g., plateau in the middle, steeper rise at high neighbor counts). The linear model cannot capture these shapes. Future work could add piecewise-linear or polynomial models.
+- **Sequential builds**: Each variant requires a full rebuild (~15-25s). This limits practical sweep size compared to `optimize_delays.py` where all runs can be parallelized.
+- **Single build directory**: Only one variant can be compiled at a time. Running multiple instances of the script simultaneously against the same build directory will corrupt results.
+- **Topology-specific**: Optimal table values depend on the network's neighbor-count distribution. A network where most nodes have 2-4 neighbors will be sensitive to different table entries than one where most have 8-10.
+- **Static table**: The linear model assumes the relationship between neighbor count and optimal delay is consistent across all network conditions. In practice, the optimal slope may depend on traffic load, message patterns, or radio parameters.
 
 ## 6. Running the Pipeline
 
@@ -178,10 +313,27 @@ python3 tools/build_real_sim.py simulation/topology.json \
 # 2. Quick test run
 build/orchestrator/orchestrator simulation/real_network.json > output.ndjson
 
-# 3. Parameter sweep (3 seeds, 4 parallel workers)
+# 3a. Static delay sweep (all repeaters get same values)
 python3 tools/optimize_delays.py simulation/real_network.json \
   --rxdelay 0:5:1 --txdelay 0:1:0.2 --direct-txdelay 0:0.5:0.1 \
-  --seeds 3 -j 4 -o results.csv
+  --seeds 3 -j 4 -o results_static.csv
+
+# 3b. Auto-tune table sweep (each repeater adapts by neighbor count)
+# Requires MeshCore fork build:
+#   cmake -S . -B build-fork -DMESHCORE_DIR=$(pwd)/../MeshCore-stachuman
+#   cmake --build build-fork
+python3 tools/optimize_tuning.py simulation/real_network.json \
+  --tx-base 0.8:1.2:0.1 --tx-slope 0.02:0.05:0.01 \
+  --dtx-base 0.3:0.5:0.1 --dtx-slope 0.02 \
+  --rx-base 0.3:0.5:0.1 --rx-slope 0.02 \
+  --seeds 3 --build-dir build-fork \
+  --meshcore-dir ../MeshCore-stachuman \
+  -j 4 -o results_tuning.csv
+
+# 3c. Apply specific static delays to a config (without sweep)
+python3 tools/set_delays.py simulation/real_network.json \
+  --rxdelay 1.0 --txdelay 0.5 --direct-txdelay 0.2 \
+  -o simulation/real_network_tuned.json
 
 # 4. Visualize a specific run
 python3 visualization/visualize.py output.ndjson

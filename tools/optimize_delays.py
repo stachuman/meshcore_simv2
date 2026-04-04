@@ -29,13 +29,21 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 
 
 def parse_range(s):
-    """Parse 'min:max:step' into list of float values."""
+    """Parse 'min:max:step' or a single constant value into list of floats.
+
+    Formats:
+        '1.0'           -> [1.0]        (constant)
+        '1.0:1.0:0'     -> [1.0]        (step=0 means constant)
+        '0.0:5.0:1.0'   -> [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
+    """
     parts = s.split(":")
+    if len(parts) == 1:
+        return [float(parts[0])]
     if len(parts) != 3:
-        raise ValueError(f"Expected min:max:step, got: {s}")
+        raise ValueError(f"Expected value or min:max:step, got: {s}")
     lo, hi, step = float(parts[0]), float(parts[1]), float(parts[2])
-    if step <= 0:
-        raise ValueError(f"Step must be > 0, got: {step}")
+    if step <= 0 or lo == hi:
+        return [lo]
     n = max(0, int(round((hi - lo) / step)) + 1)
     return [round(lo + i * step, 4) for i in range(n)]
 
@@ -128,6 +136,16 @@ def main():
                         help="Show per-run orchestrator summary")
 
     args = parser.parse_args()
+
+    if not os.path.isfile(args.config):
+        print(f"ERROR: config file not found: {args.config}", file=sys.stderr)
+        sys.exit(1)
+
+    if not args.config.endswith(".json"):
+        print(f"ERROR: config file does not look like JSON: {args.config}", file=sys.stderr)
+        print(f"  (Did you forget the config file? The orchestrator path goes in --orchestrator)",
+              file=sys.stderr)
+        sys.exit(1)
 
     if not os.path.isfile(args.orchestrator):
         print(f"ERROR: orchestrator not found at {args.orchestrator}", file=sys.stderr)
