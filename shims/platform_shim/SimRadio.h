@@ -47,6 +47,7 @@ class SimRadio : public mesh::Radio {
     int _sf;
     int _bw_hz;
     int _cr;
+    int _preamble_len = 16;  // MeshCore configures SX1262 with preambleLength=16
 
     mesh::MillisecondClock& _ms;
     unsigned long _tx_done_at = 0;
@@ -60,6 +61,8 @@ class SimRadio : public mesh::Radio {
     float _tx_fail_prob = 0.0f;
     uint32_t _rng_state = 1;  // xorshift32 state (avoids <random> / min/max macro clash)
     uint32_t _tx_fail_count_stat = 0;
+
+
 
     // Rx boosted gain mode (no-op in simulator)
     bool _rx_boosted_gain = false;
@@ -94,7 +97,7 @@ public:
     int getSF() const { return _sf; }
     int getCR() const { return _cr; }
     double getSymbolMs() const { return (double)(1 << _sf) / (_bw_hz / 1000.0); }
-    int getPreambleSymbols() const { return 8; }
+    int getPreambleSymbols() const { return _preamble_len; }
     double getPreambleMs() const { return (getPreambleSymbols() + 4.25) * getSymbolMs(); }
     float getSnrThreshold() const;
 
@@ -104,7 +107,7 @@ public:
 
     // TX failure simulation
     void setTxFailProb(float p) { _tx_fail_prob = p; }
-    void seed(uint64_t s) { _rng_state = static_cast<uint32_t>(s) | 1u; } // ensure non-zero
+void seed(uint64_t s) { _rng_state = static_cast<uint32_t>(s) | 1u; } // ensure non-zero
     uint32_t getTxFailCount() const { return _tx_fail_count_stat; }
 
 #ifdef ORCHESTRATOR_BUILD

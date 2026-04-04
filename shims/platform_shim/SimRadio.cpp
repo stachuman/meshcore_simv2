@@ -94,7 +94,7 @@ int SimRadio::recvRaw(uint8_t* bytes, int sz) {
 uint32_t SimRadio::getEstAirtimeFor(int len_bytes) {
     // Semtech AN1200.13 -- LoRa on-air time in milliseconds.
     double t_sym = getSymbolMs();
-    double t_pre = (8 + 4.25) * t_sym;
+    double t_pre = (_preamble_len + 4.25) * t_sym;
 
     int de = (t_sym >= 16.0) ? 1 : 0;
     double num = 8.0 * len_bytes - 4.0 * _sf + 44;
