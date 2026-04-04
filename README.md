@@ -62,7 +62,7 @@ Configs are JSON files with these sections:
 {
   "simulation": {
     "duration_ms": 90000,
-    "step_ms": 5,
+    "step_ms": 4,
     "warmup_ms": 5000,
     "hot_start": true
   },
@@ -94,56 +94,63 @@ See [docs/CONFIG_FORMAT.md](docs/CONFIG_FORMAT.md) for full reference.
 
 ## Working with Real Topologies
 
-The `simulation/` directory contains data from a real MeshCore network:
+Generate simulation configs from real-world node data using the **topology generator** -- a two-stage pipeline:
 
-| File | Description |
-|---|---|
-| `simulation/topology.json` | Raw network export -- nodes with GPS, edges with measured SNR/RSSI |
-| `simulation/real_network.json` | Pre-converted orchestrator config ready to simulate |
+1. **`topology_generator`** -- fetches live node positions from the MeshCore network API, computes RF links using the ITM propagation model, and outputs a topology config
+2. **`inject_test.py`** -- places companion nodes, generates message schedules, and produces a ready-to-run simulation config
 
-### Converting a topology export
+### Quick start: Gdansk region test
+
+The included `prepare_gdansk_test.sh` runs the full pipeline:
 
 ```bash
-python3 tools/convert_topology.py simulation/topology.json \
-    --add-companion alice:567EBBCC \
-    --add-companion bob:05FE75AB \
-    --msg-schedule alice:bob:30000 \
-    -o my_sim.json
+bash prepare_gdansk_test.sh
+build/orchestrator/orchestrator simulation/gdansk_test.json
 ```
 
-This converts raw topology data into a simulator config:
-- Filters out stub nodes and weak links
-- Estimates GPS coordinates for nodes missing them
-- Fills connectivity gaps using a fitted path-loss model (on by default)
-- Injects companion nodes attached to specified repeaters
-- Generates periodic message commands
+This fetches ~100 repeaters from the Gdansk/Pomerania region, computes ITM-based RF links, places 4 companions on well-connected repeaters, and generates a 15-minute test with direct messages and channel broadcasts.
 
-Key flags:
+### Running the pipeline manually
+
+```bash
+# Step 1: Generate topology from live network data
+python3 -m topology_generator \
+    --region 53.7,17.3,54.8,19.5 \
+    --freq-mhz 869.618 --tx-power-dbm 20.0 --antenna-height 5.0 \
+    --sf 8 --bw 62500 --cr 4 \
+    --max-distance-km 40 --min-snr -10.0 \
+    --max-edges-per-node 12 --link-survival 0.4 \
+    --clutter-db 6.0 \
+    -v -o simulation/gdansk_topology.json
+
+# Step 2: Inject companions and message schedules
+python3 tools/inject_test.py simulation/gdansk_topology.json \
+    --companions 4 --companion-names alice,bob,carol,dave \
+    --min-neighbors 2 \
+    --auto-schedule --channel \
+    --msg-interval 70 --msg-count 5 \
+    --chan-interval 80 --chan-count 4 \
+    --duration 900000 \
+    -v -o simulation/gdansk_test.json
+
+# Step 3: Run and visualize
+tools/run_sim.sh simulation/gdansk_test.json -v
+```
+
+Key topology generator flags:
+
 | Flag | Default | Description |
 |---|---|---|
-| `--min-snr` | -7.5 | Drop links below this SNR |
-| `--fill-gaps` / `--no-fill-gaps` | on | Estimate edges for nearby unmeasured pairs |
-| `--merge-bidir` | off | Merge A->B + B->A into single bidirectional links |
-| `--estimate-coords` | on | Infer GPS for nodes with missing coordinates |
-| `--validate-coords` | off | Flag nodes with suspicious coordinates |
-| `-v` | off | Print detailed statistics |
+| `--region` | (required) | Bounding box: `lat_min,lon_min,lat_max,lon_max` |
+| `--freq-mhz` | 869.618 | LoRa carrier frequency |
+| `--max-distance-km` | 40 | Skip node pairs beyond this range |
+| `--min-snr` | -10.0 | Drop links below this SNR |
+| `--link-survival` | 1.0 | Stochastic link survival probability (0.4 = realistic sparsity) |
+| `--clutter-db` | 6.0 | Additional attenuation for urban/suburban clutter |
+| `--max-edges-per-node` | 12 | Safety cap on neighbor count |
+| `--api-cache` | none | Cache API responses to avoid repeated downloads |
 
-See [docs/CONVERT_TOPOLOGY.md](docs/CONVERT_TOPOLOGY.md) for full documentation.
-
-### Running the real network simulation
-
-```bash
-# Use the pre-converted config directly
-tools/run_sim.sh simulation/real_network.json
-
-# Or convert with custom companions and run
-python3 tools/convert_topology.py simulation/topology.json \
-    --add-companion alice:567EBBCC \
-    --add-companion bob:GDA1R \
-    --msg-schedule alice:bob:30000 \
-    -o /tmp/my_network.json
-tools/run_sim.sh /tmp/my_network.json -v
-```
+See [docs/TOPOLOGY_GENERATOR.md](docs/TOPOLOGY_GENERATOR.md) for full documentation.
 
 ## Testing Different MeshCore Variants
 
@@ -202,18 +209,19 @@ Creates a repeater grid with companion nodes at the corners, auto-generates cros
 ## Project Structure
 
 ```
-MeshCore/           MeshCore firmware sources (read-only, never modified)
-shims/              Platform shim layer (Arduino, FS, crypto, radio)
-orchestrator/       Multi-node simulator engine
-  Orchestrator.cpp  Main simulation loop, physics, collision detection
-  JsonConfig.cpp    Config parser
-  CompanionNode.cpp Companion mesh node factory
-  RepeaterNode.cpp  Repeater mesh node factory
-simple_repeater/    Standalone single-repeater binary
-companion_radio/    Standalone single-companion binary
-simulation/         Real-world topology data
-test/               Test configs (t*.json) and runner
-tools/              Conversion, generation, and run scripts
-visualization/      Interactive event visualizer
-docs/               Config format reference
+MeshCore/            MeshCore firmware sources (read-only, never modified)
+shims/               Platform shim layer (Arduino, FS, crypto, radio)
+orchestrator/        Multi-node simulator engine
+  Orchestrator.cpp   Main simulation loop, physics, collision detection
+  JsonConfig.cpp     Config parser
+  CompanionNode.cpp  Companion mesh node factory
+  RepeaterNode.cpp   Repeater mesh node factory
+simple_repeater/     Standalone single-repeater binary
+companion_radio/     Standalone single-companion binary
+topology_generator/  ITM-based topology generation from live network data
+simulation/          Real-world topology data and generated configs
+test/                Test configs (t*.json) and runner
+tools/               Injection, generation, analysis, and run scripts
+visualization/       Interactive event visualizer
+docs/                Config format and model documentation
 ```
