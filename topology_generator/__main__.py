@@ -9,6 +9,8 @@ Usage:
 """
 
 import argparse
+import math
+import random
 import sys
 import time
 from collections import defaultdict
@@ -40,6 +42,36 @@ def _compute_link_worker(args):
         tx_power, bw_hz, nf_db, min_snr, climate,
         polarization, eps, sgm, refractivity, clutter_db,
     )
+
+
+def survival_filter(raw_links, survival_prob, seed=42, verbose=False):
+    """Stochastically drop links to simulate real-world connectivity loss.
+
+    Each link survives with probability:
+      p = survival_prob / (1 + exp(-(snr - SNR_MID) / SNR_SCALE))
+
+    Strong links (high SNR) survive at up to `survival_prob`.
+    Weak links (low SNR) survive at much lower rates.
+    This naturally creates a skewed neighbor distribution: hub nodes
+    (many strong candidates) keep more links, peripheral nodes keep fewer.
+    """
+    SNR_MID = 10.0   # dB: 50% of max survival at this SNR
+    SNR_SCALE = 4.0   # dB: sigmoid steepness
+
+    rng = random.Random(seed)
+    survivors = []
+
+    for link in raw_links:
+        snr = link["snr"]
+        p = survival_prob / (1.0 + math.exp(-(snr - SNR_MID) / SNR_SCALE))
+        if rng.random() < p:
+            survivors.append(link)
+
+    if verbose:
+        print(f"  Survival filter: {len(survivors)}/{len(raw_links)} links survived "
+              f"(survival_prob={survival_prob}, seed={seed})", file=sys.stderr)
+
+    return survivors
 
 
 def select_links(raw_links, max_edges, max_good, verbose=False):
@@ -180,12 +212,16 @@ def main():
                         help=f"Hard cap total edges per node (default: {_MAX_EDGES_PER_NODE})")
     parser.add_argument("--max-good-links", type=int, default=_MAX_GOOD_LINKS,
                         help=f"Cap SNR>0 edges per node (default: {_MAX_GOOD_LINKS})")
+    parser.add_argument("--link-survival", type=float, default=1.0,
+                        help="Stochastic link survival ceiling 0.0-1.0 (default: 1.0 = disabled)")
+    parser.add_argument("--survival-seed", type=int, default=42,
+                        help="RNG seed for link survival filter (default: 42)")
 
     # Simulation
     parser.add_argument("--duration", type=int, default=300000,
                         help="Simulation duration in ms (default: 300000)")
-    parser.add_argument("--step", type=int, default=5,
-                        help="Simulation step in ms (default: 5)")
+    parser.add_argument("--step", type=int, default=4,
+                        help="Simulation step in ms (default: 4)")
     parser.add_argument("--warmup", type=int, default=5000,
                         help="Warmup in ms (default: 5000)")
     parser.add_argument("--hot-start", action="store_true", default=True)
@@ -332,15 +368,42 @@ def main():
 
     print(f"  {len(raw_links)} viable links (SNR >= {args.min_snr} dB)", file=sys.stderr)
 
+    # --- Step 6b: Stochastic link survival ---
+    if args.link_survival < 1.0:
+        print("Step 6b: Applying link survival filter...", file=sys.stderr)
+        raw_links = survival_filter(
+            raw_links, args.link_survival, seed=args.survival_seed,
+            verbose=args.verbose,
+        )
+        # When survival is active, caps become a safety net only
+        effective_good = args.max_edges_per_node
+    else:
+        effective_good = args.max_good_links
+
     # --- Step 7: Apply edge caps (closest-first priority) ---
     print("Step 6: Applying edge caps...", file=sys.stderr)
     links_out = select_links(
-        raw_links, args.max_edges_per_node, args.max_good_links,
+        raw_links, args.max_edges_per_node, effective_good,
         verbose=args.verbose,
     )
     print(f"  {len(links_out)} links after caps "
           f"(max {args.max_edges_per_node} edges/node, "
-          f"max {args.max_good_links} good/node)", file=sys.stderr)
+          f"max {effective_good} good/node)", file=sys.stderr)
+
+    # --- Step 7b: Prune isolated nodes (0 good neighbors) ---
+    connected_names = set()
+    for link in links_out:
+        if link["snr"] > 0.0:
+            connected_names.add(link["from"])
+            connected_names.add(link["to"])
+    pruned = [n for n in nodes_out if n["name"] not in name_set or n["name"] in connected_names]
+    n_pruned = len(nodes_out) - len(pruned)
+    if n_pruned > 0:
+        print(f"  Pruned {n_pruned} nodes with 0 good neighbors", file=sys.stderr)
+        nodes_out = pruned
+        name_set = {n["name"] for n in nodes_out}
+        links_out = [l for l in links_out
+                     if l["from"] in name_set and l["to"] in name_set]
 
     # --- Step 8: Link statistics ---
     if links_out:

@@ -1,0 +1,31 @@
+{
+  "simulation": {
+    "duration_ms": 180000,
+    "step_ms": 5,
+    "warmup_ms": 0,
+    "hot_start": true,
+    "radio": { "sf": 8, "bw": 62500, "cr": 4 }
+  },
+  "nodes": [
+    { "name": "R1", "role": "repeater" },
+    { "name": "R2", "role": "repeater" },
+    { "name": "R3", "role": "repeater" },
+    { "name": "alice", "role": "companion", "attached_to": "R1" },
+    { "name": "bob", "role": "companion", "attached_to": "R3" }
+  ],
+  "topology": {
+    "links": [
+      { "from": "R1", "to": "R2", "snr": 10.0, "bidir": true },
+      { "from": "R2", "to": "R3", "snr": 10.0, "bidir": true },
+      { "from": "alice", "to": "R1", "snr": 20.0, "bidir": true },
+      { "from": "bob", "to": "R3", "snr": 20.0, "bidir": true }
+    ]
+  },
+  "commands": [
+    { "at_ms": 30000, "node": "alice", "command": "neighbors" },
+    { "at_ms": 30000, "node": "bob", "command": "neighbors" },
+    { "at_ms": 40000, "node": "alice", "command": "msga bob hello-ack-test" },
+    { "at_ms": 120000, "node": "alice", "command": "stats" },
+    { "at_ms": 120000, "node": "bob", "command": "stats" }
+  ]
+}

@@ -308,7 +308,7 @@ Key insight: a constant clock **offset** doesn't stagger timers (cancels in `nex
 
 ## 11. Time Resolution
 
-The simulation advances in discrete `step_ms` increments (default 5 ms). All events within the same step are treated as simultaneous. This affects timing-sensitive effects:
+The simulation advances in discrete `step_ms` increments (default 4 ms). All events within the same step are treated as simultaneous. This affects timing-sensitive effects:
 
 | Radio config | T_sym | Recommended step_ms |
 |---|---|---|

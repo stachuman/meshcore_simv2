@@ -138,6 +138,8 @@ ITM climate codes:
 | `--min-snr` | -10.0 | Drop links below this SNR in dB |
 | `--max-edges-per-node` | 8 | Hard cap on total edges per node |
 | `--max-good-links` | 3 | Cap on SNR > 0 edges per node (prevents over-optimistic density) |
+| `--link-survival` | 1.0 | Stochastic link survival ceiling 0.0-1.0 (1.0 = disabled) |
+| `--survival-seed` | 42 | RNG seed for link survival filter |
 
 ### Simulation Parameters
 
@@ -286,14 +288,48 @@ This maps SNR -6 dB to 50% loss, with steep rolloff. Links with loss < 0.01% omi
 
 ITM/SRTM models terrain but not buildings, trees, cable losses, or connector losses. The `--clutter-db` parameter adds a flat attenuation (default 6 dB) to both ends of every link. This brings the SNR distribution in line with real-world observations (median SNR around -2 dB in the Gdansk region, vs +2 dB without clutter).
 
+### Link Survival
+
+ITM predicts SNR > 0 for most nearby node pairs, so without filtering, nearly every node hits the hard edge cap — producing an unrealistic flat distribution (e.g., 72% of nodes at exactly 4 neighbors). Real networks have a skewed distribution: many nodes with few neighbors, a few hub nodes with many.
+
+The `--link-survival` parameter adds stochastic link filtering before edge caps. Each ITM-computed link survives with an SNR-dependent probability:
+
+```
+p(snr) = survival / (1 + exp(-(snr - 10) / 4))
+```
+
+Where:
+- `survival` = `--link-survival` ceiling (0.0-1.0)
+- SNR_MID = 10 dB: 50% of max survival at this SNR
+- SNR_SCALE = 4 dB: sigmoid steepness
+
+This naturally creates a skewed neighbor distribution: hub nodes with many strong candidates keep more links, peripheral nodes with fewer candidates keep fewer. The edge caps become a safety net rather than the primary density control.
+
+When `--link-survival` is active, `--max-good-links` is automatically set equal to `--max-edges-per-node` (since survival handles sparsity, the good-link cap is unnecessary).
+
+**Example survival probabilities with `--link-survival 0.4`:**
+
+| SNR (dB) | Survival probability |
+|---|---|
+| 30+ | ~0.40 |
+| 15 | ~0.35 |
+| 10 | ~0.20 |
+| 5 | ~0.11 |
+| 0 | ~0.05 |
+| -5 | ~0.02 |
+
+**Tuning guidance:**
+- `--link-survival 0.4`: ~4-5 avg good neighbors (recommended for dense regions)
+- `--link-survival 0.6`: ~6-8 avg good neighbors (well-connected mesh)
+- `--link-survival 0.2`: ~2-3 avg good neighbors (sparse, many islands)
+- Use `--survival-seed` to explore different random topologies
+
 ### Edge Caps
 
-After computing all viable links, a distance-priority selection caps edges per node to prevent unrealistic density. Links are sorted by distance (closest first), then accepted only if both endpoints are below their caps:
+After link survival filtering (if enabled), a distance-priority selection caps edges per node to prevent runaway density. Links are sorted by distance (closest first), then accepted only if both endpoints are below their caps:
 
 - `--max-edges-per-node` (default 8): hard cap on total edges
-- `--max-good-links` (default 3): cap on SNR > 0 edges (prevents over-optimistic mesh density)
-
-This matches the strategy in `convert_topology.py` and produces edge distributions comparable to real MeshCore network data (median 8 edges/node).
+- `--max-good-links` (default 3): cap on SNR > 0 edges (prevents over-optimistic mesh density; auto-raised when `--link-survival` is active)
 
 ### Default RF Parameters
 
@@ -348,7 +384,7 @@ All links are `bidir: true` -- ITM path loss is reciprocal with identical antenn
   "_source": "ITM topology generator, region=53.8,17.5,54.8,19.5",
   "simulation": {
     "duration_ms": 300000,
-    "step_ms": 5,
+    "step_ms": 4,
     "warmup_ms": 5000,
     "hot_start": true,
     "radio": { "sf": 8, "bw": 62500, "cr": 4 }

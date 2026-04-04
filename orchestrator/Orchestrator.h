@@ -13,7 +13,7 @@
 
 struct OrchestratorConfig {
     unsigned long duration_ms = 300000;
-    int step_ms = 5;
+    int step_ms = 4;
     uint32_t epoch_start = 1700000000;
     unsigned long warmup_ms = 0;
     bool hot_start = false;

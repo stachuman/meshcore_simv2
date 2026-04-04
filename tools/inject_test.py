@@ -32,6 +32,7 @@ import json
 import math
 import random
 import sys
+from collections import defaultdict
 
 
 # --- Geometry ---
@@ -117,36 +118,114 @@ def inject_companions(config, companions, default_snr=10.0, default_rssi=-70.0):
     return added
 
 
-def auto_place_companions(config, n, rng, snr=10.0, rssi=-70.0, verbose=False):
-    """Auto-place n companions using farthest-point sampling.
+def _count_good_neighbors(config, min_snr=0.0):
+    """Count SNR > min_snr neighbors per node from topology links."""
+    counts = defaultdict(int)
+    for link in config.get("topology", {}).get("links", []):
+        snr = link.get("snr", 0.0)
+        if snr > min_snr:
+            counts[link["from"]] += 1
+            if link.get("bidir", False):
+                counts[link["to"]] += 1
+    return counts
+
+
+def _largest_component(config, min_snr=0.0):
+    """Find the largest connected component via SNR > min_snr links.
+
+    Returns set of node names in the largest component.
+    """
+    adj = defaultdict(set)
+    for link in config.get("topology", {}).get("links", []):
+        if link.get("snr", 0.0) > min_snr:
+            adj[link["from"]].add(link["to"])
+            if link.get("bidir", False):
+                adj[link["to"]].add(link["from"])
+
+    all_nodes = {n["name"] for n in config["nodes"]}
+    visited = set()
+    best_component = set()
+
+    for name in all_nodes:
+        if name in visited:
+            continue
+        component = set()
+        queue = [name]
+        while queue:
+            n = queue.pop()
+            if n in visited:
+                continue
+            visited.add(n)
+            component.add(n)
+            queue.extend(adj.get(n, set()) - visited)
+        if len(component) > len(best_component):
+            best_component = component
+
+    return best_component
+
+
+def auto_place_companions(config, n, rng, snr=10.0, rssi=-70.0,
+                          names=None, min_neighbors=2, verbose=False):
+    """Auto-place n companions using connectivity-aware farthest-point sampling.
+
+    Only considers repeaters in the largest connected component (SNR > 0)
+    with at least `min_neighbors` good neighbors. This ensures all companions
+    can theoretically reach each other.
 
     Returns list of companion names.
     """
+    good_counts = _count_good_neighbors(config)
+    main_component = _largest_component(config)
+
     repeaters_with_coords = []
     for node in config["nodes"]:
         if node.get("role") != "repeater":
             continue
         lat = node.get("lat", 0.0)
         lon = node.get("lon", 0.0)
-        if lat != 0.0 or lon != 0.0:
-            repeaters_with_coords.append(node)
+        if lat == 0.0 and lon == 0.0:
+            continue
+        repeaters_with_coords.append(node)
 
-    if n > len(repeaters_with_coords):
-        print(f"WARNING: requested {n} companions but only "
-              f"{len(repeaters_with_coords)} repeaters with coords. "
-              f"Using {len(repeaters_with_coords)}.", file=sys.stderr)
-        n = len(repeaters_with_coords)
+    # Filter to largest component + min neighbors
+    in_component = [r for r in repeaters_with_coords
+                    if r["name"] in main_component]
+    n_excluded = len(repeaters_with_coords) - len(in_component)
+    if n_excluded > 0 and verbose:
+        print(f"  Excluded {n_excluded} repeaters outside largest component "
+              f"({len(main_component)} nodes)", file=sys.stderr)
+
+    well_connected = [r for r in in_component
+                      if good_counts.get(r["name"], 0) >= min_neighbors]
+
+    if len(well_connected) < n:
+        print(f"WARNING: only {len(well_connected)} repeaters in main component with "
+              f">= {min_neighbors} good neighbors (need {n}). Relaxing to min_neighbors=1.",
+              file=sys.stderr)
+        well_connected = [r for r in in_component
+                          if good_counts.get(r["name"], 0) >= 1]
+
+    if len(well_connected) < n:
+        print(f"WARNING: only {len(well_connected)} connected repeaters with coords. "
+              f"Using all in main component.", file=sys.stderr)
+        well_connected = in_component
+
+    if n > len(well_connected):
+        n = len(well_connected)
 
     if n < 2:
         print("ERROR: need at least 2 repeaters with coords for auto-placement",
               file=sys.stderr)
         sys.exit(1)
 
-    selected = farthest_point_sampling(repeaters_with_coords, n, rng)
+    selected = farthest_point_sampling(well_connected, n, rng)
 
     companion_names = []
     for i, rpt in enumerate(selected):
-        cname = f"c{i+1:02d}"
+        if names and i < len(names):
+            cname = names[i]
+        else:
+            cname = f"c{i+1:02d}"
         companion_names.append(cname)
         config["nodes"].append({"name": cname, "role": "companion"})
         config["topology"]["links"].append({
@@ -158,11 +237,13 @@ def auto_place_companions(config, n, rng, snr=10.0, rssi=-70.0, verbose=False):
         })
 
     if verbose:
-        print(f"Companion placement ({n} companions, farthest-point sampling):",
+        print(f"Companion placement ({n} companions, farthest-point + connectivity):",
               file=sys.stderr)
         for cname, rpt in zip(companion_names, selected):
+            gc = good_counts.get(rpt["name"], 0)
             print(f"  {cname} -> {rpt['name']} "
-                  f"({rpt.get('lat', '?')}, {rpt.get('lon', '?')})",
+                  f"({rpt.get('lat', '?')}, {rpt.get('lon', '?')}) "
+                  f"[{gc} good neighbors]",
                   file=sys.stderr)
 
     return companion_names
@@ -181,7 +262,18 @@ def parse_msg_schedule_arg(arg: str) -> dict:
     return result
 
 
-def inject_manual_schedules(config, schedules):
+def parse_chan_schedule_arg(arg: str) -> dict:
+    """Parse --chan-schedule from:channel:interval_s[:count]"""
+    parts = arg.split(":")
+    if len(parts) < 3:
+        raise ValueError(f"--chan-schedule requires from:channel:interval_s, got: {arg}")
+    result = {"from": parts[0], "channel": int(parts[1]), "interval_s": float(parts[2])}
+    if len(parts) >= 4:
+        result["count"] = int(parts[3])
+    return result
+
+
+def inject_manual_schedules(config, schedules, ack=False):
     """Add manually specified message schedules."""
     warmup = config["simulation"].get("warmup_ms", 5000)
     entries = config.get("message_schedule", [])
@@ -194,12 +286,54 @@ def inject_manual_schedules(config, schedules):
         }
         if "count" in sched:
             entry["count"] = sched["count"]
+        if ack:
+            entry["ack"] = True
         entries.append(entry)
     config["message_schedule"] = entries
 
 
+def inject_manual_channel_schedules(config, schedules):
+    """Add manually specified channel broadcast schedules."""
+    warmup = config["simulation"].get("warmup_ms", 5000)
+    entries = config.get("channel_schedule", [])
+    for sched in schedules:
+        entry = {
+            "from": sched["from"],
+            "channel": sched["channel"],
+            "start_ms": warmup + 5000,
+            "interval_ms": int(sched["interval_s"] * 1000),
+        }
+        if "count" in sched:
+            entry["count"] = sched["count"]
+        entries.append(entry)
+    config["channel_schedule"] = entries
+
+
+def _random_times(rng, phase_base, mean_interval_ms, count):
+    """Generate `count` sorted random send times with exponential inter-arrival.
+
+    Models real user behavior: messages arrive as a Poisson process with
+    mean inter-arrival time = mean_interval_ms. Each message gets a unique
+    random timestamp, naturally clustered and spread.
+    """
+    times = []
+    t = phase_base + rng.randint(0, mean_interval_ms - 1)
+    for _ in range(count):
+        times.append(int(t))
+        # Exponential inter-arrival, clamped to [0.2x, 3x] mean to avoid
+        # extreme bunching or gaps
+        gap = rng.expovariate(1.0 / mean_interval_ms)
+        gap = max(mean_interval_ms * 0.2, min(gap, mean_interval_ms * 3.0))
+        t += gap
+    return times
+
+
 def generate_auto_schedules(companions, interval_ms, count, warmup_ms, rng):
-    """Generate diverse message schedules with random start offsets.
+    """Generate diverse message schedules with Poisson-distributed timing.
+
+    Each message gets its own random send time (exponential inter-arrival
+    around mean_interval_ms). This models realistic user behavior rather
+    than fixed-interval robots.
 
     Patterns (all interleaved):
     - 1-to-1: round-robin pairing (c01->c02, c02->c03, ..., cN->c01)
@@ -210,64 +344,51 @@ def generate_auto_schedules(companions, interval_ms, count, warmup_ms, rng):
     phase_base = warmup_ms + 5000
     n = len(companions)
 
+    def _add_pair_schedules(sender, receiver, pattern_tag):
+        times = _random_times(rng, phase_base, interval_ms, count)
+        for seq, t in enumerate(times, 1):
+            schedules.append({
+                "from": sender,
+                "to": receiver,
+                "start_ms": t,
+                "interval_ms": 1,
+                "count": 1,
+                "message": f"{pattern_tag} {sender}->{receiver} seq={seq}",
+                "ack": True,
+            })
+
     # 1-to-1: round-robin
     for i in range(n):
         j = (i + 1) % n
-        offset = rng.randint(0, interval_ms - 1)
-        schedules.append({
-            "from": companions[i],
-            "to": companions[j],
-            "start_ms": phase_base + offset,
-            "interval_ms": interval_ms,
-            "count": count,
-            "message": f"1to1 {companions[i]}->{companions[j]} seq={{n}} direct msg status ok signal good position hold steady",
-            "ack": True,
-        })
+        _add_pair_schedules(companions[i], companions[j], "1to1")
 
     # 1-to-many: first companion sends to all others
     sender = companions[0]
     for i in range(1, n):
-        offset = rng.randint(0, interval_ms - 1)
-        schedules.append({
-            "from": sender,
-            "to": companions[i],
-            "start_ms": phase_base + offset,
-            "interval_ms": interval_ms,
-            "count": count,
-            "message": f"1toN {sender}->{companions[i]} seq={{n}} broadcast update all stations check in report status",
-            "ack": True,
-        })
+        _add_pair_schedules(sender, companions[i], "1toN")
 
     # many-to-1: all send to last companion
     target = companions[-1]
     for i in range(n - 1):
-        offset = rng.randint(0, interval_ms - 1)
-        schedules.append({
-            "from": companions[i],
-            "to": target,
-            "start_ms": phase_base + offset,
-            "interval_ms": interval_ms,
-            "count": count,
-            "message": f"Nto1 {companions[i]}->{target} seq={{n}} converge report mesh node active all links nominal",
-            "ack": True,
-        })
+        _add_pair_schedules(companions[i], target, "Nto1")
 
     return schedules, phase_base
 
 
 def generate_channel_schedules(companions, interval_ms, count, phase_base, rng):
-    """Generate channel broadcast schedule on public channel (channel 0)."""
+    """Generate channel broadcast schedule with Poisson-distributed timing."""
     schedules = []
     for comp in companions:
-        offset = rng.randint(0, interval_ms - 1)
-        schedules.append({
-            "from": comp,
-            "channel": 0,
-            "start_ms": phase_base + offset,
-            "interval_ms": interval_ms,
-            "count": count,
-            "message": f"chan {comp} seq={{n}} public channel broadcast mesh network status check all nodes",
-        })
+        times = _random_times(rng, phase_base, interval_ms, count)
+        for seq, t in enumerate(times, 1):
+            schedules.append({
+                "from": comp,
+                "channel": 0,
+                "start_ms": t,
+                "interval_ms": 1,
+                "count": 1,
+                "message": f"chan {comp} seq={seq}",
+            })
     return schedules
 
 
@@ -339,16 +460,26 @@ def main():
     # Auto companion placement
     parser.add_argument("--companions", type=int, default=None,
                         help="Auto-place N companions (farthest-point sampling)")
+    parser.add_argument("--companion-names", default=None,
+                        help="Comma-separated names for auto-placed companions (default: c01,c02,...)")
     parser.add_argument("--companion-snr", type=float, default=10.0,
                         help="SNR for auto-placed companion links (default: 10.0)")
     parser.add_argument("--companion-rssi", type=float, default=-70.0,
                         help="RSSI for auto-placed companion links (default: -70.0)")
+    parser.add_argument("--min-neighbors", type=int, default=2,
+                        help="Min good neighbors for repeater to be eligible for companion placement (default: 2)")
     parser.add_argument("--seed", type=int, default=42,
                         help="RNG seed for auto-placement and schedule offsets (default: 42)")
 
     # Manual message schedule
     parser.add_argument("--msg-schedule", action="append",
                         help="Message schedule: from:to:interval_s[:count] (repeatable)")
+    parser.add_argument("--ack", action="store_true", default=False,
+                        help="Use ack (msga) for manual --msg-schedule entries")
+
+    # Manual channel schedule
+    parser.add_argument("--chan-schedule", action="append",
+                        help="Channel schedule: from:channel:interval_s[:count] (repeatable)")
 
     # Auto schedule generation
     parser.add_argument("--auto-schedule", action="store_true", default=False,
@@ -373,8 +504,8 @@ def main():
                         help="Override warmup_ms")
 
     # Assertions
-    parser.add_argument("--no-auto-assert", action="store_true", default=False,
-                        help="Disable auto-generated delivery assertions")
+    parser.add_argument("--auto-assert", action="store_true", default=False,
+                        help="Enable auto-generated delivery assertions")
 
     # Output
     parser.add_argument("-o", "--output", help="Output file (default: stdout)")
@@ -406,9 +537,11 @@ def main():
 
     # Auto-place companions
     if args.companions:
+        names = args.companion_names.split(",") if args.companion_names else None
         companion_names = auto_place_companions(
             config, args.companions, rng,
             snr=args.companion_snr, rssi=args.companion_rssi,
+            names=names, min_neighbors=args.min_neighbors,
             verbose=args.verbose,
         )
         print(f"Auto-placed {len(companion_names)} companions", file=sys.stderr)
@@ -437,14 +570,16 @@ def main():
         n_1to1 = len(companion_names)
         n_1toN = len(companion_names) - 1
         n_Nto1 = len(companion_names) - 1
-        total_msgs = sum(s["count"] for s in schedules)
-        print(f"Auto-schedule: {len(schedules)} entries, {total_msgs} messages",
+        total_msgs = len(schedules)
+        print(f"Auto-schedule: {total_msgs} messages "
+              f"(mean interval {args.msg_interval}s, Poisson-distributed)",
               file=sys.stderr)
         if args.verbose:
-            print(f"  1-to-1: {n_1to1} pairs (round-robin)", file=sys.stderr)
-            print(f"  1-to-many: {n_1toN} targets from {companion_names[0]}",
+            print(f"  1-to-1: {n_1to1} pairs x {args.msg_count} msgs (round-robin)",
                   file=sys.stderr)
-            print(f"  many-to-1: {n_Nto1} senders to {companion_names[-1]}",
+            print(f"  1-to-many: {n_1toN} targets x {args.msg_count} msgs from {companion_names[0]}",
+                  file=sys.stderr)
+            print(f"  many-to-1: {n_Nto1} senders x {args.msg_count} msgs to {companion_names[-1]}",
                   file=sys.stderr)
 
         # Channel broadcasts
@@ -455,15 +590,22 @@ def main():
                 companion_names, chan_interval_ms, chan_count, phase_base, rng,
             )
             config["channel_schedule"] = chan_schedules
-            total_chan = sum(s["count"] for s in chan_schedules)
-            print(f"Channel schedule: {len(chan_schedules)} entries, "
-                  f"{total_chan} messages", file=sys.stderr)
+            print(f"Channel schedule: {len(chan_schedules)} messages "
+                  f"(mean interval {args.chan_interval or args.msg_interval}s)",
+                  file=sys.stderr)
 
     # Manual message schedules
     if args.msg_schedule:
         schedules = [parse_msg_schedule_arg(s) for s in args.msg_schedule]
-        inject_manual_schedules(config, schedules)
-        print(f"Added {len(schedules)} manual schedule(s)", file=sys.stderr)
+        inject_manual_schedules(config, schedules, ack=args.ack)
+        ack_label = " (with ack)" if args.ack else ""
+        print(f"Added {len(schedules)} manual schedule(s){ack_label}", file=sys.stderr)
+
+    # Manual channel schedules
+    if args.chan_schedule:
+        schedules = [parse_chan_schedule_arg(s) for s in args.chan_schedule]
+        inject_manual_channel_schedules(config, schedules)
+        print(f"Added {len(schedules)} manual channel schedule(s)", file=sys.stderr)
 
     # Auto-adjust duration to fit all schedules
     adjusted = adjust_duration(config)
@@ -472,7 +614,7 @@ def main():
               file=sys.stderr)
 
     # Auto-assertions
-    if not args.no_auto_assert:
+    if args.auto_assert:
         generate_assertions(config)
         n = len(config.get("expect", []))
         if n:

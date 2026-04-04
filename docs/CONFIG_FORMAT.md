@@ -6,7 +6,7 @@ The orchestrator reads a single JSON file that defines the network, radio links,
 
 ```json
 {
-  "simulation": { "duration_ms": 15000, "step_ms": 5, "warmup_ms": 5000, "hot_start": true },
+  "simulation": { "duration_ms": 15000, "step_ms": 4, "warmup_ms": 5000, "hot_start": true },
   "nodes": [
     { "name": "alice", "role": "companion" },
     { "name": "relay1", "role": "repeater" },
@@ -33,7 +33,7 @@ The orchestrator reads a single JSON file that defines the network, radio links,
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `duration_ms` | int | 300000 | Total simulation time |
-| `step_ms` | int | 5 | Time resolution per tick |
+| `step_ms` | int | 4 | Time resolution per tick |
 | `epoch_start` | int | 1700000000 | Unix epoch for simulated RTC |
 | `warmup_ms` | int | 0 | During warmup, packets are delivered instantly (no physics). Must be < `duration_ms`. |
 | `hot_start` | bool | false | Inject mutual node awareness at t=0 (skips slow advert propagation). Settle time is auto-detected via quiescence. |
