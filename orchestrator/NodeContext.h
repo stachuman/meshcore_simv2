@@ -47,6 +47,9 @@ struct PendingRx {
     bool collided = false;
     bool link_loss = false;
     bool halfduplex_abort = false;
+    int interferer_idx = -1;       // sender index of strongest interferer
+    float interferer_snr = 0.0f;   // interferer's SNR at this receiver
+    float snr_margin = 0.0f;       // how much stronger victim needed to survive
 };
 
 // NullSerial: discards all output (Serial is unused in orchestrator)

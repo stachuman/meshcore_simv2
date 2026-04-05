@@ -428,11 +428,31 @@ void Orchestrator::registerTransmissions(unsigned long current_ms) {
                 // Collision check: test each direction independently
                 for (auto& existing : _nodes[receiver]->active_rx) {
                     if (isDestroyedBy(prx, existing, preamble_grace_ms, fec_tolerance_ms, t_preamble, t_sym,
-                                      _capture_locked_db, _capture_unlocked_db))
+                                      _capture_locked_db, _capture_unlocked_db)) {
                         prx.collided = true;
+                        // Track strongest interferer (highest SNR)
+                        if (prx.interferer_idx < 0 || existing.snr > prx.interferer_snr) {
+                            prx.interferer_idx = existing.sender_idx;
+                            prx.interferer_snr = existing.snr;
+                            double lock_time = prx.rx_start_ms + PREAMBLE_LOCK_SYMBOLS * t_sym;
+                            float cap_thr = ((double)existing.rx_start_ms >= lock_time)
+                                            ? _capture_locked_db : _capture_unlocked_db;
+                            prx.snr_margin = existing.snr + cap_thr - prx.snr;
+                        }
+                    }
                     if (isDestroyedBy(existing, prx, preamble_grace_ms, fec_tolerance_ms, t_preamble, t_sym,
-                                      _capture_locked_db, _capture_unlocked_db))
+                                      _capture_locked_db, _capture_unlocked_db)) {
                         existing.collided = true;
+                        // Track strongest interferer on existing entry
+                        if (existing.interferer_idx < 0 || prx.snr > existing.interferer_snr) {
+                            existing.interferer_idx = sender;
+                            existing.interferer_snr = prx.snr;
+                            double lock_time_ex = existing.rx_start_ms + PREAMBLE_LOCK_SYMBOLS * t_sym;
+                            float cap_thr_ex = ((double)prx.rx_start_ms >= lock_time_ex)
+                                               ? _capture_locked_db : _capture_unlocked_db;
+                            existing.snr_margin = prx.snr + cap_thr_ex - existing.snr;
+                        }
+                    }
                 }
 
                 if (_verbose) {
@@ -511,11 +531,19 @@ void Orchestrator::deliverReceptions(unsigned long current_ms) {
                 } else {
                     _event_counts["collision"]++;
                     _event_counts[_node_event_keys[i].collision]++;
+                    const char* iname = (it->interferer_idx >= 0)
+                        ? _nodes[it->interferer_idx]->name.c_str() : nullptr;
                     EventLog::collision(it->rx_start_ms, sname, rname, it->snr, it->rssi,
-                                        it->data.data(), (int)it->data.size());
+                                        it->data.data(), (int)it->data.size(),
+                                        iname, it->interferer_snr, it->snr_margin);
                     if (_verbose) {
-                        fprintf(stderr, "[%8.3fs] COLLIDED %s <- %s (destroyed)\n",
-                                it->rx_start_ms / 1000.0, rname, sname);
+                        if (iname) {
+                            fprintf(stderr, "[%8.3fs] COLLIDED %s <- %s (destroyed by %s, margin=%.1fdB)\n",
+                                    it->rx_start_ms / 1000.0, rname, sname, iname, it->snr_margin);
+                        } else {
+                            fprintf(stderr, "[%8.3fs] COLLIDED %s <- %s (destroyed)\n",
+                                    it->rx_start_ms / 1000.0, rname, sname);
+                        }
                     }
                 }
                 it = arx.erase(it);

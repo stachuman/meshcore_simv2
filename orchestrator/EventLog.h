@@ -20,7 +20,9 @@ void rx(unsigned long time_ms, const char* from, const char* to, float snr, floa
         const uint8_t* data, int len, uint32_t airtime_ms = 0);
 void cmdReply(unsigned long time_ms, const char* node, const char* command, const char* reply);
 void collision(unsigned long time_ms, const char* from, const char* to, float snr, float rssi,
-               const uint8_t* data, int len);
+               const uint8_t* data, int len,
+               const char* interferer = nullptr, float interferer_snr = 0.0f,
+               float snr_margin = 0.0f);
 void dropHalfDuplex(unsigned long time_ms, const char* from, const char* to,
                     const uint8_t* data, int len, uint32_t airtime_ms = 0);
 void dropWeak(unsigned long time_ms, const char* from, const char* to, float snr, float threshold,

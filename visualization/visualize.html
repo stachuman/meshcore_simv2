@@ -119,6 +119,7 @@ const S = {
     raysMode: false,
     tracePkt: null,
     traceEvents: [],
+    traceHopDepth: null,
     hoveredEvent: null,
     selectedEvent: null,
 
@@ -568,6 +569,25 @@ function drawEvents() {
                 ctx.lineWidth = 1;
             }
 
+            // Hop number badge for relay TX bars in trace mode
+            if (isTraced && S.traceHopDepth && ev.pkt in S.traceHopDepth) {
+                const depth = S.traceHopDepth[ev.pkt];
+                if (depth > 0) {
+                    const bx = x + boxW - 1;
+                    const by = y + 2;
+                    const br = 6;
+                    ctx.fillStyle = '#ff8800';
+                    ctx.beginPath();
+                    ctx.arc(bx, by + br, br, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.font = 'bold 8px monospace';
+                    ctx.fillStyle = '#000';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(String(depth), bx, by + br);
+                }
+            }
+
             // Label on TX bar: pkt_type + route (or pkt hash if no room)
             if (showLabels && boxW > 20) {
                 ctx.font = '9px monospace';
@@ -667,6 +687,15 @@ function drawEvents() {
                 ctx.textAlign = 'left';
                 ctx.textBaseline = 'top';
                 ctx.fillText(ev.snr.toFixed(1), x + sz + 2, cy - sz);
+            }
+
+            // Interferer label below the X when zoomed in
+            if (showLabels && ev.interferer) {
+                ctx.font = '8px monospace';
+                ctx.fillStyle = '#f88';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
+                ctx.fillText('by ' + ev.interferer, x, cy + sz + 2);
             }
         } else if (etype === 'drop_halfduplex') {
             const y = nodeToY(ev.to);
@@ -795,34 +824,50 @@ function drawTrace() {
         }
     }
 
-    // Also draw relay links: if a RX is followed by a TX from the same node
-    // with a different pkt (relay), draw a small connector
+    // Draw relay links: RX → relay TX within the same lane (pkt hash changes on relay)
+    // Orange solid arrows to clearly show the path-building relay chain
     for (const hop of (S.deepTrace ? S.deepTrace.hops : [])) {
         if (!hop.relay_from) continue;
-        // Find the RX that triggered this relay
         const parentHop = (S.deepTrace.hops || []).find(h => h.pkt === hop.relay_from);
         if (!parentHop) continue;
         const relayTx = hop.events.find(e => e.type === 'tx');
         if (!relayTx) continue;
-        // Find the RX in parent hop that was received by the relay node
         const triggerRx = parentHop.events.find(e => e.type === 'rx' && e.to === relayTx.node);
         if (!triggerRx) continue;
 
-        const x1 = msToX(triggerRx.time_ms);
+        const rxAirtime = triggerRx.airtime_ms || 50;
+        const x1 = msToX(triggerRx.time_ms + rxAirtime);
         const y = nodeToY(relayTx.node);
         const x2 = msToX(relayTx.time_ms);
         if (y < 0) continue;
 
-        // Horizontal connector within same lane: RX → relay TX
-        const cy = y + S.laneH / 2;
-        ctx.strokeStyle = '#aaaaff66';
-        ctx.lineWidth = 1;
-        ctx.setLineDash([2, 2]);
+        // Orange arrow within lane: RX end → relay TX start
+        const cy1 = y + S.laneH * 3 / 4;  // bottom half (RX area)
+        const cy2 = y + S.laneH / 4;       // top half (TX area)
+        ctx.strokeStyle = '#ff8800cc';
+        ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(x1, cy);
-        ctx.lineTo(x2, cy - S.laneH / 4);
+        ctx.moveTo(x1, cy1);
+        // Curved connector: slight arc to make it visually distinct
+        const cpx = (x1 + x2) / 2;
+        const cpy = y + S.laneH / 2;
+        ctx.quadraticCurveTo(cpx, cpy, x2, cy2);
         ctx.stroke();
-        ctx.setLineDash([]);
+
+        // Arrowhead at relay TX
+        const adx = x2 - cpx, ady = cy2 - cpy;
+        const alen = Math.sqrt(adx * adx + ady * ady);
+        if (alen > 4) {
+            const ax = adx / alen, ay = ady / alen;
+            const sz = 4;
+            ctx.fillStyle = '#ff8800cc';
+            ctx.beginPath();
+            ctx.moveTo(x2, cy2);
+            ctx.lineTo(x2 - sz * ax + sz * 0.5 * ay, cy2 - sz * ay - sz * 0.5 * ax);
+            ctx.lineTo(x2 - sz * ax - sz * 0.5 * ay, cy2 - sz * ay + sz * 0.5 * ax);
+            ctx.closePath();
+            ctx.fill();
+        }
     }
 
     // Draw response connectors (companion response TXs) in green
@@ -1063,6 +1108,9 @@ function updateHover(mx, my) {
     }
     if (hit.snr !== undefined) text += `\nsnr: ${hit.snr.toFixed(1)} dB`;
     if (hit.rssi !== undefined) text += `\nrssi: ${hit.rssi.toFixed(1)} dBm`;
+    if (hit.interferer) text += `\ninterferer: ${hit.interferer}`;
+    if (hit.interferer_snr !== undefined && hit.interferer) text += `\ninterferer_snr: ${hit.interferer_snr.toFixed(1)} dB`;
+    if (hit.snr_margin !== undefined && hit.interferer) text += `\nmargin: ${hit.snr_margin.toFixed(1)} dB (needed to survive)`;
     if (hit.airtime_ms) text += `\nairtime: ${hit.airtime_ms}ms`;
     if (hit.command) text += `\ncmd: ${hit.command}`;
     if (hit.reply) text += `\nreply: ${hit.reply.slice(0, 80)}`;
@@ -1163,6 +1211,21 @@ async function tracePkt(pkt) {
     S.traceEvents = allEvents;
     S.tracePkts = allPkts;  // all pkt hashes in the relay chain
 
+    // Build pkt hash → hop depth map for labeling relay TX bars
+    const hopDepth = {};
+    const hopByPkt = {};
+    for (const hop of data.hops) hopByPkt[hop.pkt] = hop;
+    function computeDepth(pkt) {
+        if (pkt in hopDepth) return hopDepth[pkt];
+        const hop = hopByPkt[pkt];
+        if (!hop || (!hop.relay_from && !hop.response_from)) { hopDepth[pkt] = 0; return 0; }
+        const parent = hop.relay_from || hop.response_from;
+        hopDepth[pkt] = computeDepth(parent) + 1;
+        return hopDepth[pkt];
+    }
+    for (const hop of data.hops) computeDepth(hop.pkt);
+    S.traceHopDepth = hopDepth;
+
     // Auto-switch to trace sort order
     const orderSelect = document.getElementById('node-order');
     if (orderSelect.value !== 'trace') {
@@ -1180,6 +1243,7 @@ function clearTrace() {
     S.traceEvents = [];
     S.tracePkts = null;
     S.deepTrace = null;
+    S.traceHopDepth = null;
 
     // Restore previous sort order if we auto-switched to trace
     const orderSelect = document.getElementById('node-order');
@@ -1242,6 +1306,14 @@ function showEventDetail(ev) {
             if (val.length > 100) val = val.slice(0, 100) + '\u2026';
             html += `<div class="field"><span class="key">${k}: </span><span class="val">${escHtml(val)}</span></div>`;
         }
+    }
+
+    // Collision explanation box
+    if (ev.type === 'collision' && ev.interferer) {
+        html += `<div style="margin-top:8px;padding:6px 8px;background:#331111;border:1px solid #663333;border-radius:4px;font-size:11px;">`;
+        html += `Packet from <b>${escHtml(ev.from)}</b> (SNR ${ev.snr.toFixed(1)}dB) destroyed by TX from <b>${escHtml(ev.interferer)}</b> (SNR ${ev.interferer_snr.toFixed(1)}dB).<br>`;
+        html += `Needed ${ev.snr_margin.toFixed(1)}dB more to survive capture.`;
+        html += `</div>`;
     }
 
     // Decode msg endpoints and path from hex
@@ -1315,6 +1387,31 @@ function showDeepTraceDetail(data) {
     html += `<div class="field"><span class="key">events: </span><span class="val">`;
     html += Object.entries(counts).map(([t,c]) => `${c} ${t}`).join(', ');
     html += `</span></div>`;
+
+    // Path growth: show how path field grows across hops
+    if (hops.length > 1) {
+        const hopDepth = S.traceHopDepth || {};
+        const orderedHops = [...hops].sort((a, b) => (hopDepth[a.pkt] || 0) - (hopDepth[b.pkt] || 0));
+        let hasPath = false;
+        let pathRows = '';
+        for (const hop of orderedHops) {
+            const tx = hop.events.find(e => e.type === 'tx' && e.hex);
+            if (!tx) continue;
+            const ep = decodePacketInfo(tx.hex);
+            if (!ep || !ep.pathHashes || ep.pathHashes.length === 0) continue;
+            hasPath = true;
+            const d = hopDepth[hop.pkt] || 0;
+            const pathNames = ep.pathHashes.map(h => resolveHash(h, pkMap));
+            const pathStr = pathNames.join(' \u2192 ');
+            pathRows += `<tr><td style="color:#ff8800">${d}</td><td>${escHtml(tx.node)}</td><td>${escHtml(pathStr)}</td></tr>`;
+        }
+        if (hasPath) {
+            html += '<h3>Path growth</h3>';
+            html += '<table><tr><th>Hop</th><th>Sender</th><th>Path</th></tr>';
+            html += pathRows;
+            html += '</table>';
+        }
+    }
 
     // Event table with clickable nodes
     html += '<table><tr><th>Time</th><th>Type</th><th>Node</th><th>Detail</th></tr>';
@@ -1453,7 +1550,9 @@ function buildDeepSpreadTree(hops) {
             } else if (child.kind === 'collision') {
                 const c = child.ev;
                 const cNodeSpan = `<span class="pkt-link" data-jump-node="${escHtml(c.to)}" data-jump-time="${c.time_ms}" style="color:${COLORS.collision}">${escHtml(c.to)}</span>`;
-                html += `<div>${pad}${branch}${cNodeSpan} <span style="color:#f44">COLLISION@${formatTime(c.time_ms)}</span></div>`;
+                let collDetail = `COLLISION@${formatTime(c.time_ms)}`;
+                if (c.interferer) collDetail += ` by ${c.interferer} (margin ${c.snr_margin.toFixed(1)}dB)`;
+                html += `<div>${pad}${branch}${cNodeSpan} <span style="color:#f44">${escHtml(collDetail)}</span></div>`;
             } else {
                 const d = child.ev;
                 const reason = child.kind.replace('drop_', '');

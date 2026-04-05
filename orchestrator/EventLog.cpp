@@ -139,13 +139,19 @@ void cmdReply(unsigned long time_ms, const char* node, const char* command, cons
 }
 
 void collision(unsigned long time_ms, const char* from, const char* to, float snr, float rssi,
-               const uint8_t* data, int len) {
+               const uint8_t* data, int len,
+               const char* interferer, float interferer_snr, float snr_margin) {
     char pkt[9];
     packetHashHex(pkt, data, len);
     const char* pt = len > 0 ? decodePayloadType(data[0]) : "?";
     const char* rt = len > 0 ? decodeRouteType(data[0]) : "?";
-    fprintf(stdout, "{\"type\":\"collision\",\"time_ms\":%lu,\"from\":\"%s\",\"to\":\"%s\",\"snr\":%.1f,\"rssi\":%.1f,\"pkt\":\"%s\",\"pkt_type\":\"%s\",\"route\":\"%s\"}\n",
-            time_ms, from, to, snr, rssi, pkt, pt, rt);
+    if (interferer) {
+        fprintf(stdout, "{\"type\":\"collision\",\"time_ms\":%lu,\"from\":\"%s\",\"to\":\"%s\",\"snr\":%.1f,\"rssi\":%.1f,\"pkt\":\"%s\",\"pkt_type\":\"%s\",\"route\":\"%s\",\"interferer\":\"%s\",\"interferer_snr\":%.1f,\"snr_margin\":%.1f}\n",
+                time_ms, from, to, snr, rssi, pkt, pt, rt, interferer, interferer_snr, snr_margin);
+    } else {
+        fprintf(stdout, "{\"type\":\"collision\",\"time_ms\":%lu,\"from\":\"%s\",\"to\":\"%s\",\"snr\":%.1f,\"rssi\":%.1f,\"pkt\":\"%s\",\"pkt_type\":\"%s\",\"route\":\"%s\"}\n",
+                time_ms, from, to, snr, rssi, pkt, pt, rt);
+    }
 }
 
 void dropHalfDuplex(unsigned long time_ms, const char* from, const char* to,
