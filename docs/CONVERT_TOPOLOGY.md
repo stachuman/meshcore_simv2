@@ -83,8 +83,8 @@ python3 tools/convert_topology.py topology.json \
 Gap-fill edges are always `bidir: true`. Output is deterministic (seeded RNG).
 
 Caps per node:
-- `--max-good-links` (default 3): max SNR > 0 dB edges
-- Hard cap: 12 total edges per node
+- `--max-good-links` (default 2): max SNR > 0 dB edges
+- `--max-edges-per-node` (default 8): hard cap total edges per node
 
 ## Adding Companions
 

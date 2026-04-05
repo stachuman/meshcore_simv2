@@ -125,27 +125,42 @@ One-shot commands executed at specific simulation times. Sorted by `at_ms` at ru
 | Field | Type | Description |
 |---|---|---|
 | `at_ms` | int | Simulation time to execute (ms) |
-| `node` | string | Target node name |
+| `node` | string | Target node name, or `@repeaters`, `@companions`, `@all` (see below) |
 | `command` | string | CLI command string (see below) |
+
+**Group targeting**: The `node` field accepts special `@` prefixes that expand to one command per matching node at parse time:
+
+| Target | Expands to |
+|---|---|
+| `@all` | Every node |
+| `@repeaters` | All nodes with `role: "repeater"` |
+| `@companions` | All nodes with `role: "companion"` |
+
+```json
+{ "at_ms": 100000, "node": "@repeaters", "command": "set txdelay 0.1" }
+```
+
+This is equivalent to writing one command per repeater node. Useful for applying global settings without listing each node.
 
 **Available commands** depend on node role:
 
 | Command | Role | Description |
 |---|---|---|
-| `msg <name> <text>` | companion | Send direct/flood message to named contact |
+| `msg <name> <text>` | companion | Send direct/flood message to named contact. Uses direct routing if a path is known, flood otherwise. |
 | `msga <name> <text>` | companion | Same as `msg` but tracks ack receipt |
 | `msgc <text>` | companion | Send message on public channel (channel 0, flood). No ack support. |
 | `advert` | companion | Broadcast self-advert (flood) |
 | `advert.zerohop` | companion | Broadcast self-advert (zero-hop only) |
+| `reset_path <name>` | companion | Clear learned direct route to named contact. Forces next `msg` to use flood routing (re-discovers path). Equivalent to MeshCore's `CMD_RESET_PATH` binary frame. |
 | `neighbors` | companion | List known contacts |
 | `stats` | companion | Print message send/receive counters |
 | `import <hex>` | companion | Import a contact from hex-encoded advert |
 | `get rxdelay` | repeater | Query RX delay base (float, default 0.0) |
-| `set rxdelay <f>` | repeater | Set RX delay base (>= 0) |
+| `set rxdelay <f>` | repeater | Set RX delay base (>= 0). Disables autotune. |
 | `get txdelay` | repeater | Query TX delay factor (float, default 0.5) |
-| `set txdelay <f>` | repeater | Set TX delay factor (>= 0) |
+| `set txdelay <f>` | repeater | Set TX delay factor (>= 0). Controls flood retransmit delay: `random(0, 5 * airtime * factor)`. Disables autotune. |
 | `get direct.txdelay` | repeater | Query direct TX delay factor (float, default 0.3) |
-| `set direct.txdelay <f>` | repeater | Set direct TX delay factor (>= 0) |
+| `set direct.txdelay <f>` | repeater | Set direct TX delay factor (>= 0). Same formula as txdelay but for direct-route relays. Disables autotune. |
 | *(any CLI)* | repeater | Passed through to MeshCore's `CommonCLI::handleCommand` |
 
 ### `message_schedule`
@@ -234,6 +249,30 @@ Test assertions checked after the simulation completes. The orchestrator exits w
 | `event_count` | `event_type`, `node` (opt), `min`/`max` | Event count in [`min`, `max`] range. `node` scopes to one node. -1 = no bound. |
 | `tx_airtime_between` | `node`, `min`, `max` | All TX airtimes from `node` fall within [`min`, `max`] ms |
 
+**Countable event types** (usable with `event_count` and `event_count_min`):
+
+| Event type | Description |
+|---|---|
+| `tx` | Packet transmitted |
+| `rx` | Packet successfully received |
+| `collision` | Packet lost to collision (interfering signal within capture threshold) |
+| `drop_weak` | Packet dropped: SNR below demodulation threshold |
+| `drop_halfduplex` | Packet dropped: receiver was transmitting (half-duplex) |
+| `drop_loss` | Packet dropped: stochastic link loss (per-link `loss` probability) |
+| `tx_fail` | TX hardware failure (per-node `tx_fail_prob`) |
+
+Additional NDJSON event types (logged but not counted for assertions):
+
+| Event type | Description |
+|---|---|
+| `sim_start` | Simulation start metadata |
+| `sim_end` | Simulation end marker |
+| `node_ready` | Node initialized (includes pub key, optional lat/lon) |
+| `cmd_reply` | Command response from a node |
+| `adversarial_drop` | Adversarial node suppressed a TX |
+| `adversarial_corrupt` | Adversarial node flipped bits in a TX |
+| `adversarial_replay` | Adversarial node scheduled a packet replay |
+
 ---
 
 ## Converting Real Topology Data
@@ -257,7 +296,7 @@ Key behaviors:
 Filtering flags:
 | Flag | Default | Effect |
 |---|---|---|
-| `--min-snr` | -7.5 | Drop edges below this SNR |
+| `--min-snr` | -10.0 | Drop edges below this SNR |
 | `--min-confidence` | 0.7 | Drop edges below this confidence |
 | `--include-inferred` | off | Include `source: "inferred"` edges (dropped by default) |
 
@@ -281,4 +320,5 @@ Opens a browser with an interactive swim-lane view:
 - **T** key or Trace button to enter trace mode — click any packet to see its full journey
 - **Arrow keys** to scroll time, **F** to fit all, **Esc** to clear
 - Zoomed out: shows per-node activity density. Zoomed in: individual packets with airtime boxes, RX markers, collision X marks.
-- Sidebar shows packet spread tree, event details, and node stats.
+- **Hover** over TX/RX bars to see decoded packet info: msg_src, msg_dst, and **path** (the repeater hash chain). Flood packets show the growing path `[B → C → D]`; direct packets show remaining hops `[E → B]`.
+- Sidebar shows packet spread tree, event details, decoded path, and node stats.

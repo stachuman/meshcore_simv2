@@ -27,6 +27,8 @@
     ]
   },
   "commands": [
+    {"at_ms": 5000, "node": "@repeaters", "command": "set path.hash.mode 1"},
+    {"at_ms": 5005, "node": "@repeaters", "command": "get rxdelay"},
     {"at_ms": 6000, "node": "alice", "command": "msg frank flood_msg"},
     {"at_ms": 60000, "node": "alice", "command": "msg frank direct_msg1"},
     {"at_ms": 110000, "node": "alice", "command": "msg frank direct_msg2"}

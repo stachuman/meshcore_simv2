@@ -112,11 +112,34 @@ static OrchestratorConfig parseJson(const json& j) {
 
     if (j.contains("commands")) {
         for (auto& cd : j["commands"]) {
-            OrchestratorConfig::CmdDef def;
-            def.at_ms   = cd["at_ms"].get<unsigned long>();
-            def.node    = cd["node"].get<std::string>();
-            def.command = cd["command"].get<std::string>();
-            cfg.commands.push_back(std::move(def));
+            unsigned long at_ms = cd["at_ms"].get<unsigned long>();
+            std::string node    = cd["node"].get<std::string>();
+            std::string command = cd["command"].get<std::string>();
+
+            if (node[0] == '@') {
+                // Expand @repeaters, @companions, @all into per-node commands
+                for (const auto& nd : cfg.nodes) {
+                    bool match = (node == "@all")
+                              || (node == "@repeaters"  && nd.role == NodeRole::Repeater)
+                              || (node == "@companions" && nd.role == NodeRole::Companion);
+                    if (match) {
+                        OrchestratorConfig::CmdDef def;
+                        def.at_ms   = at_ms;
+                        def.node    = nd.name;
+                        def.command = command;
+                        cfg.commands.push_back(std::move(def));
+                    }
+                }
+                if (node != "@all" && node != "@repeaters" && node != "@companions")
+                    throw std::runtime_error("Unknown target group \"" + node +
+                        "\" (expected @all, @repeaters, or @companions)");
+            } else {
+                OrchestratorConfig::CmdDef def;
+                def.at_ms   = at_ms;
+                def.node    = node;
+                def.command = command;
+                cfg.commands.push_back(std::move(def));
+            }
         }
     }
 

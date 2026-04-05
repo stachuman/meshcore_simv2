@@ -8,20 +8,33 @@ A single-process network simulator for [MeshCore](https://github.com/ripplebiz/M
 
 ## Building
 
-Requires CMake 3.16+, a C++17 compiler, and OpenSSL.
+Requires CMake 3.16+, a C++17 compiler, OpenSSL development libraries, and Python 3.10+.
 
 ```bash
+# Install system dependencies (Debian/Ubuntu)
+sudo apt install build-essential cmake libssl-dev python3 python3-venv
+
+# Clone the repo
+git clone --recursive https://github.com/stachuman/meshcore_simv2.git
+cd meshcore_simv2
+
+# Set up Python virtual environment
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# Build
 cmake -S . -B build
 cmake --build build
 ```
 
-It is possible to build alternate version of MeshCore (e.g. - testing new features) kept in a different directory.
+If you already cloned without `--recursive`, initialize the MeshCore submodule:
 
 ```bash
-cmake -S /home/user/meshcore_real_sim -B /home/user/meshcore_real_sim/build-fork -DMESHCORE_DIR=/home/user/MeshCore-stachuman
-cmake --build build-fork
+git submodule update --init
 ```
 
+The Python venv must be active when running visualization or topology tools (`source venv/bin/activate`).
 
 This produces three binaries:
 - `build/orchestrator/orchestrator` -- the multi-node simulator (main tool)
@@ -154,22 +167,32 @@ See [docs/TOPOLOGY_GENERATOR.md](docs/TOPOLOGY_GENERATOR.md) for full documentat
 
 ## Testing Different MeshCore Variants
 
-You can build against a different MeshCore source tree (e.g., a fork or feature branch) by setting `MESHCORE_DIR`:
+By default the simulator builds against the `MeshCore/` git submodule. To test a fork or feature branch, clone it and point `MESHCORE_DIR` to it. Use a separate build directory so both builds coexist.
 
 ```bash
-# Clone a fork alongside this repo
-git clone https://github.com/stachuman/MeshCore.git ../MeshCore-stachuman
+# 1. Clone your MeshCore fork alongside this repo
+git clone https://github.com/YOUR_USER/MeshCore.git ../MeshCore-fork
 
-# Build against the fork in a separate build directory
-cmake -S . -B build-fork -DMESHCORE_DIR=$(pwd)/../MeshCore-stachuman
+# 2. Build the simulator against the fork (separate build dir)
+cmake -S . -B build-fork -DMESHCORE_DIR=$(pwd)/../MeshCore-fork
 cmake --build build-fork
 
-# Both build dirs coexist — run tests against each
-build/orchestrator/orchestrator test/t06_msg_stats.json 2>/dev/null
-build-fork/orchestrator/orchestrator test/t06_msg_stats.json 2>/dev/null
+# 3. Run the same test against both builds to compare behavior
+build/orchestrator/orchestrator test/t06_msg_stats.json 2>/tmp/stock.txt
+build-fork/orchestrator/orchestrator test/t06_msg_stats.json 2>/tmp/fork.txt
+diff /tmp/stock.txt /tmp/fork.txt
 ```
 
-The default (no flag) uses the `MeshCore/` submodule as before.
+To switch your fork to a different branch and rebuild:
+
+```bash
+cd ../MeshCore-fork
+git checkout my-feature-branch
+cd ../meshcore_simv2
+cmake --build build-fork
+```
+
+No need to re-run `cmake -S ...` -- the `MESHCORE_DIR` path is cached. Just rebuild after changing the MeshCore sources.
 
 ## Radio Physics Model
 
