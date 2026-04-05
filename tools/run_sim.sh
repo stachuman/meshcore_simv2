@@ -41,7 +41,14 @@ echo "  Config:  $CONFIG"
 echo "  Output:  $NDJSON"
 echo ""
 
-"$ORCH" "$CONFIG" "$@" > "$NDJSON"
+ORCH_RC=0
+"$ORCH" "$CONFIG" "$@" > "$NDJSON" || ORCH_RC=$?
+
+if [ $ORCH_RC -ne 0 ]; then
+    echo ""
+    echo "  Orchestrator exited with code $ORCH_RC (assertion failure?)"
+    echo "  Launching visualizer anyway — useful for debugging."
+fi
 
 echo ""
 echo "=== Launching visualizer ==="
