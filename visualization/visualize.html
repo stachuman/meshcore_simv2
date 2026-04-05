@@ -1048,13 +1048,17 @@ function updateHover(mx, my) {
     if (hit.pkt_type) text += `\npkt_type: ${hit.pkt_type}`;
     if (hit.route) text += `\nroute: ${hit.route}`;
     if (hit.hex) {
-        const ep = decodeMsgEndpoints(hit.hex);
+        const ep = decodePacketInfo(hit.hex);
         if (ep) {
             const pkMap = buildPubKeyMap();
             const src = resolveHash(ep.srcHash, pkMap);
             const dst = resolveHash(ep.dstHash, pkMap);
             if (src) text += `\nmsg_src: ${src}`;
             if (dst) text += `\nmsg_dst: ${dst}`;
+            if (ep.pathHashes && ep.pathHashes.length > 0) {
+                const pathNames = ep.pathHashes.map(h => resolveHash(h, pkMap));
+                text += `\npath: [${pathNames.join(' \u2192 ')}]`;
+            }
         }
     }
     if (hit.snr !== undefined) text += `\nsnr: ${hit.snr.toFixed(1)} dB`;
@@ -1072,10 +1076,10 @@ function updateHover(mx, my) {
 }
 
 // ── Packet hex decoder ─────────────────────────────────────────
-// Decode msg sender/recipient from raw packet hex (TX events carry full bytes)
+// Decode msg sender/recipient and path from raw packet hex (TX events carry full bytes)
 // MeshCore packet: byte 0 = header, then optional transport (4B), then path, then payload
 // Payload for msg/req/resp/path: byte 0 = dst_hash, byte 1 = src_hash (1 byte each)
-function decodeMsgEndpoints(hexStr) {
+function decodePacketInfo(hexStr) {
     if (!hexStr || hexStr.length < 4) return null;
     const bytes = [];
     for (let i = 0; i < hexStr.length; i += 2) bytes.push(parseInt(hexStr.substr(i, 2), 16));
@@ -1088,8 +1092,7 @@ function decodeMsgEndpoints(hexStr) {
     // Only certain types have dst/src hashes
     const HAS_HASHES = new Set([0x00, 0x01, 0x02, 0x08]); // req, resp, msg, path
     const IS_ANON = payloadType === 0x07; // anon_req: dst_hash + full 32-byte pub key
-
-    if (!HAS_HASHES.has(payloadType) && !IS_ANON) return null;
+    const hasEndpoints = HAS_HASHES.has(payloadType) || IS_ANON;
 
     // Skip header
     let off = 1;
@@ -1104,14 +1107,24 @@ function decodeMsgEndpoints(hexStr) {
     const hashSizeCode = (pathByte >> 6) & 0x03;
     const pathCount = pathByte & 0x3F;
     const hashSize = hashSizeCode + 1;
-    off += hashSize * pathCount;
 
-    if (off + 2 > bytes.length) return null;
+    // Collect path hashes (first byte of each hash entry)
+    const pathHashes = [];
+    for (let p = 0; p < pathCount; p++) {
+        if (off + hashSize <= bytes.length) {
+            pathHashes.push(bytes[off]);
+        }
+        off += hashSize;
+    }
+
+    if (!hasEndpoints) return { dstHash: null, srcHash: null, pathHashes };
+
+    if (off + 2 > bytes.length) return { dstHash: null, srcHash: null, pathHashes };
 
     const dstHash = bytes[off];
     const srcHash = IS_ANON ? null : bytes[off + 1];
 
-    return { dstHash, srcHash };
+    return { dstHash, srcHash, pathHashes };
 }
 
 // Build pub key prefix → node name map (handles collisions by listing all matches)
@@ -1231,15 +1244,19 @@ function showEventDetail(ev) {
         }
     }
 
-    // Decode msg endpoints from hex
+    // Decode msg endpoints and path from hex
     if (ev.hex) {
-        const ep = decodeMsgEndpoints(ev.hex);
+        const ep = decodePacketInfo(ev.hex);
         if (ep) {
             const pkMap = buildPubKeyMap();
             const dst = resolveHash(ep.dstHash, pkMap);
             const src = resolveHash(ep.srcHash, pkMap);
             if (dst) html += `<div class="field"><span class="key">msg_dst: </span><span class="val">${escHtml(dst)}</span></div>`;
             if (src) html += `<div class="field"><span class="key">msg_src: </span><span class="val">${escHtml(src)}</span></div>`;
+            if (ep.pathHashes && ep.pathHashes.length > 0) {
+                const pathNames = ep.pathHashes.map(h => resolveHash(h, pkMap));
+                html += `<div class="field"><span class="key">path: </span><span class="val">[${escHtml(pathNames.join(' \u2192 '))}]</span></div>`;
+            }
         }
     }
 
@@ -1272,17 +1289,21 @@ function showDeepTraceDetail(data) {
         html += `<div class="field"><span class="key">route: </span><span class="val">${firstTyped.route || '?'}</span></div>`;
     }
 
-    // Decode msg source/destination from root hop's first TX hex
+    // Decode msg source/destination and path from root hop's first TX hex
     const rootHop = hops.find(h => h.pkt === rootPkt);
     if (rootHop) {
         const firstTx = rootHop.events.find(e => e.type === 'tx' && e.hex);
         if (firstTx) {
-            const ep = decodeMsgEndpoints(firstTx.hex);
+            const ep = decodePacketInfo(firstTx.hex);
             if (ep) {
                 const dst = resolveHash(ep.dstHash, pkMap);
                 const src = resolveHash(ep.srcHash, pkMap);
                 if (src) html += `<div class="field"><span class="key">msg from: </span><span class="val">${escHtml(src)}</span></div>`;
                 if (dst) html += `<div class="field"><span class="key">msg to: </span><span class="val">${escHtml(dst)}</span></div>`;
+                if (ep.pathHashes && ep.pathHashes.length > 0) {
+                    const pathNames = ep.pathHashes.map(h => resolveHash(h, pkMap));
+                    html += `<div class="field"><span class="key">path: </span><span class="val">[${escHtml(pathNames.join(' \u2192 '))}]</span></div>`;
+                }
             }
         }
     }

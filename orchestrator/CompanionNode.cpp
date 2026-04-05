@@ -253,6 +253,13 @@ public:
             }
             return r;
         }
+        if (strncmp(cmd, "reset_path ", 11) == 0) {
+            const char* prefix = cmd + 11;
+            ContactInfo* contact = _mesh.searchContactsByPrefix(prefix);
+            if (!contact) return "ERROR: contact not found: " + std::string(prefix);
+            _mesh.resetPathTo(*contact);
+            return "path reset for " + std::string(contact->name);
+        }
         return "ERROR: unknown command: " + std::string(cmd);
     }
 };

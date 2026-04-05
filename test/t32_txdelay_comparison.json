@@ -1,0 +1,80 @@
+{
+  "_name": "t32_txdelay_comparison",
+  "_desc": "Compares flood path selection with different tx_delay_factor values. Same topology as t31 (alice-B-C-D-E-frank chain + weak B-E shortcut). Phase 1: default delays (txdelay=0.5), flood msg + direct. Phase 2: low delays (txdelay=0.1) on all repeaters, flood msg + direct. Phase 3: high delays (txdelay=1.5), flood msg + direct. Lower txdelay reduces random backoff spread, so the hop-count advantage of the B-E shortcut becomes more deterministic. Higher txdelay increases variance, giving the longer chain more chances to win.",
+  "simulation": {
+    "duration_ms": 400000,
+    "step_ms": 4,
+    "warmup_ms": 5000,
+    "hot_start": true,
+    "seed": 42
+  },
+  "nodes": [
+    {"name": "alice", "role": "companion"},
+    {"name": "B", "role": "repeater"},
+    {"name": "C", "role": "repeater"},
+    {"name": "D", "role": "repeater"},
+    {"name": "E", "role": "repeater"},
+    {"name": "frank", "role": "companion"}
+  ],
+  "topology": {
+    "links": [
+      {"from": "alice", "to": "B", "snr": 10, "rssi": -70},
+      {"from": "B", "to": "C", "snr": 10, "rssi": -70},
+      {"from": "C", "to": "D", "snr": 10, "rssi": -70},
+      {"from": "D", "to": "E", "snr": 10, "rssi": -70},
+      {"from": "E", "to": "frank", "snr": 10, "rssi": -70},
+      {"from": "B", "to": "E", "snr": 3, "rssi": -90}
+    ]
+  },
+  "commands": [
+    {"at_ms": 5100, "node": "B", "command": "get txdelay"},
+    {"at_ms": 5100, "node": "C", "command": "get txdelay"},
+    {"at_ms": 5100, "node": "D", "command": "get txdelay"},
+    {"at_ms": 5100, "node": "E", "command": "get txdelay"},
+    {"at_ms": 6000, "node": "alice", "command": "msg frank phase1_flood"},
+    {"at_ms": 60000, "node": "alice", "command": "msg frank phase1_direct"},
+
+    {"at_ms": 100000, "node": "B", "command": "set txdelay 0.1"},
+    {"at_ms": 100000, "node": "C", "command": "set txdelay 0.1"},
+    {"at_ms": 100000, "node": "D", "command": "set txdelay 0.1"},
+    {"at_ms": 100000, "node": "E", "command": "set txdelay 0.1"},
+    {"at_ms": 100000, "node": "B", "command": "set direct.txdelay 0.1"},
+    {"at_ms": 100000, "node": "C", "command": "set direct.txdelay 0.1"},
+    {"at_ms": 100000, "node": "D", "command": "set direct.txdelay 0.1"},
+    {"at_ms": 100000, "node": "E", "command": "set direct.txdelay 0.1"},
+    {"at_ms": 105000, "node": "alice", "command": "reset_path frank"},
+    {"at_ms": 105000, "node": "frank", "command": "reset_path alice"},
+    {"at_ms": 108000, "node": "alice", "command": "msg frank phase2_flood"},
+    {"at_ms": 115000, "node": "alice", "command": "msg frank phase2_flood_retry"},
+    {"at_ms": 165000, "node": "alice", "command": "msg frank phase2_direct"},
+
+    {"at_ms": 200000, "node": "B", "command": "set txdelay 1.5"},
+    {"at_ms": 200000, "node": "C", "command": "set txdelay 1.5"},
+    {"at_ms": 200000, "node": "D", "command": "set txdelay 1.5"},
+    {"at_ms": 200000, "node": "E", "command": "set txdelay 1.5"},
+    {"at_ms": 200000, "node": "B", "command": "set direct.txdelay 1.0"},
+    {"at_ms": 200000, "node": "C", "command": "set direct.txdelay 1.0"},
+    {"at_ms": 200000, "node": "D", "command": "set direct.txdelay 1.0"},
+    {"at_ms": 200000, "node": "E", "command": "set direct.txdelay 1.0"},
+    {"at_ms": 205000, "node": "alice", "command": "reset_path frank"},
+    {"at_ms": 205000, "node": "frank", "command": "reset_path alice"},
+    {"at_ms": 208000, "node": "alice", "command": "msg frank phase3_flood"},
+    {"at_ms": 218000, "node": "alice", "command": "msg frank phase3_flood_retry"},
+    {"at_ms": 270000, "node": "alice", "command": "msg frank phase3_direct"}
+  ],
+  "expect": [
+    {"type": "cmd_reply_contains", "node": "alice", "command": "msg frank phase1_flood", "value": "sent"},
+    {"type": "cmd_reply_contains", "node": "alice", "command": "msg frank phase1_direct", "value": "sent"},
+    {"type": "cmd_reply_contains", "node": "alice", "command": "msg frank phase2_flood", "value": "flood"},
+    {"type": "cmd_reply_contains", "node": "alice", "command": "msg frank phase2_direct", "value": "sent"},
+    {"type": "cmd_reply_contains", "node": "alice", "command": "msg frank phase3_flood", "value": "flood"},
+    {"type": "cmd_reply_contains", "node": "alice", "command": "msg frank phase3_direct", "value": "sent"},
+
+    {"type": "cmd_reply_contains", "node": "B", "command": "get txdelay", "value": "> 0.5"},
+    {"type": "cmd_reply_contains", "node": "B", "command": "set txdelay 0.1", "value": "OK"},
+    {"type": "cmd_reply_contains", "node": "B", "command": "set txdelay 1.5", "value": "OK"},
+
+    {"type": "cmd_reply_contains", "node": "alice", "command": "reset_path frank", "value": "path reset for"},
+    {"type": "cmd_reply_contains", "node": "frank", "command": "reset_path alice", "value": "path reset for"}
+  ]
+}
