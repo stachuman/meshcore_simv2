@@ -2,83 +2,96 @@
 
 ## Overview
 
-This document describes how we set up simulations to find optimal `rxdelay`, `txdelay`, and `direct.txdelay` values for a real MeshCore repeater network. The pipeline: real topology data -> simulated network -> automated message delivery tests -> parameter sweep.
+This document describes how we set up simulations to find optimal delay tuning tables for MeshCore repeater networks. The pipeline: live network API -> ITM propagation model -> simulated topology -> companion + message injection -> automated parameter sweep.
 
 ## 1. Test Topology
 
 ### Source data
 
-Starting point is `simulation/topology.json` — a snapshot exported from a live MeshCore network (~74 nodes in the Gdansk/Gdynia area, Poland). Each node has:
-- GPS coordinates (lat/lon), though some nodes report (0,0)
-- Per-neighbor SNR measurements (directional — A hearing B differs from B hearing A)
-- Confidence scores and measurement source (direct neighbor table, packet trace, or inferred)
+Topologies are generated from live MeshCore network data using the `topology_generator` module. It fetches node positions from the [MeshCore map API](https://map.meshcore.io), then computes RF links using the **Irregular Terrain Model (ITM / Longley-Rice)** propagation model with SRTM elevation data.
 
-### Processing pipeline (`tools/convert_topology.py`)
+The Gdansk/Pomerania region (bounding box `53.7,17.3,54.8,19.5`) is used for all delay optimization tests. A typical fetch returns ~150-160 repeaters with GPS coordinates.
 
-The raw data goes through several stages:
+### Processing pipeline (`topology_generator`)
 
-1. **Node filtering** — drops stub nodes (short prefix), sanitizes names (strips emoji/special chars)
-2. **Coordinate estimation** — nodes with missing GPS get positions estimated via weighted centroid of known neighbors (weight proportional to SNR)
-3. **Edge filtering** — drops edges below SNR threshold (default -10 dB for SF8), low confidence (<0.7), inferred source, or excessive distance (>80 km)
-4. **Gap-fill** — adds estimated links for nearby repeater pairs that lack measured edges, using a log-distance propagation model fitted from real measurements, with Gaussian shadow fading. Capped at 2 "good" (SNR>0) edges and 8 total edges per node
-5. **Loss model** — each link gets a packet loss probability via logistic sigmoid mapping SNR to loss (50% loss at -6 dB, near-zero above 0 dB)
+1. **API fetch** — downloads all nodes in the bounding box from the MeshCore map API. Responses can be cached (`--api-cache`) to avoid repeated downloads.
+2. **ITM link computation** — for each pair of nodes within `--max-distance-km` (40 km), computes path loss using the ITM model with terrain profiles from SRTM data, then derives received SNR. Links below `--min-snr` (-10 dB) are dropped.
+3. **Clutter attenuation** — adds `--clutter-db` (6 dB) to account for urban/suburban clutter not captured by SRTM.
+4. **Link density control** — three parameters shape the final topology:
+   - `--link-survival`: stochastic survival probability applied to each ITM-computed link (lower = sparser)
+   - `--max-edges-per-node`: hard cap on total neighbors
+   - `--max-good-links`: cap on "good" links (SNR > 0) per node; remaining slots filled with weaker links
+5. **Config emission** — outputs a simulation config JSON with nodes (name, role, lat/lon) and bidirectional links (SNR, RSSI, loss probability).
 
-After processing, a typical run yields ~71 repeaters with ~357 links (220 measured + 137 gap-filled).
+### Key topology generator flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--region` | (required) | Bounding box: `lat_min,lon_min,lat_max,lon_max` |
+| `--freq-mhz` | 869.618 | LoRa carrier frequency (EU ISM) |
+| `--tx-power-dbm` | 20.0 | TX power |
+| `--antenna-height` | 5.0 | Antenna height in meters |
+| `--sf` / `--bw` / `--cr` | 8 / 62500 / 4 | LoRa radio parameters |
+| `--max-distance-km` | 40 | Skip node pairs beyond this range |
+| `--min-snr` | -10.0 | Drop links below this SNR |
+| `--link-survival` | 1.0 | Stochastic survival probability per link |
+| `--max-edges-per-node` | 12 | Hard cap on total neighbors |
+| `--max-good-links` | (none) | Cap on good (SNR > 0) links per node |
+| `--clutter-db` | 6.0 | Additional urban/suburban attenuation |
+| `--api-cache` | (none) | Cache API responses to this file |
 
 ### Limitations
 
-- **Coordinate accuracy**: ~5 nodes have estimated (not measured) coordinates. Gap-filled links for these nodes may not reflect real RF paths.
-- **SNR snapshot**: Measurements are from a single point in time. Real SNR varies with weather, interference, antenna movement.
-- **Missing nodes**: The snapshot may not include all active repeaters. Some nodes with short prefixes are dropped.
-- **Gap-fill assumptions**: The propagation model (log-distance + shadow fading) is a rough approximation. Real terrain effects (hills, buildings) are not modeled.
-- **Symmetric gap-fill**: Gap-filled links use `bidir: true` with averaged SNR. Real links are often asymmetric.
+- **ITM model fidelity**: ITM uses SRTM terrain data (~30m resolution) but does not model buildings, vegetation, or local obstructions. The `--clutter-db` parameter is a rough compensation.
+- **Stochastic link survival**: The `--link-survival` flag randomly drops links to simulate real-world sparsity (not all theoretically possible links exist in practice), but the randomness doesn't correlate with terrain or distance.
+- **SNR snapshot**: Node positions come from a single API fetch. Real nodes may move, go offline, or change antenna configuration.
+- **Symmetric links**: All links are generated as bidirectional with equal SNR. Real LoRa links are often asymmetric.
+- **No measured SNR**: Unlike the older `convert_topology.py` pipeline (which used measured neighbor-table SNR), the topology generator computes all SNR values from the propagation model. This gives consistent coverage but may miss real-world anomalies.
 
 ## 2. Companion Placement
 
-### Method (`tools/build_real_sim.py`)
+### Method (`tools/inject_test.py`)
 
-Companion nodes (message endpoints) are placed automatically using **farthest-point sampling**:
+Companion nodes (message endpoints) are placed automatically using **connectivity-aware farthest-point sampling**:
 
-1. Pick a random repeater as the first companion's anchor (seeded RNG for reproducibility)
-2. For each subsequent companion: select the repeater that maximizes the minimum distance to all already-chosen repeaters
+1. Identify the **largest connected component** of repeaters (SNR > 0 links only) to ensure all companions can theoretically reach each other
+2. Filter to repeaters with at least `--min-neighbors` good neighbors (default 2) — avoids placing companions on poorly connected edge nodes
+3. Apply **farthest-point sampling**: pick a random repeater as the first anchor, then iteratively select the repeater that maximizes the minimum geographic distance to all already-chosen anchors
 
-This produces geographically spread companions that stress-test multi-hop routing rather than clustering in one area.
-
-Each companion connects to its anchor repeater with a strong link (SNR=10 dB, no loss) — simulating a user standing next to a repeater.
+The density test scripts place **4 companions** named `alice`, `bob`, `carol`, `dave`. Each companion connects to its anchor repeater with a strong link (SNR=10 dB, RSSI=-70 dBm) — simulating a user standing next to a repeater.
 
 ### Limitations
 
 - **Uniform strong links**: Real companion-to-repeater links vary in quality. A companion indoors or far from its repeater would have worse SNR.
 - **No mobility**: Companions are static for the entire simulation.
-- **Anchor selection ignores connectivity**: A geographically distant repeater might be poorly connected to the mesh. The algorithm optimizes geographic spread, not routing quality.
+- **Geographic vs routing spread**: The algorithm optimizes geographic distance between anchors, not routing diversity. Two geographically distant repeaters might share the same bottleneck relay.
 
 ## 3. Message Simulation
 
-
 ### Hot start
 
-Simulation always start with hot start phase - network stabilization. In this phase all collision detections are off, the purpose is to let each
-repeater knows its surronding AND each companion knows all the other companions.
+Simulations always start with a hot-start phase — collision-free network stabilization. In this phase all collision detection is off; the purpose is to let each repeater know its surroundings AND each companion discover all other companions.
 
-### Simulation length
+### Simulation parameters
 
-Test simulation period is 22 minutes with the following setup:
+The density test scripts use the following setup:
 
-- **12 companions** placed via farthest-point sampling across 71 repeaters
-- **Message interval**: 200s mean (each schedule gets a random offset within [0, interval) for desynchronization)
-- **4 concurrent patterns**: 1-to-1, 1-to-many, many-to-1, and channel broadcast — all interleaved from the same base time
-- **Deterministic randomization**: 3 different seeds per parameter combination (seeds 42, 43, 44)
-
+- **4 companions** placed via farthest-point sampling
+- **15 minutes** simulation duration (900,000 ms)
+- **Message interval**: 70s mean for direct messages, 80s mean for channel broadcasts
+- **5 direct messages** and **4 channel messages** per schedule entry
+- **Poisson-distributed timing**: each message gets an exponential inter-arrival time (mean = interval), clamped to [0.2x, 3x] to avoid extreme bunching or gaps. This models realistic user behavior rather than fixed-interval robots.
+- **6 seeds** per parameter combination (seeds 42-47) to account for stochastic variation
 
 ### Schedule patterns
 
-Four patterns run concurrently (interleaved), each with random start offsets per schedule to avoid artificial synchronization:
+Four patterns run concurrently (interleaved), all using Poisson-distributed send times:
 
 | Pattern | Command | Description | Purpose |
 |---|---|---|---|
-| **1-to-1** | `msga` | Round-robin pairs (c01->c02, c02->c03, ..., cN->c01) | Baseline point-to-point delivery |
-| **1-to-many** | `msga` | First companion broadcasts to all others | Tests fan-out / flood routing |
-| **many-to-1** | `msga` | All companions send to last companion | Tests convergent traffic / congestion |
+| **1-to-1** | `msga` | Round-robin pairs (alice->bob, bob->carol, carol->dave, dave->alice) | Baseline point-to-point delivery |
+| **1-to-many** | `msga` | First companion sends to all others (alice->bob, alice->carol, alice->dave) | Tests fan-out / flood routing |
+| **many-to-1** | `msga` | All send to last companion (alice->dave, bob->dave, carol->dave) | Tests convergent traffic / congestion |
 | **channel broadcast** | `msgc` | Each companion sends on public channel (channel 0) | Tests flood routing under mixed traffic |
 
 Direct messages (first three patterns) use `msga` (message with ack tracking) so both delivery and acknowledgement rates are measured. Channel messages use `msgc` (flood, no ack) — delivery is tracked by counting receptions at all other companions.
@@ -86,26 +99,41 @@ Direct messages (first three patterns) use `msga` (message with ack tracking) so
 ### Timing
 
 - All four patterns start from the same base time: warmup + 5 seconds (after hot-start advert exchange completes)
-- Each individual schedule gets a random offset within [0, interval) to desynchronize
+- Each individual message gets a random Poisson-distributed send time
 - All patterns compete for airtime simultaneously — creating realistic mixed traffic load
 - Duration auto-extends to fit all schedules + 30s delivery buffer
 
+### Message count
+
+With 4 companions, the auto-scheduler generates per seed run:
+
+| Pattern | Pairs | Msgs/pair | Total messages |
+|---------|-------|-----------|----------------|
+| 1-to-1 | 4 | 5 | 20 |
+| 1-to-many | 3 | 5 | 15 |
+| many-to-1 | 3 | 5 | 15 |
+| **Direct total** | | | **50** |
+| Channel | 4 senders | 4 | 16 |
+
+50 direct messages per seed, 300 across 6 seeds.
+
 ### Message size
 
-Test messages are ~70-75 characters each, approximating realistic MeshCore message length. Examples:
-- Direct: `"1to1 c01->c02 seq=3 direct msg status ok signal good position hold steady"`
-- Channel: `"chan c01 seq=3 public channel broadcast mesh network status check all nodes"`
+Test messages are ~25-40 characters each. Examples:
+- Direct: `"1to1 alice->bob seq=3"`
+- Channel: `"chan alice seq=3"`
 
 ### Limitations
 
-- **Artificial traffic patterns**: Real networks see irregular, bursty messaging — not periodic schedules.
-- **Fixed message size**: All messages are ~75 chars. Real traffic includes short status pings and longer payloads.
+- **Artificial traffic patterns**: Real networks see irregular, bursty messaging — not scheduled patterns, even with Poisson timing.
+- **Small companion count**: 4 companions is a light traffic load compared to a busy real network with dozens of active users.
+- **Fixed message size**: All messages are short. Real traffic includes longer payloads.
 
 ## 4. Radio Physics
 
 The orchestrator simulates LoRa radio physics:
 
-- **Collision detection**: 3-stage model with timing-dependent capture (1 dB locked / 6 dB unlocked), preamble grace, FEC tolerance. See [RADIO_MODEL.md](RADIO_MODEL.md) for full details.
+- **Collision detection**: 3-stage model with timing-dependent capture (3 dB locked / 6 dB unlocked), preamble grace, FEC tolerance. See [RADIO_MODEL.md](../docs/RADIO_MODEL.md) for full details.
 - **Half-duplex**: nodes cannot TX while receiving (RX blocks TX, TX aborts active RX)
 - **Listen-before-talk**: channel activity detection with preamble sensing delay
 - **SNR variance**: per-link Gaussian jitter on each reception
@@ -114,12 +142,12 @@ The orchestrator simulates LoRa radio physics:
 ### Limitations
 
 - **No multipath/fading dynamics**: SNR variance is static Gaussian, not correlated over time (no slow fading, no Doppler)
-- **No duty cycle**: Real LoRa is subject to regulatory duty-cycle limits (1% in EU). The simulator does not enforce this, hence, it is easy to turn on
-- **No frequency-offset modeling**: All nodes assumed on the same channel. Real LoRa receivers have a frequency-dependent capture margin (+-30kHz for BW125).
+- **No duty cycle**: Real LoRa is subject to regulatory duty-cycle limits (1% in EU). The simulator does not enforce this.
+- **No frequency-offset modeling**: All nodes assumed on the same channel. Real LoRa receivers have a frequency-dependent capture margin.
 - **No near-far effect**: All SNR values come from the link table. A node receiving a weak distant signal next to a strong nearby transmitter doesn't experience additional desensitization beyond what the collision model captures.
 - **Clock stagger only**: Node desynchronization uses random clock offsets (0-120s). Real networks have drift, GPS sync, and power-cycle patterns.
 
-## 5. Delay Parameter Sweep
+## 5. Delay Parameters
 
 ### What we're optimizing
 
@@ -131,13 +159,11 @@ Three MeshCore repeater parameters:
 | `txdelay` | 0.5 | Random backoff factor for flood (broadcast) retransmissions. Higher = more spread = fewer collisions but slower delivery |
 | `direct.txdelay` | 0.3 | Random backoff factor for direct (point-to-point) retransmissions |
 
-### Method (`tools/optimize_delays.py`)
+### Two optimization approaches
 
-1. Define parameter grid (e.g., rxdelay 0-5 step 1, txdelay 0-1 step 0.2, direct.txdelay 0-0.5 step 0.1)
-2. For each combination, inject `set` commands to all repeaters just after warmup
-3. Run each combination with multiple seeds (default 3) to account for stochastic variation
-4. Parse delivery percentage from orchestrator output
-5. Report mean, standard deviation, min, max per combination
+**Static sweep** (`tools/optimize_delays.py`): sets identical delay values on all repeaters via `set` commands. Simple but ignores per-node density differences.
+
+**Auto-tune table sweep** (`tools/optimize_tuning.py`): optimizes the compile-time auto-tune lookup table so each repeater independently adapts delays based on its neighbor count. This is the approach used by the density test scripts (Section 5d) and described in detail below.
 
 ### Metrics & ranking
 
@@ -146,18 +172,9 @@ Three metrics are collected per run. Variants are ranked by **Delivery %** only;
 | Priority | Metric | Definition | Why |
 |:--------:|--------|------------|-----|
 | 1 | **Delivery %** | direct messages received / direct messages sent | Primary objective — point-to-point reliability is the most user-visible quality measure |
-| 2 | **Channel %** | channel receptions / expected receptions (sent × (N_companions − 1)) | Secondary — flood broadcast reach indicates overall network health |
+| 2 | **Channel %** | channel receptions / expected receptions (sent x (N_companions - 1)) | Secondary — flood broadcast reach indicates overall network health |
 | 3 | **Ack %** | acknowledgements received / acks expected | Tertiary — round-trip success is desirable but depends on both directions working |
 | — | **Stability** | standard deviation of Delivery % across seeds | Tiebreaker — lower variance means more predictable behaviour |
-
-### Limitations
-
-- **Set command side-effect**: MeshCore's `set` command triggers a preference write/reload even when setting the same value as the default. This means optimizer runs are not directly comparable to an unmodified baseline — but all runs within the sweep are affected equally, so relative rankings are valid.
-- **Grid resolution**: Coarse grids may miss narrow optima. Fine grids are expensive (each run takes ~5s for a 71-node network).
-- **Single topology**: Results are specific to this network topology. Different network shapes/sizes may have different optimal delays.
-- **Fixed radio params**: The sweep holds SF/BW/CR constant. Optimal delays may differ for SF7 vs SF12.
-- **No interaction with other settings**: Only delay parameters are swept. Other MeshCore settings (e.g., max hops, flood limits) stay at defaults.
-- **Uniform settings**: All repeaters are set to the exactly same delay settings - no distinction for 'local/regional' repeaters. We are testing kind of 'default' settings.
 
 ## 5b. Auto-Tune Table Optimization
 
@@ -175,8 +192,6 @@ struct DelayTuning {
 
 When `auto_tune_delays` is enabled (on by default), each repeater calls `recalcAutoTune()` periodically. This counts active neighbors (SNR > 0, heard within 7 days) and looks up the corresponding table entry. Sparse nodes (few neighbors) use lower delays for faster forwarding; dense nodes (many neighbors) use higher delays to reduce collisions.
 
-Unlike the static sweep (Section 5) which sets identical delays on all repeaters, auto-tuning lets each repeater adapt to its local topology — a more realistic and potentially better-performing approach.
-
 ### Parameterization
 
 Optimizing all 39 table values (13 entries x 3 floats) directly would create an intractable search space. Instead, the table is parameterized as a **linear model** with 6 free parameters:
@@ -187,20 +202,20 @@ value(n) = clamp(base + slope * n, clamp_min, clamp_max)
 
 where `n` is the neighbor count (0-12). Three (base, slope) pairs — one for each delay type:
 
-| Parameter | Meaning | Typical range |
+| Parameter | Meaning | Sweep range (density scripts) |
 |---|---|---|
-| `tx_base` | tx_delay at 0 neighbors | 0.5 - 2.0 |
-| `tx_slope` | tx_delay increment per neighbor | 0.00 - 0.10 |
-| `dtx_base` | direct_tx_delay at 0 neighbors | 0.2 - 1.0 |
-| `dtx_slope` | direct_tx_delay increment per neighbor | 0.00 - 0.05 |
-| `rx_base` | rx_delay_base at 0 neighbors | 0.2 - 1.0 |
-| `rx_slope` | rx_delay_base increment per neighbor | 0.00 - 0.05 |
+| `tx_base` | tx_delay at 0 neighbors | 0.0 - 1.5 (step 0.5) |
+| `tx_slope` | tx_delay increment per neighbor | 0.3 - 0.6 (step 0.3) |
+| `dtx_base` | direct_tx_delay at 0 neighbors | 0.0 - 1.5 (step 0.5) |
+| `dtx_slope` | direct_tx_delay increment per neighbor | 0.3 - 0.6 (step 0.3) |
+| `rx_base` | rx_delay_base at 0 neighbors | 0.0 - 1.5 (step 0.5) |
+| `rx_slope` | rx_delay_base increment per neighbor | 0.3 - 0.6 (step 0.3) |
 
-Example: `tx_base=1.0, tx_slope=0.033` produces tx_delay values from 1.000 (0 neighbors) to 1.396 (12 neighbors).
+This gives 4 x 2 x 4 x 2 x 4 x 2 = **512 variants** per density level.
 
 ### Method (`tools/optimize_tuning.py`)
 
-The script operates differently from `optimize_delays.py` because it must recompile the MeshCore fork for each parameter variant:
+The script must recompile the MeshCore fork for each parameter variant:
 
 1. Parse 6 parameter ranges (each accepts `value` or `min:max:step` format)
 2. Backup original `DelayTuning.h`
@@ -208,7 +223,7 @@ The script operates differently from `optimize_delays.py` because it must recomp
    a. Generate `DelayTuning.h` from linear formula
    b. Rebuild the fork orchestrator (`cmake --build build-fork`, ~15-25s)
    c. Run all seeds in parallel (via `-j` flag)
-   d. Parse delivery/ack/channel results
+   d. Parse delivery/ack/channel/fate results
 4. Restore original `DelayTuning.h` (guaranteed via `try/finally`)
 5. Aggregate and rank results
 
@@ -217,13 +232,13 @@ The config is sanitized before each run: any manual `set rxdelay`/`set txdelay`/
 ### CLI
 
 ```bash
-python3 tools/optimize_tuning.py simulation/real_network.json \
-  --tx-base 0.8:1.2:0.1 --tx-slope 0.02:0.05:0.01 \
-  --dtx-base 0.3:0.5:0.05 --dtx-slope 0.01:0.03:0.005 \
-  --rx-base 0.3:0.5:0.05 --rx-slope 0.01:0.03:0.005 \
-  --seeds 3 --build-dir build-fork \
+python3 tools/optimize_tuning.py config.json \
+  --tx-base 0.0:1.5:0.5 --tx-slope 0.3:0.6:0.3 \
+  --dtx-base 0.0:1.5:0.5 --dtx-slope 0.3:0.6:0.3 \
+  --rx-base 0.0:1.5:0.5 --rx-slope 0.3:0.6:0.3 \
+  --seeds 6 --build-dir build-fork \
   --meshcore-dir ../MeshCore-stachuman \
-  -j 4 -o results.csv
+  -j 6 -o results.csv
 ```
 
 | Flag | Default | Description |
@@ -259,22 +274,20 @@ cmake --build build-fork
 
 ### Time estimation
 
-Each variant requires a rebuild (~15-25s) plus seed runs. For a simulation config that takes ~30s per seed:
+Each variant requires a rebuild (~15-25s) plus seed runs. For a 15-minute simulation with 6 seeds and `-j 6`:
 
-| Sweep dimensions | Variants | Seeds | Time per variant | Total |
-|---|---|---|---|---|
-| 1x1x1x1x1x1 | 1 | 3 | ~50s | ~1 min |
-| 3x3x1x1x1x1 | 9 | 3 | ~50s | ~8 min |
-| 5x4x3x3x3x3 | 1620 | 3 | ~50s | ~22 hours |
-
-Strategy: start with coarse sweeps on few parameters (fix others as constants), then refine around the best region.
+| Variants | Seeds | Time per variant | Total |
+|---|---|---|---|
+| 1 | 6 | ~50s | ~1 min |
+| 64 (4x2x4x1x1x1) | 6 | ~50s | ~1 hour |
+| 512 (4x2x4x2x4x2) | 6 | ~50s | ~7 hours |
 
 ### Output
 
 The script prints a ranked table of all variants with delivery metrics and message fate diagnostics. For the best result, it outputs the full 13-entry C array ready to paste into `DelayTuning.h`:
 
 ```
-  Top 10 variants (of 384):
+  Top 10 variants (of 512):
     tx_b   tx_s   dtx_b  dtx_s    rx_b   rx_s    mean    std   min   max  delivered   acks   chan  col/lost  drp/lost
   ------ ------  ------ ------  ------ ------  ------  -----  ----  ----  ---------  -----  -----  --------  --------
    0.000 0.3000   0.000 0.3000   0.500 0.3000   51.0%   3.3%   48%   56%   153/300      4%    51%      73.9       0.8
@@ -307,7 +320,7 @@ CSV columns:
 ### Limitations
 
 - **Linear model constraint**: Real optimal tables may be non-linear (e.g., plateau in the middle, steeper rise at high neighbor counts). The linear model cannot capture these shapes. Future work could add piecewise-linear or polynomial models.
-- **Sequential builds**: Each variant requires a full rebuild (~15-25s). This limits practical sweep size compared to `optimize_delays.py` where all runs can be parallelized.
+- **Sequential builds**: Each variant requires a full rebuild (~15-25s). This limits practical sweep size.
 - **Single build directory**: Only one variant can be compiled at a time. Running multiple instances of the script simultaneously against the same build directory will corrupt results.
 - **Topology-specific**: Optimal table values depend on the network's neighbor-count distribution. A network where most nodes have 2-4 neighbors will be sensitive to different table entries than one where most have 8-10.
 - **Static table**: The linear model assumes the relationship between neighbor count and optimal delay is consistent across all network conditions. In practice, the optimal slope may depend on traffic load, message patterns, or radio parameters.
@@ -373,103 +386,127 @@ These help distinguish between parameter regimes where messages fail due to coll
 
 ### Purpose
 
-Optimal delay parameters may differ across network densities. The `delay_optimization/` directory includes three scripts that generate networks with different link densities from the Gdansk region and run full parameter sweeps on each:
-
-| Script | Density | Key topology flags | Typical neighbors |
-|--------|---------|-------------------|-------------------|
-| `run_sparse.sh` | Sparse | `--link-survival 0.2 --max-edges-per-node 6 --max-good-links 2` | 1-3 |
-| `run_medium.sh` | Medium | `--link-survival 0.4 --max-edges-per-node 12 --max-good-links 3` | 3-6 |
-| `run_dense.sh` | Dense | `--link-survival 0.7 --max-edges-per-node 16 --max-good-links 6` | 6-12 |
+Optimal delay parameters may differ across network densities. The `delay_optimization/` directory includes three scripts that generate networks with different link densities from the Gdansk region and run full parameter sweeps on each.
 
 ### What each script does
 
-1. Runs `topology_generator` to generate a topology from the Gdansk region API
-2. Runs `inject_test.py` to place companions and generate message schedules
-3. Runs `optimize_tuning.py` with the generated config
+Each script runs a 4-step pipeline:
 
-Results are saved as `results_<density>_<timestamp>.csv` in the `delay_optimization/` directory.
+1. **Generate topology** — runs `topology_generator` with the Gdansk region, density-specific link survival and edge caps
+2. **Inject test cases** — runs `inject_test.py` to place 4 companions (alice, bob, carol, dave) and generate auto-schedules (70s direct interval, 80s channel interval, 5 direct + 4 channel messages per entry)
+3. **Print topology statistics** — runs `topology_stats.py` to summarize the generated network
+4. **Run optimization sweep** — runs `optimize_tuning.py` with 512 variants (4x2x4x2x4x2), 6 seeds, 6 parallel jobs
 
-### Density control parameters
+### Density configurations
 
-The topology generator uses these flags to control link density:
+| Script | Density | `--link-survival` | `--max-edges-per-node` | `--max-good-links` | Typical neighbors |
+|--------|---------|-------------------|------------------------|--------------------|--------------------|
+| `run_sparse.sh` | Sparse | 0.2 | 6 | 2 | 1-3 |
+| `run_medium.sh` | Medium | 0.4 | 12 | 3 | 3-6 |
+| `run_dense.sh` | Dense | 0.7 | 16 | 6 | 6-12 |
 
-| Flag | Effect |
-|------|--------|
-| `--link-survival` | Sigmoid-based probability that an ITM-computed link survives. Lower values = sparser network. |
-| `--max-edges-per-node` | Hard cap on total neighbors per node |
-| `--max-good-links` | Cap on "good" links (SNR > 0) per node. Remaining slots filled with weaker links. |
+### Sweep parameters (same for all densities)
+
+| Parameter | Range | Values |
+|-----------|-------|--------|
+| `tx_base` | 0.0:1.5:0.5 | 0.0, 0.5, 1.0, 1.5 |
+| `tx_slope` | 0.3:0.6:0.3 | 0.3, 0.6 |
+| `dtx_base` | 0.0:1.5:0.5 | 0.0, 0.5, 1.0, 1.5 |
+| `dtx_slope` | 0.3:0.6:0.3 | 0.3, 0.6 |
+| `rx_base` | 0.0:1.5:0.5 | 0.0, 0.5, 1.0, 1.5 |
+| `rx_slope` | 0.3:0.6:0.3 | 0.3, 0.6 |
+
+### Output files
+
+Each script generates three files in the `delay_optimization/` directory:
+
+| File | Description |
+|------|-------------|
+| `<density>_topology.json` | Raw topology from `topology_generator` |
+| `<density>_test.json` | Complete simulation config with companions and schedules |
+| `results_<density>_<timestamp>.csv` | Full sweep results (512 rows) |
 
 ### Usage
 
-```bash
-cd delay_optimization
-bash run_sparse.sh    # sparse network sweep
-bash run_medium.sh    # medium network sweep
-bash run_dense.sh     # dense network sweep
-```
-
-Each script accepts `MESHCORE_DIR` as an environment variable to point to the MeshCore fork.
-
-## 6. Running the Pipeline
+Scripts are run from the project root (they `cd` automatically):
 
 ```bash
-# 1. Generate simulation config (10 companions, SF8/BW125k, direct + channel messages)
-python3 tools/build_real_sim.py simulation/topology.json \
-  --companions 10 --sf 8 --bw 125000 --cr 4 \
-  --msg-interval 30 --msg-count 5 \
-  -o simulation/real_network.json -v
+# Full sweeps
+./delay_optimization/run_sparse.sh
+./delay_optimization/run_medium.sh
+./delay_optimization/run_dense.sh
 
-# 1b. Same but with separate channel interval, or no channel messages
-python3 tools/build_real_sim.py simulation/topology.json \
-  --companions 10 --sf 8 --bw 125000 --cr 4 \
-  --msg-interval 30 --msg-count 5 \
-  --chan-interval 60 --chan-count 3 \
-  -o simulation/real_network.json -v
-
-python3 tools/build_real_sim.py simulation/topology.json \
-  --companions 10 --no-channel \
-  -o simulation/real_network.json -v
-
-# 2. Quick test run
-build/orchestrator/orchestrator simulation/real_network.json > output.ndjson
-
-# 3a. Static delay sweep (all repeaters get same values)
-python3 tools/optimize_delays.py simulation/real_network.json \
-  --rxdelay 0:5:1 --txdelay 0:1:0.2 --direct-txdelay 0:0.5:0.1 \
-  --seeds 3 -j 4 -o results_static.csv
-
-# 3b. Auto-tune table sweep (each repeater adapts by neighbor count)
-# Requires MeshCore fork build:
-#   cmake -S . -B build-fork -DMESHCORE_DIR=$(pwd)/../MeshCore-stachuman
-#   cmake --build build-fork
-python3 tools/optimize_tuning.py simulation/real_network.json \
-  --tx-base 0.8:1.2:0.1 --tx-slope 0.02:0.05:0.01 \
-  --dtx-base 0.3:0.5:0.1 --dtx-slope 0.02 \
-  --rx-base 0.3:0.5:0.1 --rx-slope 0.02 \
-  --seeds 3 --build-dir build-fork \
-  --meshcore-dir ../MeshCore-stachuman \
-  -j 4 -o results_tuning.csv
-
-# 3c. Apply specific static delays to a config (without sweep)
-python3 tools/set_delays.py simulation/real_network.json \
-  --rxdelay 1.0 --txdelay 0.5 --direct-txdelay 0.2 \
-  -o simulation/real_network_tuned.json
-
-# 4. Visualize a specific run
-python3 visualization/visualize.py output.ndjson
+# Quick test (override seeds/jobs)
+./delay_optimization/run_sparse.sh --seeds 2 -j 2
 ```
 
-Channel schedule flags for `build_real_sim.py`:
+Each script accepts `MESHCORE_DIR` as an environment variable to point to the MeshCore fork (defaults to `../MeshCore-stachuman`).
 
-| Flag | Default | Description |
-|---|---|---|
-| `--no-channel` | off | Disable channel broadcast messages entirely |
-| `--chan-interval` | same as `--msg-interval` | Channel message interval in seconds |
-| `--chan-count` | same as `--msg-count` | Number of channel messages per companion |
+### Prerequisites
+
+1. MeshCore fork at `../MeshCore-stachuman` (or set `MESHCORE_DIR`)
+2. Fork build directory configured: `cmake -S . -B build-fork -DMESHCORE_DIR=$(pwd)/../MeshCore-stachuman`
+3. API cache recommended (`/tmp/meshcore_nodes_cache.json`) — first run downloads ~31K nodes
+4. Python venv active with `requirements.txt` dependencies
+
+## 6. Running the Pipeline Manually
+
+The density test scripts automate the full pipeline, but each step can be run independently:
+
+```bash
+# Step 1: Generate topology from live network data
+python3 -m topology_generator \
+    --region 53.7,17.3,54.8,19.5 \
+    --api-cache /tmp/meshcore_nodes_cache.json \
+    --freq-mhz 869.618 --tx-power-dbm 20.0 --antenna-height 5.0 \
+    --sf 8 --bw 62500 --cr 4 \
+    --max-distance-km 40 --min-snr -10.0 \
+    --max-edges-per-node 12 --max-good-links 3 \
+    --link-survival 0.4 --clutter-db 6.0 \
+    -v -o topology.json
+
+# Step 2: Inject companions and message schedules
+python3 tools/inject_test.py topology.json \
+    --companions 4 --companion-names alice,bob,carol,dave \
+    --min-neighbors 2 \
+    --auto-schedule --channel \
+    --msg-interval 70 --msg-count 5 \
+    --chan-interval 80 --chan-count 4 \
+    --duration 900000 \
+    -v -o test_config.json
+
+# Step 3: Inspect the generated topology
+python3 tools/topology_stats.py test_config.json
+
+# Step 4: Quick test run
+build/orchestrator/orchestrator test_config.json > events.ndjson
+
+# Step 5: Auto-tune table sweep (requires MeshCore fork build)
+python3 tools/optimize_tuning.py test_config.json \
+    --tx-base 0.0:1.5:0.5 --tx-slope 0.3:0.6:0.3 \
+    --dtx-base 0.0:1.5:0.5 --dtx-slope 0.3:0.6:0.3 \
+    --rx-base 0.0:1.5:0.5 --rx-slope 0.3:0.6:0.3 \
+    --seeds 6 --build-dir build-fork \
+    --meshcore-dir ../MeshCore-stachuman \
+    -j 6 -o results.csv
+
+# Step 6: Visualize a specific run
+python3 visualization/visualize.py events.ndjson --config test_config.json
+```
+
+### Alternative: static delay sweep
+
+For a simpler sweep that sets identical delays on all repeaters (without recompiling):
+
+```bash
+python3 tools/optimize_delays.py test_config.json \
+    --rxdelay 0:5:1 --txdelay 0:1:0.2 --direct-txdelay 0:0.5:0.1 \
+    --seeds 3 -j 4 -o results_static.csv
+```
 
 ## 7. Results
 
-All results use Gdansk/Pomerania region topologies generated via `topology_generator` with ITM propagation model. Three network densities are tested (see Section 5d). Each sweep uses `optimize_tuning.py` with 3 seeds per variant. CSV files with full results are stored in this directory.
+All results use Gdansk/Pomerania region topologies generated via `topology_generator` with ITM propagation model. Three network densities are tested (see Section 5d). Each sweep uses `optimize_tuning.py` with 512 variants and 6 seeds per variant. CSV files with full results are stored in this directory.
 
 ### 7.1 Sparse network
 
@@ -477,7 +514,7 @@ Script: `run_sparse.sh`. Topology: `--link-survival 0.2 --max-edges-per-node 6 -
 
 CSV: [`results_sparse_<timestamp>.csv`]
 
-*(Results pending — run `bash run_sparse.sh`)*
+*(Results pending — run `bash ./delay_optimization/run_sparse.sh`)*
 
 ### 7.2 Medium network
 
@@ -485,7 +522,7 @@ Script: `run_medium.sh`. Topology: `--link-survival 0.4 --max-edges-per-node 12 
 
 CSV: [`results_medium_<timestamp>.csv`]
 
-*(Results pending — run `bash run_medium.sh`)*
+*(Results pending — run `bash ./delay_optimization/run_medium.sh`)*
 
 ### 7.3 Dense network
 
@@ -493,7 +530,7 @@ Script: `run_dense.sh`. Topology: `--link-survival 0.7 --max-edges-per-node 16 -
 
 CSV: [`results_dense_<timestamp>.csv`]
 
-*(Results pending — run `bash run_dense.sh`)*
+*(Results pending — run `bash ./delay_optimization/run_dense.sh`)*
 
 ### Key findings
 
