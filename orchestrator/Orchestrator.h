@@ -5,6 +5,9 @@
 #include <memory>
 #include <random>
 #include <map>
+#include <set>
+#include <unordered_map>
+#include <unordered_set>
 
 #include "VirtualClock.h"
 #include "NodeContext.h"
@@ -138,6 +141,23 @@ class Orchestrator {
         std::string tx, rx, collision, drop_halfduplex, drop_weak, drop_loss, tx_fail;
     };
     std::vector<NodeEventKeys> _node_event_keys;
+
+    // Per-message fate tracking: follows each scheduled message through relay chain
+    struct MessageFate {
+        int from_idx;
+        int to_idx;                 // destination companion node index
+        unsigned long send_time_ms;
+        std::unordered_set<uint32_t> pkt_hashes;  // all hashes in this message's relay tree
+        int tx_count = 0;
+        int rx_count = 0;
+        int collisions = 0;
+        int drops = 0;              // weak + halfduplex + loss combined
+        bool delivered = false;     // tracked hash reached to_idx as successful RX
+    };
+    std::vector<MessageFate> _message_fates;
+    std::unordered_map<uint32_t, int> _hash_to_fate;  // pkt_hash → fate index
+    std::unordered_map<int, int> _pending_msg_fates;   // node_idx → fate index (awaiting initial TX)
+    std::vector<std::set<int>> _step_rx_fates;          // [node_idx] → fate indices delivered this step
 
     int findNode(const std::string& name) const;
     void routePackets(unsigned long current_ms);

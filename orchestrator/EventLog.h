@@ -9,6 +9,8 @@ namespace EventLog {
 
 // Compute 8-char hex packet fingerprint (FNV-1a hash)
 void packetHashHex(char out[9], const uint8_t* data, int len);
+// Compute raw uint32_t FNV-1a hash (for programmatic use)
+uint32_t packetHash(const uint8_t* data, int len);
 
 void simStart(unsigned long time_ms, int n_nodes, int step_ms,
               unsigned long warmup_ms = 0, bool hot_start = false);

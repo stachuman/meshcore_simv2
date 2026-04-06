@@ -47,6 +47,9 @@ void Orchestrator::configure(const OrchestratorConfig& cfg) {
     _tx_count = 0;
     _rx_count = 0;
     _event_counts.clear();
+    _message_fates.clear();
+    _hash_to_fate.clear();
+    _pending_msg_fates.clear();
 
     // Create nodes (each owns its own VirtualClock for per-node time stagger)
     for (const auto& nd : cfg.nodes) {
@@ -71,6 +74,9 @@ void Orchestrator::configure(const OrchestratorConfig& cfg) {
             "tx_fail:" + nm
         };
     }
+
+    // Initialize per-node step tracking for message fate relay detection
+    _step_rx_fates.resize(_nodes.size());
 
     // Build link model
     int n = (int)_nodes.size();
@@ -196,6 +202,12 @@ static bool isDestroyedBy(const PendingRx& primary, const PendingRx& interferer,
     return true;  // primary is destroyed
 }
 
+// Helper: check if packet header indicates "msg" payload type (bits 5-2 == 0x02)
+static bool isMsgPacketType(const uint8_t* data, int len) {
+    if (len < 1) return false;
+    return ((data[0] >> 2) & 0x0F) == 0x02;
+}
+
 void Orchestrator::registerTransmissions(unsigned long current_ms) {
     int n = (int)_nodes.size();
 
@@ -308,6 +320,31 @@ void Orchestrator::registerTransmissions(unsigned long current_ms) {
                         (int)cap.data.size(), airtime);
             }
 
+            // Message fate: link TX hash to tracked message
+            uint32_t tx_hash = EventLog::packetHash(cap.data.data(), (int)cap.data.size());
+            int linked_fate = -1;
+            // Check if this is the initial TX from a pending message command
+            auto pmf_it = _pending_msg_fates.find(sender);
+            if (pmf_it != _pending_msg_fates.end() && isMsgPacketType(cap.data.data(), (int)cap.data.size())) {
+                linked_fate = pmf_it->second;
+                _message_fates[linked_fate].pkt_hashes.insert(tx_hash);
+                _message_fates[linked_fate].tx_count++;
+                _hash_to_fate[tx_hash] = linked_fate;
+                _pending_msg_fates.erase(pmf_it);
+            }
+            // Check if this is a relay TX from a node that received tracked packets
+            // (persistent across steps — Dispatcher may delay relay by many steps)
+            if (linked_fate < 0 && !_step_rx_fates.empty() && !_step_rx_fates[sender].empty()
+                && isMsgPacketType(cap.data.data(), (int)cap.data.size())) {
+                for (int fi : _step_rx_fates[sender]) {
+                    _message_fates[fi].pkt_hashes.insert(tx_hash);
+                    _message_fates[fi].tx_count++;
+                    _hash_to_fate[tx_hash] = fi;
+                    linked_fate = fi;
+                }
+                _step_rx_fates[sender].clear();  // consumed — prevent re-linking
+            }
+
             for (int receiver = 0; receiver < n; receiver++) {
                 if (receiver == sender) continue;
                 LinkParams lp;
@@ -353,6 +390,7 @@ void Orchestrator::registerTransmissions(unsigned long current_ms) {
                         fprintf(stderr, "[%8.3fs]   X  %s weak (snr=%.1f < %.1f)\n",
                                 current_ms / 1000.0, rname, rx_snr, thr);
                     }
+                    if (linked_fate >= 0) _message_fates[linked_fate].drops++;
                     continue;
                 }
 
@@ -388,6 +426,7 @@ void Orchestrator::registerTransmissions(unsigned long current_ms) {
                                 current_ms / 1000.0, rname,
                                 _nodes[receiver]->tx_busy_until / 1000.0);
                     }
+                    if (linked_fate >= 0) _message_fates[linked_fate].drops++;
                     continue;
                 }
 
@@ -493,6 +532,11 @@ void Orchestrator::deliverReceptions(unsigned long current_ms) {
             if (it->rx_end_ms <= current_ms) {
                 const char* sname = _nodes[it->sender_idx]->name.c_str();
                 const char* rname = _nodes[i]->name.c_str();
+
+                // Message fate tracking: look up packet hash
+                uint32_t rx_hash = EventLog::packetHash(it->data.data(), (int)it->data.size());
+                auto fate_it = _hash_to_fate.find(rx_hash);
+
                 if (!it->collided && !it->link_loss && !it->halfduplex_abort) {
                     _rx_count++;
                     _event_counts["rx"]++;
@@ -546,6 +590,21 @@ void Orchestrator::deliverReceptions(unsigned long current_ms) {
                         }
                     }
                 }
+
+                // Message fate: count this event for tracked messages
+                if (fate_it != _hash_to_fate.end()) {
+                    auto& fate = _message_fates[fate_it->second];
+                    if (!it->collided && !it->link_loss && !it->halfduplex_abort) {
+                        fate.rx_count++;
+                        _step_rx_fates[i].insert(fate_it->second);
+                        if (i == fate.to_idx) fate.delivered = true;
+                    } else if (it->collided) {
+                        fate.collisions++;
+                    } else {
+                        fate.drops++;  // halfduplex or link_loss
+                    }
+                }
+
                 it = arx.erase(it);
             } else {
                 ++it;
@@ -569,6 +628,29 @@ void Orchestrator::processCommands(unsigned long current_ms) {
                     current_ms / 1000.0, node->name.c_str(),
                     cmd.command.c_str(), reply.c_str());
         }
+
+        // Track message fates: detect "msg <dest>" or "msga <dest>" commands
+        const std::string& c = cmd.command;
+        bool is_msg = (c.size() > 4 && c.compare(0, 4, "msg ") == 0);
+        bool is_msga = (c.size() > 5 && c.compare(0, 5, "msga ") == 0);
+        if ((is_msg || is_msga) && c.find("msgc") != 0) {
+            // Parse destination name (second token)
+            size_t name_start = is_msga ? 5 : 4;
+            size_t name_end = c.find(' ', name_start);
+            if (name_end == std::string::npos) name_end = c.size();
+            std::string dest = c.substr(name_start, name_end - name_start);
+            int to_idx = findNode(dest);
+            if (to_idx >= 0) {
+                MessageFate fate;
+                fate.from_idx = cmd.node_index;
+                fate.to_idx = to_idx;
+                fate.send_time_ms = current_ms;
+                int fate_idx = (int)_message_fates.size();
+                _message_fates.push_back(std::move(fate));
+                _pending_msg_fates[cmd.node_index] = fate_idx;
+            }
+        }
+
         _next_cmd++;
     }
 }
@@ -809,6 +891,11 @@ bool Orchestrator::run() {
             registerTransmissions(current_ms);
         }
 
+        // Clear per-step pending message fates (initial TX is same-step)
+        _pending_msg_fates.clear();
+        // Note: _step_rx_fates is NOT cleared per-step — Dispatcher may
+        // delay relay TX by many steps. Cleared on consumption instead.
+
         current_ms += _step_ms;
         _clock.advanceMillis(_step_ms);
         for (auto& node : _nodes) {
@@ -964,6 +1051,41 @@ bool Orchestrator::run() {
         fprintf(stderr, "Acks: %d/%d received (%.0f%%)\n",
                 total_ack_received, total_ack_pending,
                 total_ack_received * 100.0 / total_ack_pending);
+    }
+
+    // Message fate summary — per-message collision/drop breakdown
+    if (!_message_fates.empty()) {
+        int n_tracked = (int)_message_fates.size();
+        int n_delivered = 0, n_lost = 0;
+        double del_tx = 0, del_rx = 0, del_col = 0, del_drop = 0;
+        double lost_tx = 0, lost_rx = 0, lost_col = 0, lost_drop = 0;
+        for (auto& f : _message_fates) {
+            if (f.delivered) {
+                n_delivered++;
+                del_tx += f.tx_count;
+                del_rx += f.rx_count;
+                del_col += f.collisions;
+                del_drop += f.drops;
+            } else {
+                n_lost++;
+                lost_tx += f.tx_count;
+                lost_rx += f.rx_count;
+                lost_col += f.collisions;
+                lost_drop += f.drops;
+            }
+        }
+        fprintf(stderr, "\nMessage fate (%d tracked, %d delivered, %d lost):\n",
+                n_tracked, n_delivered, n_lost);
+        if (n_delivered > 0) {
+            fprintf(stderr, "  Per delivered message: mean tx=%.1f  rx=%.1f  collision=%.1f  drop=%.1f\n",
+                    del_tx / n_delivered, del_rx / n_delivered,
+                    del_col / n_delivered, del_drop / n_delivered);
+        }
+        if (n_lost > 0) {
+            fprintf(stderr, "  Per lost message:      mean tx=%.1f  rx=%.1f  collision=%.1f  drop=%.1f\n",
+                    lost_tx / n_lost, lost_rx / n_lost,
+                    lost_col / n_lost, lost_drop / n_lost);
+        }
     }
 
     return checkAssertions();

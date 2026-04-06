@@ -205,6 +205,11 @@ The simulator models realistic LoRa radio behavior:
 - **SNR variance** -- per-link Gaussian sampling (`snr_std_dev`)
 - **Stochastic loss** -- per-link drop probability (`loss`)
 - **Adversarial modes** -- per-node packet drop, bit corruption, or delayed replay
+- **Message fate tracking** -- follows each message through the relay chain, counting per-message collisions and drops to diagnose delivery failures
+
+## Delay Optimization
+
+The `delay_optimization/` directory contains scripts for sweeping MeshCore delay parameters across different network densities. See [delay_optimization/DELAY_OPTIMIZATION.md](delay_optimization/DELAY_OPTIMIZATION.md) for methodology, results, and the multi-density test pipeline.
 
 ## Visualization
 
@@ -243,6 +248,7 @@ simple_repeater/     Standalone single-repeater binary
 companion_radio/     Standalone single-companion binary
 topology_generator/  ITM-based topology generation from live network data
 simulation/          Real-world topology data and generated configs
+delay_optimization/  Delay parameter sweep scripts and results
 test/                Test configs (t*.json) and runner
 tools/               Injection, generation, analysis, and run scripts
 visualization/       Interactive event visualizer

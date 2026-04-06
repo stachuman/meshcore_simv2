@@ -275,6 +275,54 @@ Additional NDJSON event types (logged but not counted for assertions):
 
 ---
 
+## Stderr Summary Output
+
+After the simulation completes, the orchestrator prints a summary to stderr. This includes radio stats, per-node message delivery, and (when `msg`/`msga` commands are present) message fate diagnostics.
+
+### Delivery summary
+
+```
+=== Simulation Summary (22.0min) ===
+Radio: 4521 TX, 6832 RX
+
+Sent messages:
+  alice        6 (flood:2 direct:4 group:0)
+    -> bob        3 sent, 2 delivered (67%)
+    -> carol      3 sent, 3 delivered (100%)
+
+Received messages:
+  bob          2  <-  alice:2
+  carol        3  <-  alice:3
+
+Delivery: 5/6 messages (83%)
+Channel: 12/18 receptions (67%)
+Acks: 3/5 received (60%)
+```
+
+### Message fate
+
+When `msg` or `msga` commands are used, the orchestrator tracks each message through the relay chain and reports per-message collision/drop means:
+
+```
+Message fate (50 tracked, 11 delivered, 39 lost):
+  Per delivered message: mean tx=194.2  rx=325.5  collision=290.2  drop=0.8
+  Per lost message:      mean tx=43.4  rx=65.0  collision=50.3  drop=0.6
+```
+
+| Field | Meaning |
+|-------|---------|
+| `tracked` | Number of `msg`/`msga` commands that were fate-tracked |
+| `delivered` | Messages where a tracked packet reached the destination |
+| `lost` | Messages where no tracked packet reached the destination |
+| `tx` | Mean number of transmissions (including relays) per message |
+| `rx` | Mean successful receptions per message |
+| `collision` | Mean packet collisions per message |
+| `drop` | Mean drops (half-duplex + link loss) per message |
+
+High `collision` relative to `tx` indicates congestion; high `drop` relative to `rx` indicates link-quality issues. Channel messages (`msgc`) are not tracked.
+
+---
+
 ## Converting Real Topology Data
 
 `tools/convert_topology.py` converts a real MeshCore network's `topology.json` (node list + directed SNR edges) into this config format.

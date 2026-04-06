@@ -66,13 +66,17 @@ static const char* decodeRouteType(uint8_t header) {
 
 namespace EventLog {
 
-void packetHashHex(char out[9], const uint8_t* data, int len) {
-    // FNV-1a 32-bit hash
+uint32_t packetHash(const uint8_t* data, int len) {
     uint32_t h = 0x811c9dc5u;
     for (int i = 0; i < len; i++) {
         h ^= data[i];
         h *= 0x01000193u;
     }
+    return h;
+}
+
+void packetHashHex(char out[9], const uint8_t* data, int len) {
+    uint32_t h = packetHash(data, len);
     for (int i = 7; i >= 0; i--) {
         out[i] = HEX[h & 0x0F];
         h >>= 4;

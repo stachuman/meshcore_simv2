@@ -163,15 +163,39 @@ def run_single(orchestrator_path, config_json_str, seed, run_id):
         chan_m = re.search(r"Channel:\s+(\d+)/(\d+)\s+receptions\s+\((\d+)%\)", stderr)
         chan_pct = int(chan_m.group(3)) if chan_m else -1
 
+        # Message fate stats
+        fate = {"tracked": 0, "delivered": 0, "lost": 0,
+                "del_collision": 0.0, "del_drop": 0.0,
+                "lost_collision": 0.0, "lost_drop": 0.0}
+        fate_m = re.search(r"Message fate \((\d+) tracked, (\d+) delivered, (\d+) lost\)", stderr)
+        if fate_m:
+            fate["tracked"] = int(fate_m.group(1))
+            fate["delivered"] = int(fate_m.group(2))
+            fate["lost"] = int(fate_m.group(3))
+        del_m = re.search(r"Per delivered message: mean tx=[\d.]+\s+rx=[\d.]+\s+collision=([\d.]+)\s+drop=([\d.]+)", stderr)
+        if del_m:
+            fate["del_collision"] = float(del_m.group(1))
+            fate["del_drop"] = float(del_m.group(2))
+        lost_m = re.search(r"Per lost message:\s+mean tx=[\d.]+\s+rx=[\d.]+\s+collision=([\d.]+)\s+drop=([\d.]+)", stderr)
+        if lost_m:
+            fate["lost_collision"] = float(lost_m.group(1))
+            fate["lost_drop"] = float(lost_m.group(2))
+
         summary_match = re.search(r"(=== Simulation Summary.*)", stderr, re.DOTALL)
         summary = summary_match.group(1).strip() if summary_match else ""
 
-        return (seed, delivered, sent, pct, ack_pct, chan_pct, summary)
+        return (seed, delivered, sent, pct, ack_pct, chan_pct, fate, summary)
 
     except subprocess.TimeoutExpired:
-        return (seed, 0, 0, 0, -1, -1, "TIMEOUT")
+        empty_fate = {"tracked": 0, "delivered": 0, "lost": 0,
+                      "del_collision": 0.0, "del_drop": 0.0,
+                      "lost_collision": 0.0, "lost_drop": 0.0}
+        return (seed, 0, 0, 0, -1, -1, empty_fate, "TIMEOUT")
     except Exception as e:
-        return (seed, 0, 0, 0, -1, -1, f"ERROR: {e}")
+        empty_fate = {"tracked": 0, "delivered": 0, "lost": 0,
+                      "del_collision": 0.0, "del_drop": 0.0,
+                      "lost_collision": 0.0, "lost_drop": 0.0}
+        return (seed, 0, 0, 0, -1, -1, empty_fate, f"ERROR: {e}")
     finally:
         if os.path.exists(tmp_path):
             os.unlink(tmp_path)
@@ -303,6 +327,23 @@ def main():
     completed_variants = 0
     t_start = time.monotonic()
 
+    CSV_HEADER = ["tx_base", "tx_slope", "dtx_base", "dtx_slope",
+                  "rx_base", "rx_slope",
+                  "mean_delivery_pct", "std_pct", "min_pct", "max_pct",
+                  "total_delivered", "total_sent", "mean_ack_pct",
+                  "mean_chan_pct", "n_seeds",
+                  "fate_tracked", "fate_delivered", "fate_lost",
+                  "lost_mean_collision", "lost_mean_drop"]
+
+    # Open CSV for incremental writes so results survive interruption
+    csv_file = None
+    csv_writer = None
+    if args.output:
+        csv_file = open(args.output, "w", newline="")
+        csv_writer = csv.writer(csv_file)
+        csv_writer.writerow(CSV_HEADER)
+        csv_file.flush()
+
     try:
         for vi, (tx_b, tx_s, dtx_b, dtx_s, rx_b, rx_s) in enumerate(variants):
             # --- Generate and write DelayTuning.h ---
@@ -326,9 +367,12 @@ def main():
                 print(f" BUILD FAILED", file=sys.stderr)
                 print(build_result.stderr, file=sys.stderr)
                 # Record failures for all seeds
+                empty_fate = {"tracked": 0, "delivered": 0, "lost": 0,
+                              "del_collision": 0.0, "del_drop": 0.0,
+                              "lost_collision": 0.0, "lost_drop": 0.0}
                 for seed in seeds:
                     raw_results.append((tx_b, tx_s, dtx_b, dtx_s, rx_b, rx_s,
-                                        seed, 0, 0, 0, -1, -1, "BUILD_FAILED"))
+                                        seed, 0, 0, 0, -1, -1, empty_fate, "BUILD_FAILED"))
                     completed_runs += 1
                 completed_variants += 1
                 continue
@@ -342,9 +386,9 @@ def main():
                 for si, seed in enumerate(seeds):
                     r = run_single(orchestrator_path, base_cfg_json, seed,
                                    run_id_base + si)
-                    seed_r, delivered, sent, pct, ack_pct, chan_pct, summary = r
+                    seed_r, delivered, sent, pct, ack_pct, chan_pct, fate, summary = r
                     raw_results.append((tx_b, tx_s, dtx_b, dtx_s, rx_b, rx_s,
-                                        seed_r, delivered, sent, pct, ack_pct, chan_pct, summary))
+                                        seed_r, delivered, sent, pct, ack_pct, chan_pct, fate, summary))
                     completed_runs += 1
 
                     elapsed = time.monotonic() - t_start
@@ -369,9 +413,9 @@ def main():
 
                     for future in as_completed(futures):
                         r = future.result()
-                        seed_r, delivered, sent, pct, ack_pct, chan_pct, summary = r
+                        seed_r, delivered, sent, pct, ack_pct, chan_pct, fate, summary = r
                         raw_results.append((tx_b, tx_s, dtx_b, dtx_s, rx_b, rx_s,
-                                            seed_r, delivered, sent, pct, ack_pct, chan_pct, summary))
+                                            seed_r, delivered, sent, pct, ack_pct, chan_pct, fate, summary))
                         completed_runs += 1
 
                         elapsed = time.monotonic() - t_start
@@ -389,7 +433,47 @@ def main():
 
             completed_variants += 1
 
+            # --- Incremental CSV: aggregate this variant and append ---
+            if csv_writer:
+                variant_runs = [(d, s, p, a, c, ft) for
+                                (tb, ts, db, ds, rb, rs, _, d, s, p, a, c, ft, _)
+                                in raw_results[-len(seeds):]
+                                if (tb, ts, db, ds, rb, rs) == (tx_b, tx_s, dtx_b, dtx_s, rx_b, rx_s)]
+                if variant_runs:
+                    v_pcts = [r[2] for r in variant_runs]
+                    v_acks = [r[3] for r in variant_runs if r[3] >= 0]
+                    v_chans = [r[4] for r in variant_runs if r[4] >= 0]
+                    v_mean = sum(v_pcts) / len(v_pcts)
+                    v_std = (math.sqrt(sum((p - v_mean) ** 2 for p in v_pcts) / (len(v_pcts) - 1))
+                             if len(v_pcts) > 1 else 0.0)
+                    v_del = sum(r[0] for r in variant_runs)
+                    v_sent = sum(r[1] for r in variant_runs)
+                    v_ack = sum(v_acks) / len(v_acks) if v_acks else -1
+                    v_chan = sum(v_chans) / len(v_chans) if v_chans else -1
+                    # Fate stats: sum across seeds
+                    v_fate_tracked = sum(r[5]["tracked"] for r in variant_runs)
+                    v_fate_del = sum(r[5]["delivered"] for r in variant_runs)
+                    v_fate_lost = sum(r[5]["lost"] for r in variant_runs)
+                    lost_cols = [r[5]["lost_collision"] for r in variant_runs if r[5]["lost"] > 0]
+                    lost_drps = [r[5]["lost_drop"] for r in variant_runs if r[5]["lost"] > 0]
+                    v_lost_col = sum(lost_cols) / len(lost_cols) if lost_cols else 0.0
+                    v_lost_drp = sum(lost_drps) / len(lost_drps) if lost_drps else 0.0
+                    csv_writer.writerow([
+                        tx_b, tx_s, dtx_b, dtx_s, rx_b, rx_s,
+                        round(v_mean, 1), round(v_std, 1),
+                        min(v_pcts), max(v_pcts),
+                        v_del, v_sent,
+                        round(v_ack, 1) if v_ack >= 0 else "",
+                        round(v_chan, 1) if v_chan >= 0 else "",
+                        len(variant_runs),
+                        v_fate_tracked, v_fate_del, v_fate_lost,
+                        round(v_lost_col, 1), round(v_lost_drp, 1),
+                    ])
+                    csv_file.flush()
+
     finally:
+        if csv_file:
+            csv_file.close()
         # --- Restore original DelayTuning.h ---
         with open(tuning_h_path, "w") as f:
             f.write(original_h)
@@ -398,9 +482,9 @@ def main():
     # --- Aggregate per variant ---
     combos = {}
     for r in raw_results:
-        tx_b, tx_s, dtx_b, dtx_s, rx_b, rx_s, seed, delivered, sent, pct, ack_pct, chan_pct, _ = r
+        tx_b, tx_s, dtx_b, dtx_s, rx_b, rx_s, seed, delivered, sent, pct, ack_pct, chan_pct, fate, _ = r
         key = (tx_b, tx_s, dtx_b, dtx_s, rx_b, rx_s)
-        combos.setdefault(key, []).append((delivered, sent, pct, ack_pct, chan_pct))
+        combos.setdefault(key, []).append((delivered, sent, pct, ack_pct, chan_pct, fate))
 
     aggregated = []
     for (tx_b, tx_s, dtx_b, dtx_s, rx_b, rx_s), runs in combos.items():
@@ -418,6 +502,15 @@ def main():
         mean_ack = sum(ack_pcts) / len(ack_pcts) if ack_pcts else -1
         mean_chan = sum(chan_pcts) / len(chan_pcts) if chan_pcts else -1
 
+        # Fate stats
+        fate_tracked = sum(r[5]["tracked"] for r in runs)
+        fate_delivered = sum(r[5]["delivered"] for r in runs)
+        fate_lost = sum(r[5]["lost"] for r in runs)
+        lost_cols = [r[5]["lost_collision"] for r in runs if r[5]["lost"] > 0]
+        lost_drps = [r[5]["lost_drop"] for r in runs if r[5]["lost"] > 0]
+        mean_lost_col = sum(lost_cols) / len(lost_cols) if lost_cols else 0.0
+        mean_lost_drp = sum(lost_drps) / len(lost_drps) if lost_drps else 0.0
+
         aggregated.append({
             "tx_b": tx_b, "tx_s": tx_s,
             "dtx_b": dtx_b, "dtx_s": dtx_s,
@@ -427,6 +520,9 @@ def main():
             "total_delivered": total_delivered, "total_sent": total_sent,
             "mean_ack": mean_ack, "mean_chan": mean_chan,
             "n_seeds": len(runs),
+            "fate_tracked": fate_tracked, "fate_delivered": fate_delivered,
+            "fate_lost": fate_lost,
+            "mean_lost_col": mean_lost_col, "mean_lost_drp": mean_lost_drp,
         })
 
     aggregated.sort(key=lambda a: (a["mean_pct"], -a["std_pct"]), reverse=True)
@@ -435,31 +531,36 @@ def main():
     t_str = f"{int(t_total//60)}m{int(t_total%60):02d}s" if t_total >= 60 else f"{t_total:.1f}s"
 
     # --- Print results ---
-    print(f"\n{'='*105}", file=sys.stderr)
+    print(f"\n{'='*125}", file=sys.stderr)
     print(f"  Completed {total_runs} runs ({n_combos} variants x {len(seeds)} seeds) in {t_str}",
           file=sys.stderr)
-    print(f"{'='*105}", file=sys.stderr)
+    print(f"{'='*125}", file=sys.stderr)
     top_n = min(args.top, len(aggregated))
     print(f"  Top {top_n} variants (of {n_combos}):", file=sys.stderr)
-    print(f"{'='*105}", file=sys.stderr)
+    print(f"{'='*125}", file=sys.stderr)
     print(f"  {'tx_b':>6} {'tx_s':>6}  {'dtx_b':>6} {'dtx_s':>6}  {'rx_b':>6} {'rx_s':>6}  "
           f"{'mean':>6}  {'std':>5}  {'min':>4}  {'max':>4}  "
-          f"{'delivered':>9}  {'acks':>5}  {'chan':>5}",
+          f"{'delivered':>9}  {'acks':>5}  {'chan':>5}  "
+          f"{'col/lost':>8}  {'drp/lost':>8}",
           file=sys.stderr)
     print(f"  {'-'*6} {'-'*6}  {'-'*6} {'-'*6}  {'-'*6} {'-'*6}  "
           f"{'-'*6}  {'-'*5}  {'-'*4}  {'-'*4}  "
-          f"{'-'*9}  {'-'*5}  {'-'*5}",
+          f"{'-'*9}  {'-'*5}  {'-'*5}  "
+          f"{'-'*8}  {'-'*8}",
           file=sys.stderr)
     for a in aggregated[:top_n]:
         ack_str = f"{a['mean_ack']:.0f}%" if a["mean_ack"] >= 0 else "n/a"
         chan_str = f"{a['mean_chan']:.0f}%" if a["mean_chan"] >= 0 else "n/a"
+        col_str = f"{a['mean_lost_col']:.1f}" if a["fate_lost"] > 0 else "n/a"
+        drp_str = f"{a['mean_lost_drp']:.1f}" if a["fate_lost"] > 0 else "n/a"
         print(f"  {a['tx_b']:6.3f} {a['tx_s']:6.4f}  "
               f"{a['dtx_b']:6.3f} {a['dtx_s']:6.4f}  "
               f"{a['rx_b']:6.3f} {a['rx_s']:6.4f}  "
               f"{a['mean_pct']:5.1f}%  {a['std_pct']:4.1f}%  "
               f"{a['min_pct']:3d}%  {a['max_pct']:3d}%  "
               f"{a['total_delivered']:>4}/{a['total_sent']:<4}  "
-              f"{ack_str:>5}  {chan_str:>5}",
+              f"{ack_str:>5}  {chan_str:>5}  "
+              f"{col_str:>8}  {drp_str:>8}",
               file=sys.stderr)
 
     # --- Best result with full table ---
@@ -487,15 +588,11 @@ def main():
                   file=sys.stderr)
         print(f"  }};", file=sys.stderr)
 
-    # --- Save CSV ---
+    # --- Rewrite CSV sorted by delivery % ---
     if args.output:
         with open(args.output, "w", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow(["tx_base", "tx_slope", "dtx_base", "dtx_slope",
-                             "rx_base", "rx_slope",
-                             "mean_delivery_pct", "std_pct", "min_pct", "max_pct",
-                             "total_delivered", "total_sent", "mean_ack_pct",
-                             "mean_chan_pct", "n_seeds"])
+            writer.writerow(CSV_HEADER)
             for a in aggregated:
                 writer.writerow([
                     a["tx_b"], a["tx_s"], a["dtx_b"], a["dtx_s"],
@@ -506,8 +603,10 @@ def main():
                     round(a["mean_ack"], 1) if a["mean_ack"] >= 0 else "",
                     round(a["mean_chan"], 1) if a["mean_chan"] >= 0 else "",
                     a["n_seeds"],
+                    a["fate_tracked"], a["fate_delivered"], a["fate_lost"],
+                    round(a["mean_lost_col"], 1), round(a["mean_lost_drp"], 1),
                 ])
-        print(f"Full results saved to {args.output}", file=sys.stderr)
+        print(f"Full results saved to {args.output} (sorted by delivery %)", file=sys.stderr)
 
 
 if __name__ == "__main__":

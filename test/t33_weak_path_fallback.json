@@ -1,0 +1,56 @@
+{
+  "_name": "t33_weak_path_fallback",
+  "_desc": "Diamond topology: R4 never advertises but still relays flood packets. Proves a repeater does not need to advert to participate in routing — R4's strong links deliver the message faster than the weak R1-R2-R3 chain.",
+  "simulation": {
+    "duration_ms": 150000,
+    "step_ms": 5,
+    "warmup_ms": 5000
+  },
+  "nodes": [
+    { "name": "alice", "role": "companion" },
+    { "name": "R1", "role": "repeater" },
+    { "name": "R2", "role": "repeater" },
+    { "name": "R3", "role": "repeater" },
+    { "name": "R4", "role": "repeater" },
+    { "name": "bob", "role": "companion" }
+  ],
+  "topology": {
+    "links": [
+      { "from": "alice", "to": "R1", "snr": 5.0, "rssi": -90.0, "bidir": true },
+      { "from": "R1", "to": "R2", "snr": 3.0, "rssi": -90.0, "bidir": true },
+      { "from": "R2", "to": "R3", "snr": 3.0, "rssi": -90.0, "bidir": true },
+      { "from": "R3", "to": "bob", "snr": 3.0, "rssi": -90.0, "bidir": true },
+      { "from": "alice", "to": "R4", "snr": 12.0, "rssi": -70.0, "bidir": true },
+      { "from": "R4", "to": "bob", "snr": 12.0, "rssi": -70.0, "bidir": true }
+    ]
+  },
+  "commands": [
+    { "at_ms": 0, "node": "R4", "command": "set advert.interval 0" },
+    { "at_ms": 0, "node": "R4", "command": "set flood.advert.interval 0" },
+    { "at_ms": 6000, "node": "alice", "command": "advert" },
+    { "at_ms": 8000, "node": "R1", "command": "advert" },
+    { "at_ms": 10000, "node": "R2", "command": "advert" },
+    { "at_ms": 12000, "node": "R3", "command": "advert" },
+    { "at_ms": 14000, "node": "bob", "command": "advert" },
+
+    { "at_ms": 35000, "node": "alice", "command": "advert" },
+    { "at_ms": 37000, "node": "R1", "command": "advert" },
+    { "at_ms": 39000, "node": "R2", "command": "advert" },
+    { "at_ms": 41000, "node": "R3", "command": "advert" },
+    { "at_ms": 43000, "node": "bob", "command": "advert" },
+
+    { "at_ms": 65000, "node": "alice", "command": "advert" },
+    { "at_ms": 67000, "node": "R1", "command": "advert" },
+    { "at_ms": 69000, "node": "R2", "command": "advert" },
+    { "at_ms": 71000, "node": "R3", "command": "advert" },
+    { "at_ms": 73000, "node": "bob", "command": "advert" },
+
+    { "at_ms": 100000, "node": "alice", "command": "neighbors" },
+    { "at_ms": 100000, "node": "bob", "command": "neighbors" },
+    { "at_ms": 110000, "node": "alice", "command": "msg bob test weak path" }
+  ],
+  "expect": [
+    { "type": "cmd_reply_contains", "node": "alice", "command": "neighbors", "value": "bob" },
+    { "type": "cmd_reply_contains", "node": "alice", "command": "msg", "value": "msg sent" }
+  ]
+}

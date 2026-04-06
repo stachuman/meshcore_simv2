@@ -139,12 +139,16 @@ Three MeshCore repeater parameters:
 4. Parse delivery percentage from orchestrator output
 5. Report mean, standard deviation, min, max per combination
 
-### Metrics
+### Metrics & ranking
 
-- **Delivery %**: direct messages received / direct messages sent (primary metric)
-- **Ack %**: acknowledgements received / acks expected (measures round-trip success)
-- **Channel %**: channel receptions / expected receptions. Expected = sent_group * (N_companions - 1), since each channel message should reach all other companions via flood routing.
-- **Stability**: standard deviation across seeds (lower = more reliable)
+Three metrics are collected per run. Variants are ranked by **Delivery %** only; the other two are reported for analysis but do not affect sort order. Lower standard deviation breaks ties.
+
+| Priority | Metric | Definition | Why |
+|:--------:|--------|------------|-----|
+| 1 | **Delivery %** | direct messages received / direct messages sent | Primary objective — point-to-point reliability is the most user-visible quality measure |
+| 2 | **Channel %** | channel receptions / expected receptions (sent × (N_companions − 1)) | Secondary — flood broadcast reach indicates overall network health |
+| 3 | **Ack %** | acknowledgements received / acks expected | Tertiary — round-trip success is desirable but depends on both directions working |
+| — | **Stability** | standard deviation of Delivery % across seeds | Tiebreaker — lower variance means more predictable behaviour |
 
 ### Limitations
 
@@ -267,20 +271,38 @@ Strategy: start with coarse sweeps on few parameters (fix others as constants), 
 
 ### Output
 
-The script prints a ranked table of all variants and, for the best result, outputs the full 13-entry C array ready to paste into `DelayTuning.h`:
+The script prints a ranked table of all variants with delivery metrics and message fate diagnostics. For the best result, it outputs the full 13-entry C array ready to paste into `DelayTuning.h`:
 
 ```
-Best: tx=1.1+0.04*n  dtx=0.4+0.025*n  rx=0.4+0.025*n
-  -> 15.0% mean delivery (std=0.0%, range 15-15%)
-
-  C array for DelayTuning.h:
-  static const DelayTuning DELAY_TUNING_TABLE[] = {
-    {1.100f, 0.400f, 0.400f},  // 0 neighbors
-    {1.140f, 0.425f, 0.425f},  // 1 neighbors
-    ...
-    {1.580f, 0.700f, 0.700f},  // 12 neighbors
-  };
+  Top 10 variants (of 384):
+    tx_b   tx_s   dtx_b  dtx_s    rx_b   rx_s    mean    std   min   max  delivered   acks   chan  col/lost  drp/lost
+  ------ ------  ------ ------  ------ ------  ------  -----  ----  ----  ---------  -----  -----  --------  --------
+   0.000 0.3000   0.000 0.3000   0.500 0.3000   51.0%   3.3%   48%   56%   153/300      4%    51%      73.9       0.8
+   0.000 0.3000   0.500 0.6000   0.500 0.3000   50.3%   3.4%   46%   56%   151/300      6%    54%      65.2       1.1
 ```
+
+The last two columns (`col/lost`, `drp/lost`) come from per-message fate tracking (see Section 5c below). They show the mean number of collisions and drops experienced per lost (undelivered) message, helping diagnose whether failures are due to congestion (high collisions) or link quality (high drops).
+
+### CSV output
+
+Results are saved incrementally to CSV via the `-o` flag. Rows are appended after each variant completes and flushed immediately, so partial results survive interruption. At the end of a complete run, the CSV is rewritten sorted by delivery %.
+
+CSV columns:
+
+| Column | Description |
+|--------|-------------|
+| `tx_base` .. `rx_slope` | The 6 linear model parameters |
+| `mean_delivery_pct` | Mean delivery % across seeds |
+| `std_pct`, `min_pct`, `max_pct` | Delivery % statistics |
+| `total_delivered`, `total_sent` | Absolute counts summed across seeds |
+| `mean_ack_pct` | Mean ack % across seeds (empty if no acks) |
+| `mean_chan_pct` | Mean channel % across seeds (empty if no channel messages) |
+| `n_seeds` | Number of seeds completed |
+| `fate_tracked` | Total messages tracked across seeds |
+| `fate_delivered` | Messages where fate tracking confirmed delivery |
+| `fate_lost` | Messages where fate tracking found no delivery |
+| `lost_mean_collision` | Mean collisions per lost message (averaged across seeds with losses) |
+| `lost_mean_drop` | Mean drops per lost message (averaged across seeds with losses) |
 
 ### Limitations
 
@@ -289,6 +311,104 @@ Best: tx=1.1+0.04*n  dtx=0.4+0.025*n  rx=0.4+0.025*n
 - **Single build directory**: Only one variant can be compiled at a time. Running multiple instances of the script simultaneously against the same build directory will corrupt results.
 - **Topology-specific**: Optimal table values depend on the network's neighbor-count distribution. A network where most nodes have 2-4 neighbors will be sensitive to different table entries than one where most have 8-10.
 - **Static table**: The linear model assumes the relationship between neighbor count and optimal delay is consistent across all network conditions. In practice, the optimal slope may depend on traffic load, message patterns, or radio parameters.
+
+## 5c. Message Fate Analysis
+
+### Motivation
+
+When messages fail to deliver, aggregate stats (e.g., "30% delivery") don't explain *why*. Was it collisions saturating the network? Link drops on weak paths? The message fate tracker follows each scheduled message through the relay chain and counts per-message collisions and drops, giving actionable diagnostic data.
+
+### How it works
+
+The orchestrator tracks each `msg`/`msga` command from send to delivery (or loss):
+
+1. **Command detection**: When `processCommands` processes a `msg <dest>` or `msga <dest>` command, a `MessageFate` entry is created with `from_idx`, `to_idx`, and `send_time_ms`.
+
+2. **Initial TX linking**: In `registerTransmissions`, the first TX from the sending node (matching "msg" packet type) is linked to the fate via its FNV-1a packet hash.
+
+3. **Relay chain tracking**: When a node receives a tracked packet (in `deliverReceptions`), it's marked as carrying that fate. If the node later transmits a "msg" packet (in `registerTransmissions`), the new TX hash is linked to the same fate -- even if the relay happens many simulation steps later (MeshCore's Dispatcher adds delay).
+
+4. **Event counting**: For each tracked packet hash, the orchestrator counts:
+   - **tx_count**: how many times the message was transmitted (including relays)
+   - **rx_count**: successful receptions at any node
+   - **collisions**: receptions destroyed by interference
+   - **drops**: receptions lost to half-duplex conflicts or link loss
+
+5. **Delivery detection**: If any tracked hash reaches the destination node as a successful RX, the fate is marked `delivered`.
+
+### Orchestrator output
+
+The orchestrator prints a per-message fate summary to stderr after the delivery stats:
+
+```
+Message fate (50 tracked, 11 delivered, 39 lost):
+  Per delivered message: mean tx=194.2  rx=325.5  collision=290.2  drop=0.8
+  Per lost message:      mean tx=43.4  rx=65.0  collision=50.3  drop=0.6
+```
+
+Interpretation:
+- **Delivered messages** had extensive network activity (194 TX, 325 RX) -- the flood reached enough nodes despite 290 collisions per message.
+- **Lost messages** had much less activity (43 TX, 65 RX) -- the relay chain died early, starved by collisions.
+- **Low drop counts** in both cases suggest link drops are not the primary failure mode; collisions dominate.
+
+### Integration with optimize_tuning.py
+
+The optimization script parses the fate summary from each run and aggregates across seeds. Two columns appear in both the results table and CSV:
+
+| Column | Meaning |
+|--------|---------|
+| `col/lost` / `lost_mean_collision` | Mean collisions per lost message -- high values indicate congestion-dominated failure |
+| `drp/lost` / `lost_mean_drop` | Mean drops per lost message -- high values indicate link-quality-dominated failure |
+
+These help distinguish between parameter regimes where messages fail due to collision overload (increase delays) vs. weak links (topology issue, delays won't help).
+
+### Limitations
+
+- **Relay ambiguity**: When a node receives multiple tracked messages and relays one, the relay is linked to all active fates. This can slightly over-count TX/RX for individual fates. Rare in practice.
+- **Hash change on relay**: MeshCore modifies packet headers when relaying, changing the packet hash. The tracker bridges this gap using temporal correlation (RX at node N, then TX from node N), but if a node receives two different tracked messages simultaneously, their relay hashes may be cross-linked.
+- **Only `msg`/`msga` commands**: Channel messages (`msgc`) are not tracked in this first approach.
+- **No per-hop breakdown**: The tracker counts total collisions/drops across all hops, not which specific hop failed. A message that traverses 8 hops and loses 3 packets to collisions at hop 5 looks the same as one that loses 3 packets across hops 2, 4, and 7.
+
+## 5d. Multi-Density Test Scripts
+
+### Purpose
+
+Optimal delay parameters may differ across network densities. The `delay_optimization/` directory includes three scripts that generate networks with different link densities from the Gdansk region and run full parameter sweeps on each:
+
+| Script | Density | Key topology flags | Typical neighbors |
+|--------|---------|-------------------|-------------------|
+| `run_sparse.sh` | Sparse | `--link-survival 0.2 --max-edges-per-node 6 --max-good-links 2` | 1-3 |
+| `run_medium.sh` | Medium | `--link-survival 0.4 --max-edges-per-node 12 --max-good-links 3` | 3-6 |
+| `run_dense.sh` | Dense | `--link-survival 0.7 --max-edges-per-node 16 --max-good-links 6` | 6-12 |
+
+### What each script does
+
+1. Runs `topology_generator` to generate a topology from the Gdansk region API
+2. Runs `inject_test.py` to place companions and generate message schedules
+3. Runs `optimize_tuning.py` with the generated config
+
+Results are saved as `results_<density>_<timestamp>.csv` in the `delay_optimization/` directory.
+
+### Density control parameters
+
+The topology generator uses these flags to control link density:
+
+| Flag | Effect |
+|------|--------|
+| `--link-survival` | Sigmoid-based probability that an ITM-computed link survives. Lower values = sparser network. |
+| `--max-edges-per-node` | Hard cap on total neighbors per node |
+| `--max-good-links` | Cap on "good" links (SNR > 0) per node. Remaining slots filled with weaker links. |
+
+### Usage
+
+```bash
+cd delay_optimization
+bash run_sparse.sh    # sparse network sweep
+bash run_medium.sh    # medium network sweep
+bash run_dense.sh     # dense network sweep
+```
+
+Each script accepts `MESHCORE_DIR` as an environment variable to point to the MeshCore fork.
 
 ## 6. Running the Pipeline
 
@@ -349,35 +469,32 @@ Channel schedule flags for `build_real_sim.py`:
 
 ## 7. Results
 
+All results use Gdansk/Pomerania region topologies generated via `topology_generator` with ITM propagation model. Three network densities are tested (see Section 5d). Each sweep uses `optimize_tuning.py` with 3 seeds per variant. CSV files with full results are stored in this directory.
 
-Sweep grid used for the results:
+### 7.1 Sparse network
 
-Run 1
+Script: `run_sparse.sh`. Topology: `--link-survival 0.2 --max-edges-per-node 6 --max-good-links 2`.
 
-```
-Parameter sweep: 63 combinations x 3 seeds = 189 runs
-  rxdelay:         [0.0, 0.5, 1.0]
-  txdelay:         [0.0, 0.3, 0.6]
-  direct.txdelay:  [0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0]
-  seeds:           [42, 43, 44]
-  Repeaters:       71
+CSV: [`results_sparse_<timestamp>.csv`]
 
-=====================================================================================
-  Completed 189 runs (63 combos x 3 seeds) in 3m45s
-=====================================================================================
-  Top 10 combinations (of 63):
-=====================================================================================
-   rxdelay   txdelay  d.txdelay    mean    std   min   max  delivered   acks   chan
-  --------  --------  ---------  ------  -----  ----  ----  ---------  -----  -----
-      0.00      0.00       1.50   19.3%   1.7%   17%   21%   197/1020    10%    46%
-      1.00      0.00       1.50   19.3%   1.7%   17%   21%   197/1020    10%    46%
-      0.00      0.00       1.00   19.3%   1.9%   18%   22%   198/1020    10%    45%
-      1.00      0.00       1.00   19.3%   1.9%   18%   22%   198/1020    10%    45%
-      0.50      0.00       0.50   19.0%   0.8%   18%   20%   194/1020     9%    45%
-      0.00      0.00       3.00   19.0%   1.6%   17%   21%   194/1020     9%    47%
-      1.00      0.00       3.00   19.0%   1.6%   17%   21%   194/1020     9%    47%
-      0.00      0.00       0.00   18.7%   1.2%   17%   20%   192/1020     9%    43%
-      1.00      0.00       0.00   18.7%   1.2%   17%   20%   192/1020     9%    43%
-      0.50      0.00       0.00   18.3%   0.9%   17%   19%   187/1020    10%    44%
+*(Results pending — run `bash run_sparse.sh`)*
 
-```
+### 7.2 Medium network
+
+Script: `run_medium.sh`. Topology: `--link-survival 0.4 --max-edges-per-node 12 --max-good-links 3`.
+
+CSV: [`results_medium_<timestamp>.csv`]
+
+*(Results pending — run `bash run_medium.sh`)*
+
+### 7.3 Dense network
+
+Script: `run_dense.sh`. Topology: `--link-survival 0.7 --max-edges-per-node 16 --max-good-links 6`.
+
+CSV: [`results_dense_<timestamp>.csv`]
+
+*(Results pending — run `bash run_dense.sh`)*
+
+### Key findings
+
+*(To be filled after all three sweeps complete.)*
