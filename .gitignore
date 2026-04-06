@@ -1,5 +1,5 @@
 build/
-build-fork/
+build-*/
 __pycache__/
 *.pyc
 *.o
