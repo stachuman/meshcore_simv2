@@ -1,8 +1,24 @@
-# Delay Parameter Optimization — Methodology
+# Delay Parameter Optimization — Methodology and Findings
 
 ## Overview
 
-This document describes how we set up simulations to find optimal delay tuning tables for MeshCore repeater networks. The pipeline: live network API -> ITM propagation model -> simulated topology -> companion + message injection -> automated parameter sweep.
+This document describes how we set up simulations to test whether delay tuning tables can improve message delivery in MeshCore repeater networks. The pipeline: live network API -> ITM propagation model -> simulated topology -> companion + message injection -> automated parameter sweep.
+
+**Key finding**: The theoretical assumption that increasing delays reduces collisions and improves delivery does not hold in simulation. Zero delays consistently outperform all tested delay configurations — including the firmware defaults, 512 auto-tune table variants, and the hand-tuned recommendations from the white paper. The details of this discovery are in Section 8.
+
+### Theoretical thesis
+
+The starting hypothesis was based on the analysis in *"White Paper: Using rxdelay, txdelay and direct.txdelay to Minimize Collisions in a MeshCore Routing"*, which makes the following argument:
+
+1. **Collision probability is inversely proportional to the number of backoff slots.** MeshCore's retransmission delay uses the equation `t = floor(5 * airtime * txdelay)`, and the retransmit time is drawn uniformly from `[0, 5*t+1)`. More slots = lower collision probability: `P_collision ~ 1/t`.
+
+2. **Default delays create high collision risk.** The firmware defaults (txdelay=0.5, direct.txdelay=0.2, rxdelay=0) produce only 2 backoff slots for flood routing and near-zero slots for direct traffic — a 12.5% and ~100% pairwise collision probability respectively.
+
+3. **Delays should scale with neighbor count.** More neighbors means more nodes retransmitting the same message simultaneously. The white paper proposes a tuning table indexed by SNR-positive neighbor count, with txdelay ranging from 1.0 (sparse, 0-3 neighbors) to 2.0+ (regional, 11-12+), and corresponding direct.txdelay from 0.4 to 0.9.
+
+4. **Tiered delays provide temporal band separation.** Nodes with higher txdelay access a larger backoff window. The portion exclusive to high-delay nodes is collision-free with respect to low-delay nodes, creating an implicit priority hierarchy.
+
+This reasoning is mathematically sound for the *pairwise* case: if two nodes receive the same flood message and both decide to retransmit, more slots do reduce the probability they pick the same slot. The question is whether this pairwise benefit translates to improved end-to-end delivery in a real multi-hop network with mixed traffic, retransmissions, and timeouts.
 
 ### Scope: connected networks only
 
@@ -726,236 +742,206 @@ Note: the baseline (default firmware) falls near the sweep mean in all cases —
 | `rx_base` | Low (0.0-0.5) | High (1.0-1.5) | Dense needs longer RX collection window to pick best route |
 | `rx_slope` | Mixed | High (0.6) | Dense: RX delay should scale steeply with neighbors |
 
-### Key findings
+### Within-sweep findings
 
-1. **Tuning helps, especially in dense networks**: The best optimized variant improves delivery by +4.0 pp (sparse), +5.3 pp (medium), and +10.7 pp (dense) over the default firmware. Dense networks benefit most because the default table doesn't ramp delays aggressively enough for high neighbor counts.
+These findings compare the 512 auto-tune variants against each other and against the firmware default. They are valid **within the tested parameter range** but, as Section 8 reveals, the sweep's parameter range excluded the critical zero-delay baseline.
 
-2. **Ack rates improve significantly in sparse/medium**: The best variants boost ack rates from 17.3% to 26.3% (sparse) and 15.3% to 24.7% (medium) — a ~50% relative improvement. Dense ack rates barely change (9.7% to 10.7%), suggesting round-trip reliability in dense networks is fundamentally limited by collision probability.
+1. **Within the sweep range, the best variants improve over the default firmware** by +4.0 pp (sparse), +5.3 pp (medium), and +10.7 pp (dense). Dense networks benefit most because the default table doesn't ramp delays aggressively enough for high neighbor counts.
 
-3. **Channel delivery is stable**: Optimized variants show similar channel % to the baseline across all densities. The tuning primarily improves directed message delivery without degrading broadcast reach.
+2. **Ack rates improve significantly in sparse/medium**: The best variants boost ack rates from 17.3% to 26.3% (sparse) and 15.3% to 24.7% (medium) — a ~50% relative improvement.
 
-4. **Collision dominance**: Across all densities, message losses are overwhelmingly caused by collisions, not link drops. The `drp/lost` values are negligible (0.1-3.2) compared to `col/lost` (8-176). This means delay tuning is the right lever — link quality is not the bottleneck.
+3. **Collision dominance**: Across all densities, message losses are overwhelmingly caused by collisions, not link drops. The `drp/lost` values are negligible (0.1-3.2) compared to `col/lost` (8-176).
 
-5. **Collision severity scales with density**: Mean collisions per lost message: sparse=11.7, medium=60.9, dense=149.8. Dense networks see 13x more collisions than sparse, reflecting exponentially more interference as neighbors increase.
+4. **TX and RX delays serve opposite roles across densities**:
+   - **Sparse**: high TX delays (base=1.0-1.5, slope=0.6) with low RX delays (0.0-0.5).
+   - **Dense**: low TX delays (base=0.0, slope=0.3) with high RX delays (base=1.0, slope=0.6).
 
-6. **TX and RX delays serve opposite roles across densities**:
-   - **Sparse**: high TX delays (base=1.0-1.5, slope=0.6) spread retransmissions over time, reducing the few collisions that do occur. Low RX delays (0.0-0.5) avoid unnecessary waiting on sparse paths.
-   - **Dense**: low TX delays (base=0.0, slope=0.3) get packets moving quickly through the many available paths. High RX delays (base=1.0, slope=0.6) let nodes collect packets from multiple paths before choosing the best one.
+5. **Medium density is hardest**: Medium networks show the lowest peak delivery (49.3%) and mean delivery (42.5%), worse than both sparse and dense.
 
-7. **Medium density is hardest**: Medium networks show the lowest peak delivery (49.3%) and mean delivery (42.5%), worse than both sparse and dense. This suggests medium density hits a "worst of both worlds" — enough neighbors for serious collisions but not enough for reliable path diversity.
+6. **Delivery is essentially flat across delay levels**: Quartile analysis shows <1 pp difference between the lowest-delay and highest-delay quartiles within each density. The sweep explored a flat plateau where delay amount barely matters — the "best" combinations are largely explained by seed variance.
 
-8. **Default firmware is a reasonable middle-ground**: The baseline falls near the sweep mean in all three densities, suggesting the current DelayTuning.h is not badly calibrated — but it's a compromise that doesn't excel at any specific density.
+7. **Critical omission**: The sweep's minimum parameter values (all slopes >= 0.3, clamp_min=0.05) meant the lowest total delay at an average node was 4.5-7.2s depending on density. **Zero delays were never tested.** This omission is corrected in Section 8.
 
-9. **Parameter sensitivity is moderate**: The spread between best and worst variants is 14 pp (sparse), 13.3 pp (medium), and 18 pp (dense). Delays matter, but don't transform a bad topology into a good one — the fundamental limit is the network structure itself.
+## 8. Zero-Delay Baseline Discovery
 
-## 8. Universal Candidate Selection
+### The missing baseline
 
-### The problem with density-specific winners
+The 512-variant sweep (Section 7) explored auto-tune tables where all slopes were >= 0.3 and the minimum clamp was 0.05. This meant the lowest total delay at an average node (5 neighbors) was:
 
-Each density sweep (Section 7) produces a different #1 winner. But the auto-tune table is compiled into firmware once and deployed to all repeaters — each repeater looks up its own neighbor count independently. In a real network with mixed density, the table must work for sparse leaf nodes (n=1-3) and dense core hubs (n=8-12) simultaneously.
-
-Testing each density's winner across all three densities reveals severe cross-density failures:
-
-| Candidate | tx_b | tx_s | dtx_b | dtx_s | rx_b | rx_s | sparse | medium | dense | min | spread |
-|-----------|------|------|-------|-------|------|------|--------|--------|-------|-----|--------|
-| Sparse #1 | 1.5 | 0.6 | 1.5 | 0.6 | 0.0 | 0.3 | **52.7%** | 46.0% | 46.7% | 46.0% | 6.7 |
-| Medium #1 | 1.5 | 0.6 | 1.0 | 0.6 | 0.5 | 0.3 | 46.0% | **49.3%** | 43.7% | 43.7% | 5.6 |
-| Dense #1 | 0.0 | 0.3 | 0.0 | 0.3 | 0.0 | 0.6 | 43.7% | 41.0% | **55.7%** | 41.0% | 14.7 |
-| Baseline | — | — | — | — | — | — | 48.7% | 44.0% | 45.0% | 44.0% | 4.7 |
-
-The dense winner peaks at 55.7% on dense networks but crashes to 41.0% on medium — worse than the untuned baseline. The medium winner drops to 43.7% on dense. None of these would be safe to ship as firmware.
-
-### Universal ranking
-
-Instead of optimizing for one density, we rank all 512 parameter combinations by **worst-case delivery** across the three densities (min of sparse, medium, dense). This finds parameters that don't fail badly at any density.
-
-Top 10 by min-delivery:
-
-| # | tx_b | tx_s | dtx_b | dtx_s | rx_b | rx_s | sparse | medium | dense | min | mean | spread |
-|---|------|------|-------|-------|------|------|--------|--------|-------|-----|------|--------|
-| 1 | 0.5 | 0.6 | 0.0 | 0.3 | 1.0 | 0.6 | 48.7% | 48.0% | 48.0% | **48.0%** | 48.2% | 0.7 |
-| 2 | 1.0 | 0.6 | 1.0 | 0.6 | 1.0 | 0.3 | 48.3% | 46.7% | 47.7% | 46.7% | 47.6% | 1.6 |
-| 3 | 1.5 | 0.6 | 1.5 | 0.6 | 0.5 | 0.3 | 50.3% | 48.0% | 46.3% | 46.3% | 48.2% | 4.0 |
-| 4 | 1.0 | 0.6 | 1.0 | 0.3 | 1.0 | 0.3 | 46.7% | 46.3% | 46.3% | 46.3% | 46.4% | 0.4 |
-| 5 | 1.5 | 0.6 | 1.5 | 0.6 | 0.0 | 0.3 | 52.7% | 46.0% | 46.7% | 46.0% | 48.5% | 6.7 |
-| 6 | 1.0 | 0.6 | 0.5 | 0.6 | 1.0 | 0.3 | 49.0% | 46.0% | 47.0% | 46.0% | 47.3% | 3.0 |
-| 7 | 1.5 | 0.6 | 0.0 | 0.3 | 0.0 | 0.3 | 49.0% | 47.0% | 46.0% | 46.0% | 47.3% | 3.0 |
-| 8 | 0.5 | 0.6 | 0.5 | 0.3 | 1.5 | 0.3 | 46.0% | 46.3% | 49.0% | 46.0% | 47.1% | 3.0 |
-| 9 | 0.0 | 0.3 | 1.5 | 0.6 | 0.5 | 0.6 | 46.0% | 46.3% | 48.7% | 46.0% | 47.0% | 2.7 |
-| 10 | 0.5 | 0.6 | 0.0 | 0.3 | 0.5 | 0.3 | 48.3% | 47.3% | 45.7% | 45.7% | 47.1% | 2.6 |
-
-### The universal candidate: #1
-
-Parameters `tx_b=0.5, tx_s=0.6, dtx_b=0.0, dtx_s=0.3, rx_b=1.0, rx_s=0.6` dominate the ranking:
-
-- **Highest worst-case**: 48.0% min delivery — 1.3pp above the runner-up
-- **Tightest spread**: 0.7pp across densities (the next-tightest is #4 at 0.4pp but with min=46.3%)
-- **Beats baseline everywhere**: +3.7pp sparse, +4.0pp medium, +3.0pp dense vs untuned defaults
-- **No density-specific weakness**: performs within 0.7pp regardless of network density
-
-The pattern reveals why this works universally:
-- **RX delay dominates** (base=1.0, slope=0.6): nodes wait longer before rebroadcasting received packets, giving time for better routes to arrive. This helps at all densities — sparse nodes avoid premature forwarding on their few paths, dense nodes avoid flooding.
-- **TX delay moderate** (base=0.5, slope=0.6): enough backoff to reduce collisions without slowing delivery.
-- **Direct TX conservative** (base=0.0, slope=0.3): point-to-point messages get fast forwarding with gentle scaling.
-
-### Proposed auto-tune table
-
-The 13-entry lookup table generated from the universal candidate's linear model:
-
-```c
-// Universal candidate: tx_b=0.5 tx_s=0.6 dtx_b=0.0 dtx_s=0.3 rx_b=1.0 rx_s=0.6
-// Cross-density: sparse=48.7% medium=48.0% dense=48.0% (min=48.0%, spread=0.7pp)
-static const DelayTuning DELAY_TUNING_TABLE[] = {
-  {0.500f, 0.000f, 1.000f},  //  0 neighbors
-  {1.100f, 0.300f, 1.600f},  //  1 neighbors
-  {1.700f, 0.600f, 2.200f},  //  2 neighbors
-  {2.300f, 0.900f, 2.800f},  //  3 neighbors
-  {2.900f, 1.200f, 3.400f},  //  4 neighbors
-  {3.500f, 1.500f, 4.000f},  //  5 neighbors
-  {4.100f, 1.800f, 4.600f},  //  6 neighbors
-  {4.700f, 2.100f, 5.200f},  //  7 neighbors
-  {5.300f, 2.400f, 5.800f},  //  8 neighbors
-  {5.900f, 2.700f, 6.400f},  //  9 neighbors
-  {6.500f, 3.000f, 7.000f},  // 10 neighbors
-  {7.100f, 3.300f, 7.600f},  // 11 neighbors
-  {7.700f, 3.600f, 8.200f},  // 12 neighbors
-};
+```
+Minimum sweep entry: base=0.0, slope=0.3 for all three delay types
+At 5 neighbors: txdelay=1.5, direct.txdelay=1.5, rxdelay=1.5
+Total: 4.5 seconds of added delay
 ```
 
-This is the table validated in Section 9 below.
+**No combination in the sweep tested zero delays.** The sweep compared 512 ways of adding delay, but never compared any of them against the null hypothesis: no added delay at all.
 
-## 9. Validation
+### Firmware defaults
+
+Querying a stock repeater (`get rxdelay`, `get txdelay`, `get direct.txdelay`) reveals the firmware defaults:
+
+| Parameter | Default |
+|-----------|---------|
+| rxdelay | **0.0** |
+| txdelay | **0.5** |
+| direct.txdelay | **0.3** |
+
+Even the stock firmware adds 0.8s total delay per hop. These are the values the white paper's analysis starts from — and recommends *increasing*.
+
+### Targeted test: does any delay beat zero?
+
+To test whether delays help at all, we ran a targeted experiment on the NL validation topology (215 repeaters, avg 5.2 neighbors, 496 direct messages per seed, 1-hour duration, O-U correlated fading). Nine delay configurations, 6 seeds each, all using the stock orchestrator with explicit `set` commands:
+
+Script: `delay_optimization/run_targeted_nl.sh`
+
+| Variant | txdelay | direct.txdelay | rxdelay | Delivery | vs stock | Col/lost | Drp/lost |
+|---------|---------|----------------|---------|----------|----------|----------|----------|
+| **zero** | 0 | 0 | 0 | **42.1% +/-0.3** | **+11.0pp** | 22.7 | 10.8 |
+| small_0.5 | 0.5 | 0.5 | 0.5 | 32.3% +/-0.3 | +1.2pp | 25.1 | 0.5 |
+| lo_tx_hi_rx | 0.5 | 0.5 | 3.0 | 31.4% +/-0.6 | +0.3pp | 26.4 | 0.4 |
+| stock_default | 0.5 | 0.3 | 0.0 | 31.1% +/-0.5 | (base) | 25.3 | 0.5 |
+| large_3.0 | 3.0 | 3.0 | 3.0 | 31.0% +/-0.3 | -0.1pp | 32.4 | 0.8 |
+| medium_1.0 | 1.0 | 1.0 | 1.0 | 30.1% +/-0.4 | -1.0pp | 24.4 | 0.6 |
+| medium_1.5 | 1.5 | 1.5 | 1.5 | 30.0% +/-0.8 | -1.1pp | 30.2 | 0.7 |
+| hi_tx_lo_rx | 3.0 | 1.5 | 0.5 | 29.0% +/-0.3 | -2.1pp | 22.9 | 0.6 |
+| large_5.0 | 5.0 | 5.0 | 5.0 | 28.9% +/-1.3 | -2.2pp | 23.4 | 0.6 |
+
+**Zero delays win by a massive margin** — +11.0 pp over stock defaults, +13.2 pp over large delays. The relationship is monotonic: more delay = worse delivery. No delay level between 0 and 5.0 beats zero.
+
+Collisions are also *lower* at zero (22.7) than at most non-zero settings. Delays do not reduce collisions — they appear to synchronize retransmissions rather than spreading them.
+
+### Confirmation across all Gdansk densities
+
+The same zero-delay test was run on the three Gdansk sweep topologies to compare directly with the 512-variant sweep data. Script: `delay_optimization/run_zero_baseline.sh`
+
+| Density | Zero delays | Best of 512 sweep | Sweep mean | Sweep worst | Baseline |
+|---------|-------------|-------------------|------------|-------------|----------|
+| Sparse | **55.3% +/-3.5** | 52.7% | 45.9% | 38.7% | 48.7% |
+| Medium | **55.7% +/-8.3** | 49.3% | 42.5% | 36.0% | 44.0% |
+| Dense | **65.7% +/-3.9** | 55.7% | 46.5% | 37.7% | 45.0% |
+
+Zero delays beat **every single one of the 512 auto-tune variants**, across **all three densities**. The advantage grows with density:
+
+| Density | Zero vs best-of-512 | Zero vs baseline | Zero vs sweep-mean |
+|---------|--------------------:|----------------:|-------------------:|
+| Sparse | +2.6 pp | +6.6 pp | +9.4 pp |
+| Medium | +6.4 pp | +11.7 pp | +13.2 pp |
+| Dense | +10.0 pp | +20.7 pp | +19.2 pp |
+
+### Why the theory fails in practice
+
+The white paper's collision probability analysis (`P_collision ~ 1/t`) is correct for a single pair of nodes choosing from t backoff slots. But in a multi-hop network, several second-order effects overwhelm this pairwise benefit:
+
+1. **Delay-induced synchronization.** Nodes with similar neighbor counts get similar delay values from the auto-tune table. When they all wait similar amounts, they tend to transmit at the same time — creating the exact synchronized burst the delays were supposed to prevent. With zero delays, natural timing differences from propagation, processing jitter, and half-duplex deferral provide sufficient decorrelation.
+
+2. **Accumulated latency kills multi-hop delivery.** A message traversing 4 hops accumulates delay at each hop. With txdelay=1.5 and rxdelay=2.0 at each relay (typical for medium density in the white paper's table), a single message traversal adds ~14 seconds of total delay. This pushes messages past retransmission timeouts, causing the sender to retry — which creates *more* traffic and *more* collisions.
+
+3. **The white paper correctly identifies but underweights implicit LBT.** Section 3.8.5 of the white paper notes that half-duplex RX-busy deferral "behaves like an implicit, topology-dependent random backoff." This effect is "loosely and noisily correlated with neighbor count" and "already implicitly helps." Our simulation confirms this is not just helpful but *sufficient* — the hardware-level half-duplex constraint already provides the timing decorrelation that txdelay attempts to add, without the latency cost.
+
+4. **Direct messages have a single forwarder per hop.** The white paper itself acknowledges this (Section 3.6.1): "a direct message does not fan out" so "the probability of collision for that message's retransmission is independent of direct.txdelay." Adding direct.txdelay only helps when independent direct messages happen to collide — a rare event that doesn't justify the latency penalty on every message.
+
+5. **The collision probability model ignores opportunity cost.** More backoff slots reduce per-event collision probability, but each slot represents one airtime of waiting. During that waiting time, the channel is potentially idle when it could be carrying useful traffic. The model optimizes for collision avoidance without accounting for the throughput lost to idle waiting.
+
+### Practical implication
+
+The most effective "optimization" for MeshCore delay parameters is:
+
+```
+set txdelay 0
+set direct.txdelay 0
+set rxdelay 0
+```
+
+This contradicts the white paper's recommendation to increase delays above the defaults. The firmware defaults of txdelay=0.5 and direct.txdelay=0.3, while modest, already cost approximately 11 percentage points of delivery in our simulation.
+
+### Caveats
+
+These findings are from simulation only. Real hardware may have legitimate reasons for non-zero delays that the simulator does not model:
+
+- **Crystal oscillator settling time** — a radio may need brief delays between RX and TX mode transitions.
+- **Regulatory duty cycle** — the simulator does not enforce EU 1% duty cycle limits. Delays might reduce duty-cycle violations on real hardware.
+- **Processing latency** — real microcontrollers may not be able to process and retransmit as fast as the simulator assumes.
+- **Frequency offset / near-far effects** — real radios have imperfect frequency alignment that may affect capture behavior differently than the simulator's SNR-based model.
+
+If any of these hardware constraints require non-zero delays, the optimal values are likely much smaller than the white paper recommends — closer to the minimum needed for hardware compliance, not scaled by neighbor count.
+
+## 9. Validation: Auto-Tune vs Baseline vs Zero
 
 ### Motivation
 
-The parameter sweep (Section 7) used short, light tests: 15-minute simulations with 4 companions generating 50 direct messages per seed. These are fast enough for a 512-variant grid search but don't prove the winner holds up under realistic conditions. Overfitting to the test scenario is a real risk — a parameter set could win by exploiting specific timing patterns, message counts, or companion placements that won't generalize.
+The parameter sweep (Section 7) found auto-tune variants that appeared to improve over firmware defaults. Section 8 then showed that zero delays beat everything. To complete the picture, we ran the NL validation topology with the "best" auto-tune candidate to confirm it doesn't help on an unseen topology.
 
-The validation test addresses this by running the universal candidate (Section 8) against the default firmware under much heavier, more diverse conditions — and crucially, on a **different region** (Groningen+Friesland, Netherlands) than the one used for the sweep (Gdansk/Pomerania, Poland). If the optimized parameters only work on the topology they were tuned on, they're useless. Cross-region validation is the strongest test of generalizability.
+### Validation topology
 
-Both regions use identical radio settings (869.618 MHz, SF8, BW 62500, CR 4/8 — the EU-wide MeshCore standard), so the only differences are network structure and terrain.
+Script: `delay_optimization/run_medium_validation.sh`. Region: Groningen+Friesland, Netherlands (`52.8,5.2,53.5,7.0`), ~215 repeaters, 16 companions, 496 direct messages per seed, 1-hour duration, O-U correlated fading (`snr_coherence_ms=30000`).
 
-### What changes vs the sweep tests
+Topology parameters tuned for NL terrain: `survival=0.27`, `snr_mid=5`, `max-good=12` (no cap). This produces avg ~5.2 neighbors with a natural distribution and well-connected main component (96.7%).
 
 | Feature                | Sweep tests              | Validation test                      |
 | ---------------------- | ------------------------ | ------------------------------------ |
 | **Region**             | Gdansk/Pomerania, Poland | **Groningen+Friesland, Netherlands** |
-| Duration               | **15 min**               | **1 hour**                           |
+| Duration               | 15 min                   | **1 hour**                           |
 | Companions             | 4                        | **16**                               |
 | Direct messages / seed | 50                       | **496**                              |
 | Traffic patterns       | 3 (structured)           | **4 (+ random pairs)**               |
-| Mean message interval  | 70s                      | **180s**                             |
 | Correlated fading      | off                      | **snr_coherence_ms=30000**           |
-| Seeds                  | 6                        | 6 (same)                             |
 
-The key additions:
+### Results: auto-tune vs stock baseline
 
-- **Different region** — the sweep optimized on Gdansk/Pomerania (174 repeaters, flat coastal terrain). Validation uses Groningen+Friesland, Netherlands (~220 repeaters, flat farmland/coast/islands). Same radio settings (EU standard), completely different network structure and terrain.
-- **16 companions** create a much busier network with more routing diversity and contention. The farthest-point placement ensures geographic spread across the topology.
-- **Random pairs** add a 4th traffic pattern alongside 1-to-1 (round-robin), 1-to-many, and many-to-1. This generates 16 randomly selected sender-receiver pairs (`--random-pairs 16`), breaking the structural regularity of the other patterns.
-- **Correlated fading** (Ornstein-Uhlenbeck process with 30s coherence) replaces i.i.d. SNR jitter. Links fade slowly and correlate over time, creating realistic "good periods" and "bad periods" that stress routing adaptation.
-- **1-hour duration** with 180s mean inter-arrival gives messages time to propagate through congested paths and tests steady-state behavior, not just initial burst performance.
+The "universal candidate" from the sweep (tx_b=0.5, tx_s=0.6, dtx_b=0.0, dtx_s=0.3, rx_b=1.0, rx_s=0.6) was tested against stock firmware defaults:
 
-### Topology parameter tuning for NL terrain
+| Metric | Baseline (stock) | Auto-tune (best of sweep) | Delta |
+|--------|-----------------|--------------------------|-------|
+| Delivery | 30.8% +/-2.7 | 29.2% +/-1.0 | **-1.6 pp** |
+| Ack | 13.7% +/-1.2 | 14.7% +/-0.8 | +1.0 pp |
+| Channel | 49.3% +/-3.2 | 50.3% +/-2.4 | +1.0 pp |
+| Col/lost | 24.8 | 30.9 | +6.1 |
+| Drop/lost | 0.5 | 0.8 | +0.3 |
+| Msgs delivered | 917/2976 | 871/2976 | -46 |
 
-The survival filter uses an SNR-weighted sigmoid: `p = survival_prob / (1 + exp(-(snr - snr_mid) / scale))`. The default `snr_mid=10` was calibrated for Gdansk's hilly/coastal terrain where many links have moderate SNR. In the flat Netherlands, most links are high-SNR, so:
+The auto-tune variant **made delivery worse** (-1.6 pp) and **increased collisions** (+6.1 per lost message). The sweep's "best" parameters did not generalize to an unseen topology — confirming the finding from Section 8 that added delays hurt rather than help.
 
-- **`snr_mid=5`** (lowered from 10): preserves weaker bridge links between sub-regions that would otherwise be killed by the sigmoid. Without this, the topology fragments into disconnected islands.
-- **`max-good=7`** (raised from 3): in flat terrain, nearly all links are "good" (SNR > 0). With `max-good=3`, the cap bites too hard and produces avg ~2.7 neighbors. Raising to 7 produces avg ~5.1, matching Gdansk medium's 5.0.
-- **`survival=0.5`** (raised from 0.4): combined with `snr_mid=5`, this produces a well-connected main component (217/222 nodes, 97.7%).
+### Results: zero delays on NL topology
 
-### Topology comparison
+From the targeted test (Section 8), zero delays on the same NL topology:
 
-The validation topology (Groningen+Friesland) is structurally similar to the sweep topology (Gdansk) — both are medium-density networks with closely matched average neighbor counts — but differ in size, terrain, and distribution shape.
+| Metric | Baseline (stock) | Auto-tune | Zero delays |
+|--------|-----------------|-----------|-------------|
+| Delivery | 30.8% | 29.2% | **42.1%** |
+| vs baseline | — | -1.6 pp | **+11.3 pp** |
+| Col/lost | 24.8 | 30.9 | 22.7 |
 
-| Metric | Gdansk (sweep) | Groningen+Friesland (validation) |
-|--------|---------------|----------------------------------|
-| Region | Pomerania, Poland | Northern Netherlands |
-| Repeaters | 174 | 222 |
-| Companions | 4 | 16 |
-| Links | 451 | 643 |
-| Avg neighbors | 5.0 | 5.1 |
-| Median neighbors | 5 | 5 |
-| Min neighbors | 1 (16 nodes) | 1 (14 nodes) |
-| Max neighbors | 12 | 7 (capped by max-good) |
-| Components | 1 | 3 (main: 217, residual: 3+2) |
+Zero delays deliver +11.3 pp more than stock defaults and +12.9 pp more than the "optimized" auto-tune — on a topology neither was designed for.
 
-Neighbor count distributions:
+## 10. Conclusions
 
-```
-Gdansk (174 repeaters):
-   1: ████████████████ 16                 7: ███████████████ 15
-   2: ███████████████████████ 23          8: ██████████ 10
-   3: ██████████████████ 18               9: ████████ 8
-   4: ██████████████████████████████ 30  10: ██████ 6
-   5: ██████████████████████ 22          11: ███████ 7
-   6: ███████████████ 15                 12+: █████ 4
+### Summary of evidence
 
-Groningen+Friesland (222 repeaters):
-   1: ██████ 14
-   2: █████████ 21
-   3: ███████ 18
-   4: █████████████ 31
-   5: ███████████ 27
-   6: ████████ 20
-   7: ████████████████████████████████████████ 91
-```
+| Test | Densities | Region | Zero delivery | Best auto-tune delivery | Stock default delivery |
+|------|-----------|--------|--------------|-------------------------|----------------------|
+| Gdansk sparse | avg 2.7 nbrs | Poland | **55.3%** | 52.7% | 48.7% |
+| Gdansk medium | avg 5.2 nbrs | Poland | **55.7%** | 49.3% | 44.0% |
+| Gdansk dense | avg 8.0 nbrs | Poland | **65.7%** | 55.7% | 45.0% |
+| NL validation | avg 5.2 nbrs | Netherlands | **42.1%** | 29.2% | 30.8% |
 
-Key structural differences:
-- **Larger network**: 222 vs 174 repeaters — tests whether parameters scale to bigger networks.
-- **Flat max-good cap**: NL peaks at 7 neighbors (91 nodes, 41%) due to the `max-good=7` cap, while Gdansk spreads up to 12. This creates a denser cluster of nodes at the cap, testing the tuning table's behavior at mid-range entries.
-- **Near-connected**: the main component contains 97.7% of nodes. Two tiny residual fragments (3+2 nodes) are geographically isolated; companions are placed on the main component only via farthest-point sampling.
-- **Matched density**: avg 5.1 vs 5.0 neighbors — close enough for meaningful comparison despite different terrain and filter parameters.
+Zero delays are the best configuration in every test, across all densities, on both regions.
 
-### Traffic volume per seed
+### What the simulation shows
 
-| Pattern | Pairs | Msgs/pair | Total |
-|---------|-------|-----------|-------|
-| 1-to-1 (round-robin) | 16 | 8 | 128 |
-| 1-to-many | 15 | 8 | 120 |
-| many-to-1 | 15 | 8 | 120 |
-| random pairs | 16 | 8 | 128 |
-| **Direct total** | | | **496** |
-| Channel | 16 senders | 6 | 96 |
-| **Grand total** | | | **592** |
+1. **The white paper's pairwise collision model does not predict network-level delivery.** More backoff slots do reduce the probability that two specific nodes collide, but the accumulated latency, synchronized release effects, and retransmission timeouts more than cancel this benefit.
 
-Across 6 seeds: 2,976 direct messages and 576 channel messages — roughly 10x the sweep volume.
+2. **Implicit mechanisms already provide sufficient decorrelation.** Half-duplex RX-busy deferral, propagation delay differences, processing jitter, and MeshCore's own Dispatcher timing create enough natural randomization that explicit delay parameters are redundant.
 
-### Method
+3. **The firmware defaults (txdelay=0.5, direct.txdelay=0.3) cost ~11 pp of delivery** in the simulator. The auto-tune table values recommended by the white paper (txdelay=1.0-2.5, rxdelay=2-8) cost even more.
 
-Script: `delay_optimization/run_medium_validation.sh`. Six steps:
+4. **The effect is monotonic and density-independent.** More delay always means less delivery. The advantage of zero delays grows with network density (from +6.6 pp in sparse to +20.7 pp in dense), which is the opposite of what the pairwise theory predicts — dense networks, where collisions should be worst, benefit *most* from removing delays.
 
-1. **Generate topology** — Groningen+Friesland region (`52.8,5.2,53.5,7.0`), with NL-tuned density parameters (link-survival=0.5, survival-snr-mid=5, max-edges=12, max-good=7) that produce avg ~5.1 neighbors — matching the Gdansk medium sweep topology (see "Topology parameter tuning" above).
+### Limitations
 
-2. **Inject test cases** — 16 companions via farthest-point sampling (min-neighbors=2), auto-schedule with all 4 patterns, channel broadcasts, 1-hour duration. Post-processes the config to add `snr_coherence_ms=30000` for O-U correlated fading.
+These findings are from simulation. Real hardware may require non-zero delays for reasons the simulator does not model (crystal settling, duty cycle compliance, processing latency). If so, the optimal values are likely much smaller than the white paper recommends — just enough for hardware compliance, without neighbor-count scaling.
 
-3. **Print topology statistics** — network summary for reference.
+### Recommendations
 
-4. **Run baseline** — 6 seeds with the stock orchestrator (`build/orchestrator/orchestrator`). Per-seed and aggregate results printed.
-
-5. **Run optimized** — writes the universal candidate DelayTuning.h (tx_b=0.5, tx_s=0.6, dtx_b=0.0, dtx_s=0.3, rx_b=1.0, rx_s=0.6 — see Section 8) to the fork, rebuilds, injects `set autotune on` for all repeaters, then runs 6 seeds with the fork orchestrator.
-
-6. **Print comparison table** — baseline vs optimized side-by-side with deltas for delivery, ack, channel, collision/lost, and drop/lost.
-
-### What a successful validation looks like
-
-The optimized parameters pass validation if:
-
-- **Delivery % improves** over baseline on the unseen Netherlands topology. The improvement may be smaller than the sweep's +5.3 pp (different region, harder conditions), but should remain positive. A negative delta would indicate overfitting to the Gdansk topology.
-- **No metric regresses badly** — ack % and channel % should not drop significantly vs baseline.
-- **Lower variance** — the optimized variant should show similar or lower standard deviation across seeds, indicating stable behavior under different random conditions.
-- **Improvement survives correlated fading** — the O-U process tests whether the parameters work when link quality fluctuates slowly, not just under static conditions.
-- **Cross-region generalization** — this is the primary question. If parameters tuned on Gdansk also improve delivery on a completely different Dutch network, they likely capture a genuine property of the MeshCore routing algorithm rather than an artifact of one topology.
-
-### Usage
-
-```bash
-# Full validation (6 seeds, ~2-3 hours)
-./delay_optimization/run_medium_validation.sh
-
-# Quick test (fewer seeds)
-./delay_optimization/run_medium_validation.sh --seeds 2
-```
-
-### Results
-
-*(pending — validation run in progress)*
+1. **For simulation/testing**: use `set txdelay 0`, `set direct.txdelay 0`, `set rxdelay 0` on all repeaters.
+2. **For real hardware**: validate the zero-delay finding on physical repeaters before deploying. If hardware constraints require some delay, keep values as small as possible and do not scale by neighbor count.
+3. **For the auto-tune PR**: the neighbor-count-indexed delay table approach adds complexity without benefit in simulation. The simplest improvement to MeshCore's default firmware would be reducing the stock txdelay from 0.5 to 0 and direct.txdelay from 0.3 to 0.

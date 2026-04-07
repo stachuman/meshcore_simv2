@@ -36,13 +36,13 @@ MESHCORE_DIR="${MESHCORE_DIR:-$PROJECT_DIR/../MeshCore-stachuman}"
 TX_B=0.5; TX_S=0.6; DTX_B=0.0; DTX_S=0.3; RX_B=1.0; RX_S=0.6
 
 # Topology density parameters — adjusted for flat NL terrain:
-# snr_mid=5 preserves weaker bridge links, max-good=7 compensates
-# for NL having mostly high-SNR links (unlike Gdansk's mixed SNR).
-# Result: avg ~5.1 neighbors, matching Gdansk medium's avg 5.0.
-LINK_SURVIVAL=0.5
+# snr_mid=5 preserves weaker bridge links that connect sub-regions.
+# max-good=max-edges (12) avoids artificial pile-up at the cap value.
+# survival=0.27 produces avg ~5.2 neighbors with natural distribution.
+LINK_SURVIVAL=0.27
 SURVIVAL_SNR_MID=5
 MAX_EDGES=12
-MAX_GOOD=7
+MAX_GOOD=12
 
 NUM_SEEDS=6
 SEED_BASE=42

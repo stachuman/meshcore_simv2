@@ -49,12 +49,6 @@
       "lon": 5.9505
     },
     {
-      "name": "NLHARRPTOXPAR",
-      "role": "repeater",
-      "lat": 53.1658,
-      "lon": 5.44514
-    },
-    {
       "name": "Repeater_2e_Exloermo",
       "role": "repeater",
       "lat": 52.9077,
@@ -229,12 +223,6 @@
       "lon": 6.51641
     },
     {
-      "name": "NLKLMWGNRRepeater",
-      "role": "repeater",
-      "lat": 53.2814,
-      "lon": 6.13699
-    },
-    {
       "name": "NLDRRODENDTR",
       "role": "repeater",
       "lat": 53.1457,
@@ -251,12 +239,6 @@
       "role": "repeater",
       "lat": 53.1998,
       "lon": 6.55699
-    },
-    {
-      "name": "UNICORN01",
-      "role": "repeater",
-      "lat": 53.1667,
-      "lon": 5.4331
     },
     {
       "name": "DTIS__NL_LWR__8917DD",
@@ -287,12 +269,6 @@
       "role": "repeater",
       "lat": 53.2987,
       "lon": 6.6115
-    },
-    {
-      "name": "NLSMDJulianalaan",
-      "role": "repeater",
-      "lat": 53.1704,
-      "lon": 6.9893
     },
     {
       "name": "NLGRQIce9",
@@ -331,12 +307,6 @@
       "lon": 6.55613
     },
     {
-      "name": "PE1HTBYagi",
-      "role": "repeater",
-      "lat": 52.9261,
-      "lon": 5.82041
-    },
-    {
       "name": "TBeam_S3_Supreme_SX1",
       "role": "repeater",
       "lat": 53.1965,
@@ -371,6 +341,12 @@
       "role": "repeater",
       "lat": 53.0709,
       "lon": 6.00437
+    },
+    {
+      "name": "RPBurgum",
+      "role": "repeater",
+      "lat": 53.1934,
+      "lon": 6.00484
     },
     {
       "name": "Repeater_Annen",
@@ -437,12 +413,6 @@
       "role": "repeater",
       "lat": 53.0788,
       "lon": 6.59352
-    },
-    {
-      "name": "repeater_diever",
-      "role": "repeater",
-      "lat": 52.8535,
-      "lon": 6.3168
     },
     {
       "name": "Alpha_00_Repeater",
@@ -539,12 +509,6 @@
       "role": "repeater",
       "lat": 52.891,
       "lon": 6.04547
-    },
-    {
-      "name": "RP_Frieschepalen",
-      "role": "repeater",
-      "lat": 53.0944,
-      "lon": 6.19757
     },
     {
       "name": "NLREDRPT02_V1",
@@ -685,12 +649,6 @@
       "lon": 5.71561
     },
     {
-      "name": "UNICORN04",
-      "role": "repeater",
-      "lat": 53.1668,
-      "lon": 5.43337
-    },
-    {
       "name": "LouRepeater1",
       "role": "repeater",
       "lat": 53.2153,
@@ -701,12 +659,6 @@
       "role": "repeater",
       "lat": 53.3214,
       "lon": 6.83866
-    },
-    {
-      "name": "NLFRL_IJLST868",
-      "role": "repeater",
-      "lat": 53.0114,
-      "lon": 5.61073
     },
     {
       "name": "Gert_Heltec_Room__Ho",
@@ -785,12 +737,6 @@
       "role": "repeater",
       "lat": 53.163,
       "lon": 6.32889
-    },
-    {
-      "name": "NLOOLElslooPPC",
-      "role": "repeater",
-      "lat": 52.9306,
-      "lon": 6.24781
     },
     {
       "name": "NLBEDUMPVL",
@@ -959,12 +905,6 @@
       "role": "repeater",
       "lat": 53.2091,
       "lon": 5.8125
-    },
-    {
-      "name": "PA4HJH",
-      "role": "repeater",
-      "lat": 52.8541,
-      "lon": 5.72039
     },
     {
       "name": "Gravenburg_Repeater",
@@ -1255,12 +1195,6 @@
       "lon": 6.54438
     },
     {
-      "name": "nldr_ZLR_Guppy",
-      "role": "repeater",
-      "lat": 53.0858,
-      "lon": 6.68683
-    },
-    {
       "name": "mvd_Heltec_Repeater",
       "role": "repeater",
       "lat": 53.209,
@@ -1342,38 +1276,6 @@
   "topology": {
     "links": [
       {
-        "from": "Repeater_Assen_NL",
-        "to": "Repeater_Assen_NL_so",
-        "snr": 81.65,
-        "rssi": -38.39,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
-      {
-        "from": "NL_HGZ_RA_Rmax",
-        "to": "NL_HGZ_RA_H401",
-        "snr": 81.83,
-        "rssi": -38.21,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
-      {
-        "from": "Repeater_2e_Exloermo",
-        "to": "Rep2eXLMNDSOLAR_TEST",
-        "snr": 81.51,
-        "rssi": -38.53,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
-      {
-        "from": "Repeater9843AG",
-        "to": "oosterkade8solar",
-        "snr": 81.25,
-        "rssi": -38.79,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
-      {
         "from": "roomvd_Heltec",
         "to": "mvd_Heltec_Repeater",
         "snr": 81.37,
@@ -1406,14 +1308,6 @@
         "bidir": true
       },
       {
-        "from": "Heltec_Room_TEST",
-        "to": "pe1rit_repeater",
-        "snr": 77.5,
-        "rssi": -42.54,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
-      {
         "from": "pe1rit_repeater",
         "to": "Repeater_nij_beets_2",
         "snr": 77.25,
@@ -1422,42 +1316,10 @@
         "bidir": true
       },
       {
-        "from": "pe1rit_repeater",
-        "to": "Repeater_nij_beets_3",
-        "snr": 77.25,
-        "rssi": -42.79,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
-      {
-        "from": "UNICORN01",
-        "to": "UNICORN04",
-        "snr": 76.31,
-        "rssi": -43.74,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
-      {
         "from": "NLGRKRET4",
         "to": "DigitalPRoom",
         "snr": 75.42,
         "rssi": -44.62,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
-      {
-        "from": "NLLWRNoisyRP02",
-        "to": "NLLWRNoisyRP01",
-        "snr": 75.5,
-        "rssi": -44.54,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
-      {
-        "from": "NLLWRNoisyRPT02",
-        "to": "NLLWRNoisyRP01",
-        "snr": 75.69,
-        "rssi": -44.36,
         "snr_std_dev": 1.0,
         "bidir": true
       },
@@ -1494,42 +1356,10 @@
         "bidir": true
       },
       {
-        "from": "NLREDRPT01_v2",
-        "to": "NLREDRPT03",
-        "snr": 72.34,
-        "rssi": -47.7,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
-      {
         "from": "JJ1_Repeater",
         "to": "JJ1_Room_wwhello",
         "snr": 72.15,
         "rssi": -47.9,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
-      {
-        "from": "NLLWRNoisyRP02",
-        "to": "NLLWRNoisyRP03",
-        "snr": 72.02,
-        "rssi": -48.02,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
-      {
-        "from": "NLLWRNoisyRP03",
-        "to": "NLLWRNoisyRPT02",
-        "snr": 71.88,
-        "rssi": -48.16,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
-      {
-        "from": "NLLWRNoisyRP03",
-        "to": "NLLWRNoisyRPT02_2",
-        "snr": 71.88,
-        "rssi": -48.16,
         "snr_std_dev": 1.0,
         "bidir": true
       },
@@ -1542,14 +1372,6 @@
         "bidir": true
       },
       {
-        "from": "NLGRQJJ1RPT01",
-        "to": "JJ1_Repeater",
-        "snr": 71.01,
-        "rssi": -49.04,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
-      {
         "from": "NLGRQJJ1RPT02",
         "to": "JJ1_Room_wwhello",
         "snr": 70.64,
@@ -1558,34 +1380,10 @@
         "bidir": true
       },
       {
-        "from": "NLREDRPT02_V1",
-        "to": "NLREDRPT03",
-        "snr": 69.55,
-        "rssi": -50.5,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
-      {
-        "from": "NLLWRNoisyRP01",
-        "to": "NLLWRNoisySRPT01",
-        "snr": 69.48,
-        "rssi": -50.56,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
-      {
         "from": "NLLWRNoisyRPT05",
         "to": "NLLWRNoisyRPT02",
         "snr": 68.74,
         "rssi": -51.3,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
-      {
-        "from": "NLLWRNoisyRP02",
-        "to": "NLLWRNoisyRPT05",
-        "snr": 68.58,
-        "rssi": -51.46,
         "snr_std_dev": 1.0,
         "bidir": true
       },
@@ -1606,90 +1404,10 @@
         "bidir": true
       },
       {
-        "from": "NLGRQJJ1RPT01",
-        "to": "JJ1_Repeater_Test",
-        "snr": 65.11,
-        "rssi": -54.93,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
-      {
-        "from": "NLREDRPT02_V1",
-        "to": "NLREDRPT01_v2",
-        "snr": 64.91,
-        "rssi": -55.13,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
-      {
         "from": "NLLWRNoisyRPT05",
         "to": "NLLWRNoisyRP03",
         "snr": 64.18,
         "rssi": -55.86,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
-      {
-        "from": "NLGRQJJ1RPT04",
-        "to": "NLGRQJJ1RPT02",
-        "snr": 63.1,
-        "rssi": -56.95,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
-      {
-        "from": "NLLWRDeKlamp1",
-        "to": "NLLWRDeKlamp2",
-        "snr": 60.94,
-        "rssi": -59.1,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
-      {
-        "from": "NLLESObserver",
-        "to": "NLLESOmni",
-        "snr": 60.6,
-        "rssi": -59.45,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
-      {
-        "from": "preppersshelter",
-        "to": "WSLEMMER_Observer",
-        "snr": 57.09,
-        "rssi": -62.95,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
-      {
-        "from": "Gravenburg_Repeater2",
-        "to": "Gravenburg_Repeater",
-        "snr": 56.44,
-        "rssi": -63.6,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
-      {
-        "from": "NLGRQ9728RPtest",
-        "to": "NLGRQPA3EKM",
-        "snr": 55.73,
-        "rssi": -64.31,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
-      {
-        "from": "NLLWDZpl433RP01",
-        "to": "Weaze_repeater",
-        "snr": 55.03,
-        "rssi": -65.01,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
-      {
-        "from": "NLGRQdeHeld",
-        "to": "Gravenburg_Repeater",
-        "snr": 51.89,
-        "rssi": -68.15,
         "snr_std_dev": 1.0,
         "bidir": true
       },
@@ -1714,14 +1432,6 @@
         "to": "NL_ROD_AD",
         "snr": 51.52,
         "rssi": -68.52,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
-      {
-        "from": "NLAssenPittelooRpt0",
-        "to": "ASS00_MC_Repeater",
-        "snr": 51.42,
-        "rssi": -68.62,
         "snr_std_dev": 1.0,
         "bidir": true
       },
@@ -1754,22 +1464,6 @@
         "to": "NLLWDZpl868RP01",
         "snr": 50.21,
         "rssi": -69.83,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
-      {
-        "from": "NLGRQNO",
-        "to": "NLGRQIce9",
-        "snr": 50.11,
-        "rssi": -69.93,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
-      {
-        "from": "NLLWRNoisySRPT02",
-        "to": "NLLWDZpl433RP01",
-        "snr": 49.85,
-        "rssi": -70.19,
         "snr_std_dev": 1.0,
         "bidir": true
       },
@@ -1830,26 +1524,10 @@
         "bidir": true
       },
       {
-        "from": "PE4BAS_Roodeschool",
-        "to": "PE4BAS_BBSRoom",
-        "snr": 45.67,
-        "rssi": -74.37,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "Weaze_repeater",
         "to": "NLLWRPRINSETUN02",
         "snr": 46.36,
         "rssi": -73.68,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "REVR_Repeater_2",
-        "to": "NLNRBR01",
-        "snr": 46.12,
-        "rssi": -73.92,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -1886,26 +1564,10 @@
         "bidir": true
       },
       {
-        "from": "NLOOLElslooPPC",
-        "to": "NLOOLElslooM68k",
-        "snr": 47.05,
-        "rssi": -72.99,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "Repeater_Assen_NL",
         "to": "WRDN_ASS_CTR_RPT2",
         "snr": 46.34,
         "rssi": -73.7,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Repeater_Assen",
-        "to": "WRDN_ASS_CTR_RPT2",
-        "snr": 46.24,
-        "rssi": -73.81,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -1918,114 +1580,10 @@
         "bidir": true
       },
       {
-        "from": "STK_Repeater",
-        "to": "NL_GRQ_STK_NOORD",
-        "snr": 42.09,
-        "rssi": -77.95,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLRODRHCSSLR",
-        "to": "NL_ROD_AD",
-        "snr": 39.74,
-        "rssi": -80.3,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "NLLESOmni",
         "to": "MMRogue1",
         "snr": 39.17,
         "rssi": -80.87,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Gert_Repeat__Home_2",
-        "to": "JJ1_Repeater_Test",
-        "snr": 40.18,
-        "rssi": -79.86,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Gert_Heltec_Room__Ho",
-        "to": "JJ1_Repeater_Test",
-        "snr": 40.16,
-        "rssi": -79.88,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLLWDZpl433RP01",
-        "to": "NLLWRPRINSETUN02",
-        "snr": 41.52,
-        "rssi": -78.52,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "JJ1_Repeater",
-        "to": "Gert_Repeat__Home_2",
-        "snr": 38.9,
-        "rssi": -81.14,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLGRQJJ1RPT01",
-        "to": "Gert_Repeat__Home_2",
-        "snr": 37.57,
-        "rssi": -82.47,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLGRQJJ1RPT01",
-        "to": "Gert_Repeat__Home",
-        "snr": 37.55,
-        "rssi": -82.49,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Gert_Repeat__Home_2",
-        "to": "JJ1_Room_wwhello",
-        "snr": 39.7,
-        "rssi": -80.34,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Gert_Repeat__Home",
-        "to": "JJ1_Room_wwhello",
-        "snr": 39.69,
-        "rssi": -80.35,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Gert_Repeat__Home_2",
-        "to": "NLGRQJJ1RPT02",
-        "snr": 38.29,
-        "rssi": -81.75,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "oosterkade8zolder",
-        "to": "Famdevries",
-        "snr": 39.56,
-        "rssi": -80.49,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Repeater9843AG",
-        "to": "Famdevries",
-        "snr": 39.56,
-        "rssi": -80.48,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -2038,22 +1596,6 @@
         "bidir": true
       },
       {
-        "from": "NLSNK1R",
-        "to": "NLSNKRP01",
-        "snr": 40.55,
-        "rssi": -79.49,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "WRDN_ASS_CTR_RPT2",
-        "to": "Tbeam_MC_Repeater",
-        "snr": 42.39,
-        "rssi": -77.66,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "TBeam_S3_Supreme_SX1",
         "to": "NLLWDZpl868RP01",
         "snr": 39.34,
@@ -2062,58 +1604,10 @@
         "bidir": true
       },
       {
-        "from": "NLHARRPTOXPAR",
-        "to": "UNICORN04",
-        "snr": 39.95,
-        "rssi": -80.09,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Jozef_Repeater",
-        "to": "NLGRQGHH_Belsimpel",
-        "snr": 41.79,
-        "rssi": -78.25,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NL_BED_RP01",
-        "to": "NLBEDUMPVL",
-        "snr": 39.41,
-        "rssi": -80.63,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLRODJD6RO",
-        "to": "NLNRBR01",
-        "snr": 39.82,
-        "rssi": -80.22,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "ASS00_MC_Repeater",
         "to": "Tbeam_MC_Repeater",
         "snr": 41.96,
         "rssi": -78.09,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Gert_Repeat__Home",
-        "to": "NLGRQJJ1RPT04",
-        "snr": 36.74,
-        "rssi": -83.3,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "3RV_Pietertje_Eelde",
-        "to": "PSR_Repeater_Eelde",
-        "snr": 41.09,
-        "rssi": -78.95,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -2130,22 +1624,6 @@
         "to": "Tbeam_MC_Repeater",
         "snr": 40.71,
         "rssi": -79.33,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "DTIS__NL_GRQ__9747AS",
-        "to": "ipoacnl_zuidoost",
-        "snr": 42.18,
-        "rssi": -77.86,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "DTIS__NL_GRQ__9712CW",
-        "to": "NlGRQ_Rocqua_Repeat",
-        "snr": 33.55,
-        "rssi": -86.49,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -2190,14 +1668,6 @@
         "bidir": true
       },
       {
-        "from": "NLHRVRPT1",
-        "to": "nlhrvpc5e",
-        "snr": 40.47,
-        "rssi": -79.57,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "NLLEMLTRP01",
         "to": "PA11299",
         "snr": 37.99,
@@ -2222,14 +1692,6 @@
         "bidir": true
       },
       {
-        "from": "NLLWDHuizum1",
-        "to": "NLLWDZpl868RP01",
-        "snr": 38.53,
-        "rssi": -81.52,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "PINDAr01",
         "to": "NLGRNJM01",
         "snr": 38.5,
@@ -2242,14 +1704,6 @@
         "to": "WSLEMMER_Solar_Rptr",
         "snr": 38.36,
         "rssi": -81.68,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "BN_Repeater",
-        "to": "SVRRepeater01",
-        "snr": 43.22,
-        "rssi": -76.83,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -2282,30 +1736,6 @@
         "to": "ASS01_MC_Room",
         "snr": 37.84,
         "rssi": -82.2,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Repeater_Assen",
-        "to": "ASS01_MC_Room",
-        "snr": 37.79,
-        "rssi": -82.26,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Repeater_Assen_NL_so",
-        "to": "PD0PXXRAssen",
-        "snr": 35.62,
-        "rssi": -84.42,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Repeater_Assen",
-        "to": "PD0PXXRAssen",
-        "snr": 35.65,
-        "rssi": -84.39,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -2358,14 +1788,6 @@
         "bidir": true
       },
       {
-        "from": "DTIS__NL_LWR__8917DD",
-        "to": "NLLWRNoisyRP01",
-        "snr": 34.2,
-        "rssi": -85.84,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "PA3GOQ_Leeuwarden",
         "to": "NLLWRHuizum1",
         "snr": 31.61,
@@ -2378,22 +1800,6 @@
         "to": "Repeater_Peelo",
         "snr": 34.38,
         "rssi": -85.67,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "DTIS__NL_LWR__8917DD",
-        "to": "Weaze_repeater",
-        "snr": 33.45,
-        "rssi": -86.59,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLLWDHuizum1",
-        "to": "Weaze_repeater",
-        "snr": 35.12,
-        "rssi": -84.92,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -2414,22 +1820,6 @@
         "bidir": true
       },
       {
-        "from": "NLDRAPBr001",
-        "to": "PE1RWP_Repeater",
-        "snr": 38.43,
-        "rssi": -81.61,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLLWDHuizum1",
-        "to": "NLLWRNoisySRPT02",
-        "snr": 34.72,
-        "rssi": -85.32,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "Jozef_Repeater",
         "to": "NlGRQ_Rocqua_Repeat",
         "snr": 26.93,
@@ -2446,26 +1836,10 @@
         "bidir": true
       },
       {
-        "from": "NLLWRNoisyRP03",
-        "to": "NLLWRPRINSETUN02",
-        "snr": 32.17,
-        "rssi": -87.87,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "PD0PXXRAssen",
         "to": "Repeater_Peelo",
         "snr": 33.74,
         "rssi": -86.3,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "PA3GOQ_Leeuwarden",
-        "to": "NLLWRNoisySRPT02",
-        "snr": 31.84,
-        "rssi": -88.2,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -2486,26 +1860,10 @@
         "bidir": true
       },
       {
-        "from": "LouRepeater1",
-        "to": "Gert_Heltec_Room__Ho",
-        "snr": 31.25,
-        "rssi": -88.8,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "NLLWRNoisyRP01",
         "to": "NLLWRPRINSETUN02",
         "snr": 31.88,
         "rssi": -88.16,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "BillyWoo_Repeater",
-        "to": "BraMo_RoomRepeat",
-        "snr": 33.69,
-        "rssi": -86.35,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -2518,10 +1876,10 @@
         "bidir": true
       },
       {
-        "from": "NL1FRAR",
-        "to": "TBeam_S3_Supreme_SX1",
-        "snr": 33.81,
-        "rssi": -86.24,
+        "from": "Repeater_AssenWest",
+        "to": "Repeater_Assen_NL_so",
+        "snr": 32.91,
+        "rssi": -87.13,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -2542,14 +1900,6 @@
         "bidir": true
       },
       {
-        "from": "NLLWRNoisyRPT02_2",
-        "to": "Weaze_repeater",
-        "snr": 31.45,
-        "rssi": -88.59,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "TBeam_S3_Supreme_SX1",
         "to": "NLLWRNoisyRP03",
         "snr": 32.52,
@@ -2566,10 +1916,10 @@
         "bidir": true
       },
       {
-        "from": "LWRDEEDEE01",
-        "to": "NL_LWD_PI2FRL",
-        "snr": 28.46,
-        "rssi": -91.59,
+        "from": "NLLWRNoisyRP01",
+        "to": "Weaze_repeater",
+        "snr": 30.92,
+        "rssi": -89.12,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -2582,26 +1932,10 @@
         "bidir": true
       },
       {
-        "from": "NLLWRNoisyRP02",
-        "to": "NLLWRNoisySRPT02",
-        "snr": 33.9,
-        "rssi": -86.14,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "NLLWRNoisySRPT02",
         "to": "NLLWRNoisyRPT02",
         "snr": 33.89,
         "rssi": -86.15,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLLWRNoisyRP02",
-        "to": "TBeam_S3_Supreme_SX1",
-        "snr": 32.48,
-        "rssi": -87.56,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -2622,10 +1956,26 @@
         "bidir": true
       },
       {
-        "from": "NLAssenPittelooRpt0",
-        "to": "BAGRPTFMC",
-        "snr": 31.07,
-        "rssi": -88.97,
+        "from": "LWRDEEDEE01",
+        "to": "Weaze_repeater",
+        "snr": 35.72,
+        "rssi": -84.32,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLLWRBilgaard1",
+        "to": "NLLWRPRINSETUN02",
+        "snr": 33.12,
+        "rssi": -86.92,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLLWRNoisySRPT02",
+        "to": "NLLWRNoisyRPT01",
+        "snr": 33.6,
+        "rssi": -86.44,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -2638,34 +1988,10 @@
         "bidir": true
       },
       {
-        "from": "NLLEMLTRP01",
-        "to": "PA4HJH2",
-        "snr": 31.05,
-        "rssi": -88.99,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "TBeam_S3_Supreme_SX1",
-        "to": "NLLWRNoisyRPT05",
-        "snr": 32.84,
-        "rssi": -87.2,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NL_LWD_PI2FRL",
-        "to": "NLLWDZpl433RP01",
-        "snr": 30.78,
-        "rssi": -89.26,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLGRQNO",
-        "to": "NLGRQGHH_Belsimpel",
-        "snr": 34.51,
-        "rssi": -85.53,
+        "to": "NLLWRNoisySRPT01",
+        "snr": 32.52,
+        "rssi": -87.52,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -2694,26 +2020,18 @@
         "bidir": true
       },
       {
-        "from": "Gert_Repeat__Home",
-        "to": "Jozef_Repeater",
-        "snr": 30.81,
-        "rssi": -89.23,
+        "from": "NLLWRNoisyRP03",
+        "to": "NLLWDZpl433RP01",
+        "snr": 27.3,
+        "rssi": -92.74,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "BN_Repeater",
-        "to": "PA4HJH2",
-        "snr": 35.08,
-        "rssi": -84.97,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Gert_Repeat__Home",
-        "to": "Jozef_Repeater_2",
-        "snr": 30.68,
-        "rssi": -89.36,
+        "from": "Repeater_AssenWest",
+        "to": "ASS00_MC_Repeater",
+        "snr": 33.02,
+        "rssi": -87.02,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -2742,14 +2060,6 @@
         "bidir": true
       },
       {
-        "from": "PA4HJH",
-        "to": "PA4HJH2",
-        "snr": 27.84,
-        "rssi": -92.2,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "NLLWRNoisyRP02",
         "to": "NLLWDZpl868RP01",
         "snr": 26.63,
@@ -2766,10 +2076,10 @@
         "bidir": true
       },
       {
-        "from": "NLLWRNoisyRPT02",
+        "from": "NLLWRNoisyRPT01",
         "to": "NLLWDZpl433RP01",
-        "snr": 26.48,
-        "rssi": -93.56,
+        "snr": 26.23,
+        "rssi": -93.82,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -2798,14 +2108,6 @@
         "bidir": true
       },
       {
-        "from": "Gravenburg_Repeater2",
-        "to": "Hoogkerk_room_server",
-        "snr": 31.18,
-        "rssi": -88.87,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "Repeater_Assen",
         "to": "BAGRPTFMC",
         "snr": 15.98,
@@ -2818,6 +2120,14 @@
         "to": "NL_LWD_PI2FRL",
         "snr": 29.71,
         "rssi": -90.33,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NL1FRAR",
+        "to": "NLLWRNoisySRPT02",
+        "snr": 33.81,
+        "rssi": -86.23,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -2854,14 +2164,6 @@
         "bidir": true
       },
       {
-        "from": "NLDRAWST02",
-        "to": "NLDRAWST04",
-        "snr": 29.15,
-        "rssi": -90.89,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "PA3GOQ_Leeuwarden",
         "to": "NLLWRBilgaard1",
         "snr": 30.8,
@@ -2886,34 +2188,10 @@
         "bidir": true
       },
       {
-        "from": "Moarten_Repeater",
-        "to": "NLGRQGHH_Belsimpel",
-        "snr": 32.35,
-        "rssi": -87.69,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "mrKINGbase",
-        "to": "DTIS__NL_GRQ__9712CW",
-        "snr": 27.65,
-        "rssi": -92.39,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "PE4BAS_Roodeschool",
         "to": "NLUHMMBTRPT",
         "snr": 33.25,
         "rssi": -86.79,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLLWDHuizum1",
-        "to": "LWRDEEDEE01",
-        "snr": 28.44,
-        "rssi": -91.6,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -2926,18 +2204,26 @@
         "bidir": true
       },
       {
-        "from": "PA4HJH",
-        "to": "PA11299",
-        "snr": 25.21,
-        "rssi": -94.83,
+        "from": "NLLWRNoisyRP02",
+        "to": "LWRDEEDEE01",
+        "snr": 30.41,
+        "rssi": -89.63,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "NLGRQJJ1RPT04",
-        "to": "LouRepeater1",
-        "snr": 28.8,
-        "rssi": -91.24,
+        "from": "LWRDEEDEE01",
+        "to": "NLLWRNoisyRP01",
+        "snr": 30.43,
+        "rssi": -89.61,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "WRDN_ASS_CTR_RPT2",
+        "to": "BAGRPTFMC",
+        "snr": 27.27,
+        "rssi": -92.77,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -2958,38 +2244,6 @@
         "bidir": true
       },
       {
-        "from": "Moarten_Repeater",
-        "to": "Jozef_Repeater_2",
-        "snr": 21.03,
-        "rssi": -99.01,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "WSLEMMER_Solar_Rptr",
-        "to": "PA4HJH",
-        "snr": 24.56,
-        "rssi": -95.48,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLLWRBilgaard1",
-        "to": "NLLWRNoisySRPT01",
-        "snr": 30.44,
-        "rssi": -89.6,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Moarten_Repeater",
-        "to": "Jozef_Repeater",
-        "snr": 20.98,
-        "rssi": -99.06,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "LWRDEEDEE01",
         "to": "NLLWRNoisySRPT01",
         "snr": 30.28,
@@ -2998,10 +2252,34 @@
         "bidir": true
       },
       {
+        "from": "NLLWRNoisyRP02",
+        "to": "NLLWRBilgaard1",
+        "snr": 28.64,
+        "rssi": -91.4,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLLWRNoisyRPT02",
+        "to": "NLLWRBilgaard1",
+        "snr": 28.55,
+        "rssi": -91.5,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
         "from": "NLLWRBilgaard1",
         "to": "NLLWRNoisyRPT02_2",
         "snr": 29.82,
         "rssi": -90.23,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLLWRNoisyRP03",
+        "to": "NLLWRBilgaard1",
+        "snr": 28.56,
+        "rssi": -91.49,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -3022,22 +2300,6 @@
         "bidir": true
       },
       {
-        "from": "NLLEMLTRP01",
-        "to": "SVRRepeater01",
-        "snr": 27.52,
-        "rssi": -92.52,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLGRQIce9",
-        "to": "Jozef_Repeater",
-        "snr": 22.78,
-        "rssi": -97.26,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "NL_HGZ_RA_Rmax",
         "to": "NLHGZRPGFR1",
         "snr": 26.52,
@@ -3054,30 +2316,6 @@
         "bidir": true
       },
       {
-        "from": "mrKINGbase",
-        "to": "Moarten_Repeater",
-        "snr": 26.43,
-        "rssi": -93.61,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLLWRDeKlamp1",
-        "to": "NL_LWD_PI2FRL",
-        "snr": 23.35,
-        "rssi": -96.69,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "mrKINGbase",
-        "to": "LouRepeater1",
-        "snr": 12.95,
-        "rssi": -107.09,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "NLGRQJJ1RPT04",
         "to": "NLGRQPA3EKM",
         "snr": 27.31,
@@ -3086,26 +2324,10 @@
         "bidir": true
       },
       {
-        "from": "NLGRQJJ1RPT04",
-        "to": "Jozef_Repeater_2",
-        "snr": 25.83,
-        "rssi": -94.21,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "PA3GOQ_Leeuwarden",
-        "to": "NLLWRNoisyRPT01",
-        "snr": 25.41,
-        "rssi": -94.64,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLLWRNoisyRPT05",
-        "to": "PA3GOQ_Leeuwarden",
-        "snr": 26.17,
-        "rssi": -93.88,
+        "from": "NL1FRAR",
+        "to": "NLLWDZpl433RP01",
+        "snr": 28.31,
+        "rssi": -91.74,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -3146,6 +2368,30 @@
         "to": "Jozef_Repeater_2",
         "snr": 21.06,
         "rssi": -98.98,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "LWRDEEDEE01",
+        "to": "PA3GOQ_Leeuwarden",
+        "snr": 25.82,
+        "rssi": -94.22,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "DTIS__NL_GRQ__9712CW",
+        "to": "JJ1_Repeater_Test",
+        "snr": 26.33,
+        "rssi": -93.71,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "DTIS__NL_GRQ__9712CW",
+        "to": "JJ1_Room_wwhello",
+        "snr": 26.41,
+        "rssi": -93.64,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -3198,14 +2444,6 @@
         "bidir": true
       },
       {
-        "from": "PE4BAS_BBSRoom",
-        "to": "Repeater_Hefswal",
-        "snr": 26.71,
-        "rssi": -93.33,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "Windwijzer",
         "to": "Moarten_Repeater",
         "snr": 24.05,
@@ -3222,34 +2460,10 @@
         "bidir": true
       },
       {
-        "from": "Gravenburg_Repeater2",
-        "to": "DTIS__NL_GRQ__9747AS",
-        "snr": 29.62,
-        "rssi": -90.42,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLGRQJJ1RPT01",
-        "to": "NLGRQGHH_Belsimpel",
-        "snr": 24.15,
-        "rssi": -95.9,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "NLGRQ9728RPtest",
         "to": "JJ1_Repeater",
         "snr": 23.92,
         "rssi": -96.13,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "JJ1_Repeater",
-        "to": "NLGRQGHH_Belsimpel",
-        "snr": 24.47,
-        "rssi": -95.58,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -3270,10 +2484,26 @@
         "bidir": true
       },
       {
-        "from": "Repeater_Assen",
-        "to": "NL_ASS_MDK_rePTr",
-        "snr": 23.51,
-        "rssi": -96.53,
+        "from": "Jozef_Repeater",
+        "to": "mrKINGtower",
+        "snr": 18.96,
+        "rssi": -101.08,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLGRQGHH_Belsimpel",
+        "to": "JJ1_Room_wwhello",
+        "snr": 24.26,
+        "rssi": -95.78,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "mrKINGtower",
+        "to": "Jozef_Repeater_2",
+        "snr": 18.34,
+        "rssi": -101.7,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -3294,14 +2524,6 @@
         "bidir": true
       },
       {
-        "from": "NLRODJD6RO",
-        "to": "NLDRRODENDWAZZIE",
-        "snr": 23.6,
-        "rssi": -96.44,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "WSLEMMER_Observer",
         "to": "PA4HJH2",
         "snr": 22.21,
@@ -3310,18 +2532,18 @@
         "bidir": true
       },
       {
-        "from": "NLGRQLWB",
-        "to": "mrKINGbase",
-        "snr": 23.46,
-        "rssi": -96.58,
+        "from": "NLLWRNoisyRP02",
+        "to": "NL1FRAR",
+        "snr": 25.26,
+        "rssi": -94.78,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "BN_Repeater",
-        "to": "WSLEMMER_Observer",
-        "snr": 27.65,
-        "rssi": -92.39,
+        "from": "NLGRQLWB",
+        "to": "mrKINGbase",
+        "snr": 23.46,
+        "rssi": -96.58,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -3335,9 +2557,9 @@
       },
       {
         "from": "NL1FRAR",
-        "to": "NLLWRNoisyRPT01",
-        "snr": 24.9,
-        "rssi": -95.15,
+        "to": "NLLWRNoisyRP01",
+        "snr": 25.28,
+        "rssi": -94.76,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -3346,22 +2568,6 @@
         "to": "preppersshelter",
         "snr": 26.39,
         "rssi": -93.66,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLBAF",
-        "to": "NLGRWINSUM",
-        "snr": 30.71,
-        "rssi": -89.33,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLGRQJJ1RPT04",
-        "to": "mrKINGtower",
-        "snr": 13.49,
-        "rssi": -106.55,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -3382,50 +2588,58 @@
         "bidir": true
       },
       {
-        "from": "mrKINGbase",
-        "to": "NL050BeijumDKP",
-        "snr": 27.25,
-        "rssi": -92.79,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "PE1RWP_Repeater",
-        "to": "NLDRAWST02",
-        "snr": 26.24,
-        "rssi": -93.8,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLBAF",
-        "to": "NLGRQWINSUM",
-        "snr": 30.26,
-        "rssi": -89.78,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Gert_Repeat__Home",
+        "from": "Gert_Repeat__Home_2",
         "to": "NlGRQ_Rocqua_Repeat",
-        "snr": 12.95,
-        "rssi": -107.09,
+        "snr": 12.81,
+        "rssi": -107.23,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "NLLWRNoisySRPT01",
+        "from": "Repeater_Peelo",
+        "to": "WRDN_ASS_CTR_RPT2",
+        "snr": 27.03,
+        "rssi": -93.01,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLLWRNoisyRP03",
+        "to": "NLLWRHuizum1",
+        "snr": 19.99,
+        "rssi": -100.05,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLLWRNoisyRPT02_2",
+        "to": "roomvd_Heltec",
+        "snr": 23.85,
+        "rssi": -96.19,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLLWRNoisyRP02",
+        "to": "roomvd_Heltec",
+        "snr": 23.85,
+        "rssi": -96.19,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLLWRNoisyRPT02",
         "to": "mvd_Heltec_Repeater",
-        "snr": 24.68,
-        "rssi": -95.36,
+        "snr": 23.71,
+        "rssi": -96.34,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "NlGRQ_Rocqua_Repeat",
-        "to": "ipoacnl_zuidoost",
-        "snr": 22.35,
-        "rssi": -97.69,
+        "from": "NLLWRHuizum1",
+        "to": "NLLWRNoisyRP01",
+        "snr": 19.51,
+        "rssi": -100.54,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -3450,6 +2664,14 @@
         "to": "ipoacnl_west",
         "snr": 21.64,
         "rssi": -98.4,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NL1FRAR",
+        "to": "NLLWRPRINSETUN02",
+        "snr": 24.83,
+        "rssi": -95.22,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -3486,18 +2708,10 @@
         "bidir": true
       },
       {
-        "from": "NL1FRAR",
-        "to": "NLLWRDeKlamp2",
-        "snr": 24.45,
-        "rssi": -95.59,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Repeater_AssenWest",
-        "to": "WRDN_ASSN_MRSDK_RPT",
-        "snr": 21.61,
-        "rssi": -98.43,
+        "from": "DTIS__NL_GRQ__9712CW",
+        "to": "ipoacnl_west",
+        "snr": 30.2,
+        "rssi": -89.84,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -3518,14 +2732,6 @@
         "bidir": true
       },
       {
-        "from": "Hoogkerk_room_server",
-        "to": "ipoacnl_zuidoost",
-        "snr": 24.72,
-        "rssi": -95.32,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "NLUHMMBTRPT",
         "to": "Zijldijk_Repeater",
         "snr": 23.68,
@@ -3542,6 +2748,22 @@
         "bidir": true
       },
       {
+        "from": "Gert_Repeat__Home_2",
+        "to": "NLGRQPA3EKM",
+        "snr": 18.88,
+        "rssi": -101.16,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Gert_Repeat__Home",
+        "to": "NLGRQPA3EKM",
+        "snr": 18.98,
+        "rssi": -101.06,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
         "from": "Gert_Heltec_Room__Ho",
         "to": "NLGRQPA3EKM",
         "snr": 18.98,
@@ -3550,42 +2772,42 @@
         "bidir": true
       },
       {
-        "from": "NLLWRDeKlamp1",
-        "to": "NLLWRHuizum1",
-        "snr": 20.52,
-        "rssi": -99.52,
+        "from": "NLLWRNoisyRPT02",
+        "to": "NL_LWD_PI2FRL",
+        "snr": 21.9,
+        "rssi": -98.14,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "mrKINGbase",
+        "to": "Gert_Repeat__Home_2",
+        "snr": 16.1,
+        "rssi": -103.94,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
         "from": "NL_LWD_PI2FRL",
-        "to": "NLLWRNoisyRPT01",
+        "to": "NLLWRNoisyRP01",
         "snr": 21.76,
         "rssi": -98.28,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "WSLEMMER_Solar_Rptr",
-        "to": "SVRRepeater01",
-        "snr": 20.27,
-        "rssi": -99.77,
+        "from": "NLLWRNoisyRPT05",
+        "to": "NL_LWD_PI2FRL",
+        "snr": 22.61,
+        "rssi": -97.43,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "LWRDEEDEE01",
-        "to": "NLLWRDeKlamp2",
-        "snr": 19.71,
-        "rssi": -100.33,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "REVR_Repeater_2",
-        "to": "NLDRRODENDWAZZIE",
-        "snr": 21.07,
-        "rssi": -98.97,
+        "from": "NL1FRAR",
+        "to": "PA3GOQ_Leeuwarden",
+        "snr": 23.35,
+        "rssi": -96.69,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -3594,6 +2816,22 @@
         "to": "NLLWRNoisySRPT01",
         "snr": 22.75,
         "rssi": -97.29,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Repeater_Assen",
+        "to": "WRDN_ASSN_MRSDK_RPT",
+        "snr": 20.3,
+        "rssi": -99.74,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "WRDN_ASSN_MRSDK_RPT",
+        "to": "Repeater_Assen_NL_so",
+        "snr": 20.28,
+        "rssi": -99.76,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -3614,18 +2852,10 @@
         "bidir": true
       },
       {
-        "from": "LWRDEEDEE01",
-        "to": "mvd_Heltec_Repeater",
-        "snr": 20.79,
-        "rssi": -99.25,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "WontonGoodMesh_Repea",
-        "to": "HGZNOD_Repeater",
-        "snr": 21.49,
-        "rssi": -98.55,
+        "from": "LouRepeater1",
+        "to": "ipoacnl_west",
+        "snr": 26.05,
+        "rssi": -93.99,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -3638,10 +2868,34 @@
         "bidir": true
       },
       {
-        "from": "JJ1_Repeater",
+        "from": "NLGRQIce9",
+        "to": "Gert_Repeat__Home_2",
+        "snr": 10.25,
+        "rssi": -109.79,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLGRQJJ1RPT02",
         "to": "NlGRQ_Rocqua_Repeat",
-        "snr": 11.89,
-        "rssi": -108.15,
+        "snr": 11.41,
+        "rssi": -108.63,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Jozef_Repeater",
+        "to": "DTIS__NL_GRQ__9747AS",
+        "snr": 19.4,
+        "rssi": -100.64,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLGRQIce9",
+        "to": "ipoacnl_zuidoost",
+        "snr": 19.58,
+        "rssi": -100.46,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -3662,10 +2916,10 @@
         "bidir": true
       },
       {
-        "from": "PD0DL_Repeater",
-        "to": "WB_XiaoS3_Repeater",
-        "snr": 22.92,
-        "rssi": -97.12,
+        "from": "NLGRQJJ1RPT04",
+        "to": "NlGRQ_Rocqua_Repeat",
+        "snr": 12.09,
+        "rssi": -107.95,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -3678,10 +2932,34 @@
         "bidir": true
       },
       {
+        "from": "LWRDEEDEE01",
+        "to": "NLLWRBilgaard1",
+        "snr": 21.11,
+        "rssi": -98.93,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "ASS00_MC_Repeater",
+        "to": "NL_ASS_MDK_rePTr",
+        "snr": 21.25,
+        "rssi": -98.79,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
         "from": "ASS02_MC_Repeater",
         "to": "NL_ASS_MDK_rePTr",
         "snr": 21.09,
         "rssi": -98.96,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLLWRDeKlamp2",
+        "to": "NLLWDZpl868RP01",
+        "snr": 18.53,
+        "rssi": -101.51,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -3694,6 +2972,22 @@
         "bidir": true
       },
       {
+        "from": "NLGRQNO",
+        "to": "DTIS__NL_GRQ__9747AS",
+        "snr": 20.36,
+        "rssi": -99.68,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Gert_Repeat__Home",
+        "to": "Moarten_Repeater",
+        "snr": 13.97,
+        "rssi": -106.07,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
         "from": "Windwijzer",
         "to": "NLGRQIce9",
         "snr": 17.77,
@@ -3702,18 +2996,26 @@
         "bidir": true
       },
       {
-        "from": "NL_HGZ_RA_Rmax",
-        "to": "NLGRNJM01",
-        "snr": 18.08,
-        "rssi": -101.96,
+        "from": "NLLWRNoisySRPT02",
+        "to": "mvd_Heltec_Repeater",
+        "snr": 21.98,
+        "rssi": -98.06,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "PE1RWP_Repeater",
-        "to": "NLDRAWST01",
-        "snr": 22.78,
-        "rssi": -97.27,
+        "from": "NLLWRNoisySRPT02",
+        "to": "roomvd_Heltec",
+        "snr": 22.0,
+        "rssi": -98.04,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLLWRDeKlamp1",
+        "to": "NLLWDZpl868RP01",
+        "snr": 15.9,
+        "rssi": -104.15,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -3734,18 +3036,26 @@
         "bidir": true
       },
       {
-        "from": "HGZNOD2_Repeater",
-        "to": "NLGRNJM01",
-        "snr": 19.47,
-        "rssi": -100.57,
+        "from": "mrKINGbase",
+        "to": "JJ1_Repeater",
+        "snr": 7.41,
+        "rssi": -112.63,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "NLGRNJM01",
-        "to": "DLB_BASE_REPEATER",
-        "snr": 18.13,
-        "rssi": -101.91,
+        "from": "Windwijzer",
+        "to": "Jozef_Repeater_2",
+        "snr": 17.13,
+        "rssi": -102.91,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLLWRDeKlamp2",
+        "to": "Weaze_repeater",
+        "snr": 20.91,
+        "rssi": -99.13,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -3774,6 +3084,14 @@
         "bidir": true
       },
       {
+        "from": "DTIS__NL_LWR__8917DD",
+        "to": "roomvd_Heltec",
+        "snr": 18.2,
+        "rssi": -101.84,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
         "from": "NLGRQIce9",
         "to": "JJ1_Repeater_Test",
         "snr": 6.25,
@@ -3782,10 +3100,18 @@
         "bidir": true
       },
       {
-        "from": "Repeater_Peelo",
-        "to": "BAGRPTFMC",
-        "snr": 17.31,
-        "rssi": -102.73,
+        "from": "mrKINGbase",
+        "to": "DTIS__NL_GRQ__9747AS",
+        "snr": 18.64,
+        "rssi": -101.4,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Hoogkerk_room_server",
+        "to": "Jozef_Repeater_2",
+        "snr": 23.03,
+        "rssi": -97.01,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -3798,6 +3124,54 @@
         "bidir": true
       },
       {
+        "from": "NLGRQdeHeld",
+        "to": "LouRepeater1",
+        "snr": 18.34,
+        "rssi": -101.7,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLLWDZpl868RP01",
+        "to": "roomvd_Heltec",
+        "snr": 18.7,
+        "rssi": -101.34,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLLWDZpl433RP01",
+        "to": "roomvd_Heltec",
+        "snr": 18.4,
+        "rssi": -101.64,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "LouRepeater1",
+        "to": "NLGRQPA3EKM",
+        "snr": 20.22,
+        "rssi": -99.83,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Windwijzer",
+        "to": "NLGRQGHH_Belsimpel",
+        "snr": 21.46,
+        "rssi": -98.58,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "WRDN_ASSN_MRSDK_RPT",
+        "to": "ASS00_MC_Repeater",
+        "snr": 18.28,
+        "rssi": -101.76,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
         "from": "WRDN_ASSN_MRSDK_RPT",
         "to": "ASS01_MC_Room",
         "snr": 17.99,
@@ -3806,18 +3180,10 @@
         "bidir": true
       },
       {
-        "from": "WRDN_ASSN_MRSDK_RPT",
-        "to": "ASS02_MC_Repeater",
-        "snr": 17.99,
-        "rssi": -102.05,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Repeater_Annen",
-        "to": "nldr_ZLR_Guppy",
-        "snr": 14.0,
-        "rssi": -106.04,
+        "from": "NLGRQEUVELGUNNE_T3",
+        "to": "Gert_Repeat__Home_2",
+        "snr": 8.92,
+        "rssi": -111.12,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -3862,14 +3228,6 @@
         "bidir": true
       },
       {
-        "from": "Repeater_AssenWest",
-        "to": "Marsdijk_repeater",
-        "snr": 15.81,
-        "rssi": -104.23,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "BillyWoo_Repeater",
         "to": "Bommelstein_Repeater",
         "snr": 18.49,
@@ -3886,10 +3244,42 @@
         "bidir": true
       },
       {
-        "from": "Gert_Heltec_Room__Ho",
+        "from": "NLLWRDeKlamp2",
+        "to": "NLLWRPRINSETUN02",
+        "snr": 15.36,
+        "rssi": -104.68,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLGRQ9728RP01",
+        "to": "Jozef_Repeater",
+        "snr": 19.88,
+        "rssi": -100.16,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Gert_Repeat__Home_2",
         "to": "ipoacnl_west",
-        "snr": 19.66,
-        "rssi": -100.38,
+        "snr": 19.63,
+        "rssi": -100.41,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Gravenburg_Repeater2",
+        "to": "LouRepeater1",
+        "snr": 17.29,
+        "rssi": -102.75,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLGRQJJ1RPT01",
+        "to": "ipoacnl_zuidoost",
+        "snr": 9.0,
+        "rssi": -111.04,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -3902,18 +3292,10 @@
         "bidir": true
       },
       {
-        "from": "HB_Uithuizen",
-        "to": "Repeater_Hefswal",
-        "snr": 12.4,
-        "rssi": -107.64,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Hoogkerk_room_server",
-        "to": "JJ1_Repeater_Test",
-        "snr": 12.5,
-        "rssi": -107.54,
+        "from": "NLGRQJJ1RPT02",
+        "to": "ipoacnl_zuidoost",
+        "snr": 11.05,
+        "rssi": -108.99,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -3926,58 +3308,163 @@
         "bidir": true
       },
       {
-        "from": "Windwijzer",
-        "to": "NL050BeijumDKP",
-        "snr": 19.64,
-        "rssi": -100.4,
+        "from": "JJ1_Repeater_Test",
+        "to": "ipoacnl_zuidoost",
+        "snr": 15.49,
+        "rssi": -104.55,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "NLLWRBilgaard1",
-        "to": "mvd_Heltec_Repeater",
-        "snr": 18.31,
-        "rssi": -101.73,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "PINDAr01",
-        "to": "BB_Southpants_repiep",
-        "snr": 10.2,
-        "rssi": -109.84,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLGRNJM01",
-        "to": "Zuidbroek",
-        "snr": 10.65,
-        "rssi": -109.39,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLGRKRET4",
-        "to": "NLGR_Briltil_repeate",
-        "snr": 14.36,
-        "rssi": -105.68,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Hoogkerk_room_server",
-        "to": "NLGRQPA3EKM",
-        "snr": 14.25,
-        "rssi": -105.79,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLGRQ9728RP01",
+        "from": "Moarten_Repeater",
         "to": "Hoogkerk_room_server",
-        "snr": 16.16,
-        "rssi": -103.88,
+        "snr": 15.65,
+        "rssi": -104.39,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NL_LWD_PI2FRL",
+        "to": "mvd_Heltec_Repeater",
+        "snr": 15.6,
+        "rssi": -104.44,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "PA3GOQ_Leeuwarden",
+        "to": "mvd_Heltec_Repeater",
+        "snr": 14.95,
+        "rssi": -105.09,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Jozef_Repeater",
+        "to": "NLGRQEUVELGUNNE_T3",
+        "snr": 7.74,
+        "rssi": -112.3,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLGRQIce9",
+        "to": "Gravenburg_Repeater",
+        "snr": 9.98,
+        "rssi": -110.06,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLGRQEUVELGUNNE_T3",
+        "to": "JJ1_Room_wwhello",
+        "snr": 3.73,
+        "rssi": -116.31,
+        "snr_std_dev": 0.5,
+        "loss": 0.0004,
+        "bidir": true
+      },
+      {
+        "from": "ipoacnl_zuidoost",
+        "to": "NL050BeijumDKP",
+        "snr": 20.05,
+        "rssi": -99.99,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLGRQNO",
+        "to": "NLGRQdeHeld",
+        "snr": 8.53,
+        "rssi": -111.51,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Gert_Repeat__Home_2",
+        "to": "Hoogkerk_room_server",
+        "snr": 15.54,
+        "rssi": -104.5,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLGRQGHH_Belsimpel",
+        "to": "Hoogkerk_room_server",
+        "snr": 23.26,
+        "rssi": -96.78,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLLWRDeKlamp2",
+        "to": "NLLWRNoisyRPT02",
+        "snr": 13.57,
+        "rssi": -106.47,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "DTIS__NL_GRQ__9747AS",
+        "to": "Gert_Repeat__Home_2",
+        "snr": 11.19,
+        "rssi": -108.85,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLLWDHuizum1",
+        "to": "roomvd_Heltec",
+        "snr": 9.83,
+        "rssi": -110.21,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLGRQIce9",
+        "to": "Gravenburg_Repeater2",
+        "snr": 10.3,
+        "rssi": -109.75,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLGRQ9728RPtest",
+        "to": "Hoogkerk_room_server",
+        "snr": 16.08,
+        "rssi": -103.96,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLGRQdeHeld",
+        "to": "JJ1_Repeater_Test",
+        "snr": 12.86,
+        "rssi": -107.18,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLLWRDeKlamp1",
+        "to": "NLLWRNoisyRP01",
+        "snr": 13.34,
+        "rssi": -106.7,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "DTIS__NL_LWR__8917DD",
+        "to": "NLLWRDeKlamp2",
+        "snr": 11.58,
+        "rssi": -108.46,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLGRQJJ1RPT01",
+        "to": "Gravenburg_Repeater",
+        "snr": 7.46,
+        "rssi": -112.58,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -3990,10 +3477,18 @@
         "bidir": true
       },
       {
-        "from": "NLLWRBilgaard1",
-        "to": "BraMo_RoomRepeat",
-        "snr": 21.31,
-        "rssi": -98.73,
+        "from": "NLGRQLWB",
+        "to": "Gert_Repeat__Home_2",
+        "snr": 9.91,
+        "rssi": -110.13,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Gravenburg_Repeater",
+        "to": "JJ1_Room_wwhello",
+        "snr": 11.82,
+        "rssi": -108.22,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -4014,18 +3509,42 @@
         "bidir": true
       },
       {
-        "from": "NLGRNJM01",
-        "to": "BB_Southpants_repiep",
-        "snr": 14.78,
-        "rssi": -105.26,
+        "from": "JJ1_Repeater",
+        "to": "Gravenburg_Repeater2",
+        "snr": 7.02,
+        "rssi": -113.02,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "BpmsCap",
-        "to": "NLFRLNBRRKNSR01",
-        "snr": 12.41,
-        "rssi": -107.64,
+        "from": "NLGRQJJ1RPT04",
+        "to": "DTIS__NL_GRQ__9747AS",
+        "snr": 16.79,
+        "rssi": -103.25,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "mrKINGtower",
+        "to": "ipoacnl_west",
+        "snr": 8.1,
+        "rssi": -111.94,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "DTIS__NL_GRQ__9747AS",
+        "to": "JJ1_Repeater_Test",
+        "snr": 14.85,
+        "rssi": -105.19,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Gert_Heltec_Room__Ho",
+        "to": "Gravenburg_Repeater",
+        "snr": 10.64,
+        "rssi": -109.4,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -4038,42 +3557,34 @@
         "bidir": true
       },
       {
-        "from": "Gravenburg_Repeater",
-        "to": "NLGRNL12296",
-        "snr": 13.21,
-        "rssi": -106.84,
+        "from": "Moarten_Repeater",
+        "to": "NLGRQEUVELGUNNE_T3",
+        "snr": 9.2,
+        "rssi": -110.84,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLGRQNO",
+        "to": "Gravenburg_Repeater2",
+        "snr": 11.99,
+        "rssi": -108.06,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
         "from": "Marsdijk_repeater",
-        "to": "ASS01_MC_Room",
-        "snr": 14.31,
-        "rssi": -105.74,
+        "to": "ASS00_MC_Repeater",
+        "snr": 12.82,
+        "rssi": -107.22,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "PINDAr01",
-        "to": "HGZNOD_Repeater",
-        "snr": 12.09,
-        "rssi": -107.95,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLGR_Briltil_repeate",
-        "to": "Famdevries",
-        "snr": 12.63,
-        "rssi": -107.41,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "nlhrvpc5e",
-        "to": "NLFRLNBRRKNSR01",
-        "snr": 8.44,
-        "rssi": -111.6,
+        "from": "Windwijzer",
+        "to": "Gert_Repeat__Home_2",
+        "snr": 14.56,
+        "rssi": -105.48,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -4086,34 +3597,10 @@
         "bidir": true
       },
       {
-        "from": "EF_NLSNK1_R",
-        "to": "NLFRL_IJLST868",
-        "snr": 12.83,
-        "rssi": -107.21,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLFAR01",
-        "to": "WB_XiaoS3_Repeater",
-        "snr": 9.76,
-        "rssi": -110.28,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "PINDAr01",
-        "to": "Nyro187",
-        "snr": 13.06,
-        "rssi": -106.99,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Alpha_00_Repeater",
-        "to": "Bommelstein_Repeater",
-        "snr": 14.52,
-        "rssi": -105.53,
+        "from": "mrKINGbase",
+        "to": "Gravenburg_Repeater",
+        "snr": 10.09,
+        "rssi": -109.95,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -4126,50 +3613,10 @@
         "bidir": true
       },
       {
-        "from": "HB_BBSRoom",
-        "to": "Zijldijk_Repeater",
-        "snr": 12.44,
-        "rssi": -107.6,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "NLGRQdeHeld",
         "to": "NLGRNL12296",
         "snr": 12.67,
         "rssi": -107.37,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLGR_Briltil_repeate",
-        "to": "oosterkade8solar",
-        "snr": 14.17,
-        "rssi": -105.87,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLZRPRP01",
-        "to": "Zijldijk_Repeater",
-        "snr": 14.56,
-        "rssi": -105.48,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLGRQ9728RP01",
-        "to": "PSR_Rep_Eelde_Solar",
-        "snr": 5.97,
-        "rssi": -114.07,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "RPRyptsjerk",
-        "to": "mvd_Heltec_Repeater",
-        "snr": 13.33,
-        "rssi": -106.72,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -4182,22 +3629,6 @@
         "bidir": true
       },
       {
-        "from": "Bommelstein_Repeater",
-        "to": "NLSTNRP01",
-        "snr": 13.16,
-        "rssi": -106.88,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Heltec_Room_TEST",
-        "to": "NLDRAWST01",
-        "snr": 14.61,
-        "rssi": -105.43,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "NLGRQEUVELGUNNE_T3",
         "to": "mrKINGbastion",
         "snr": 14.47,
@@ -4206,10 +3637,10 @@
         "bidir": true
       },
       {
-        "from": "PINDAr01",
-        "to": "WontonGoodMesh_Repea",
-        "snr": 10.18,
-        "rssi": -109.86,
+        "from": "NLGRQLWB",
+        "to": "NLGRQJJ1RPT04",
+        "snr": 6.45,
+        "rssi": -113.6,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -4222,26 +3653,18 @@
         "bidir": true
       },
       {
-        "from": "RPWwxOkrk",
-        "to": "mvd_Heltec_Repeater",
-        "snr": 16.95,
-        "rssi": -103.09,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "3RV_Pietertje_Eelde",
-        "to": "NLGRQPA3EKM",
-        "snr": 7.24,
-        "rssi": -112.8,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "NLGRMRMR02BroodBak1",
         "to": "NL_ROD_AD",
         "snr": 10.05,
         "rssi": -109.99,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLSTNRP01",
+        "to": "NLLWRPRINSETUN02",
+        "snr": 12.78,
+        "rssi": -107.26,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -4254,18 +3677,34 @@
         "bidir": true
       },
       {
-        "from": "NLGRWVKSOLAR",
-        "to": "RepeaterDREGNS",
-        "snr": 11.48,
-        "rssi": -108.56,
+        "from": "NLLWRNoisyRP02",
+        "to": "NLSTNRP01",
+        "snr": 13.04,
+        "rssi": -107.0,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "NLGRQLWB",
-        "to": "DTIS__NL_GRQ__9747AS",
-        "snr": 11.48,
-        "rssi": -108.56,
+        "from": "NLLWRNoisyRPT02",
+        "to": "NLSTNRP01",
+        "snr": 13.04,
+        "rssi": -107.0,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLLWRNoisyRPT02_2",
+        "to": "NLSTNRP01",
+        "snr": 13.04,
+        "rssi": -107.0,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLGRQ9728RPtest",
+        "to": "ipoacnl_zuidoost",
+        "snr": 14.75,
+        "rssi": -105.29,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -4282,6 +3721,23 @@
         "to": "MvE_RAK4631_Repeater",
         "snr": 9.3,
         "rssi": -110.74,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "LouRepeater1",
+        "to": "NLGRQMeerstad",
+        "snr": 4.15,
+        "rssi": -115.89,
+        "snr_std_dev": 0.5,
+        "loss": 0.0003,
+        "bidir": true
+      },
+      {
+        "from": "Gravenburg_Repeater2",
+        "to": "NLGRQPA3EKM",
+        "snr": 12.96,
+        "rssi": -107.08,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -4311,9 +3767,9 @@
       },
       {
         "from": "NLGRQ9728RP01",
-        "to": "NLGRQdeHeld",
-        "snr": 8.38,
-        "rssi": -111.66,
+        "to": "NLGRQIce9",
+        "snr": 5.46,
+        "rssi": -114.58,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -4334,26 +3790,10 @@
         "bidir": true
       },
       {
-        "from": "NL_BED_RP01",
-        "to": "NLGRNTO_Centrum_E9",
-        "snr": 14.73,
-        "rssi": -105.31,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "NLGRMRMR02BroodBak1",
         "to": "NLRODJD6RO",
         "snr": 11.41,
         "rssi": -108.63,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "PE1RWP_Repeater",
-        "to": "RP_Frieschepalen",
-        "snr": 13.18,
-        "rssi": -106.86,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -4398,10 +3838,10 @@
         "bidir": true
       },
       {
-        "from": "PE4BAS_Roodeschool",
-        "to": "NLGR9915PAXS",
-        "snr": 17.18,
-        "rssi": -102.86,
+        "from": "Moarten_Repeater",
+        "to": "NLGRQMeerstad",
+        "snr": 8.21,
+        "rssi": -111.83,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -4410,6 +3850,14 @@
         "to": "RepNLHZ9011A",
         "snr": 16.32,
         "rssi": -103.72,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLLWRNoisySRPT01",
+        "to": "BraMo_RoomRepeat",
+        "snr": 13.34,
+        "rssi": -106.71,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -4430,26 +3878,18 @@
         "bidir": true
       },
       {
+        "from": "NLLWRNoisyRP02",
+        "to": "BraMo_RoomRepeat",
+        "snr": 11.48,
+        "rssi": -108.56,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
         "from": "Alpha_00_Repeater",
-        "to": "NLLWRNoisyRPT01",
-        "snr": 11.54,
-        "rssi": -108.5,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLVDMKERN01",
-        "to": "Zuidbroek",
-        "snr": 10.96,
-        "rssi": -109.08,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLVDMKERN01",
-        "to": "Zuidbroek_2",
-        "snr": 10.96,
-        "rssi": -109.08,
+        "to": "NLLWRNoisyRPT02",
+        "snr": 11.47,
+        "rssi": -108.57,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -4462,18 +3902,18 @@
         "bidir": true
       },
       {
-        "from": "Habies_Solar_Repeate",
-        "to": "NLLPMRP01",
-        "snr": 11.85,
-        "rssi": -108.2,
+        "from": "NLLWRNoisyRP03",
+        "to": "Alpha_00_Repeater",
+        "snr": 10.99,
+        "rssi": -109.05,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "NLUHMMBTRPT",
-        "to": "NLGR9915PAXS",
-        "snr": 13.97,
-        "rssi": -106.07,
+        "from": "NLLWRNoisyRP03",
+        "to": "BraMo_RoomRepeat",
+        "snr": 10.99,
+        "rssi": -109.05,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -4486,26 +3926,10 @@
         "bidir": true
       },
       {
-        "from": "pe1rit_repeater",
-        "to": "NLDRAWST02",
-        "snr": 11.55,
-        "rssi": -108.49,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "NLGRKRET4",
         "to": "Famdevries",
         "snr": 7.1,
         "rssi": -112.95,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "PH1J_Tbeam_SX1262_Re",
-        "to": "NLDRAWST02",
-        "snr": 9.04,
-        "rssi": -111.0,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -4534,34 +3958,10 @@
         "bidir": true
       },
       {
-        "from": "Heltec_Room_TEST",
-        "to": "PH1J_Tbeam_SX1262_Re",
-        "snr": 12.02,
-        "rssi": -108.02,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "PH1J_Tbeam_SX1262_Re",
         "to": "Repeater_nij_beets_3",
         "snr": 12.06,
         "rssi": -107.98,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GP4_Repeater",
-        "to": "PSR_Rep_Eelde_Solar",
-        "snr": 10.98,
-        "rssi": -109.06,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "PSR_Rep_Eelde_Solar",
-        "to": "Gp8_2",
-        "snr": 10.61,
-        "rssi": -109.43,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -4574,14 +3974,6 @@
         "bidir": true
       },
       {
-        "from": "NLGRWVKSOLAR",
-        "to": "NL_GRQ_STK_NOORD",
-        "snr": 10.22,
-        "rssi": -109.82,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "GP4_Repeater",
         "to": "PSR_Repeater_Eelde",
         "snr": 13.12,
@@ -4590,10 +3982,26 @@
         "bidir": true
       },
       {
-        "from": "GP8_Repeater",
-        "to": "Marsdijk_repeater",
-        "snr": 6.78,
-        "rssi": -113.26,
+        "from": "NLLWRNoisySRPT02",
+        "to": "NLSTNRP01",
+        "snr": 10.63,
+        "rssi": -109.41,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Alpha_00_Repeater",
+        "to": "Weaze_repeater",
+        "snr": 13.61,
+        "rssi": -106.43,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "DTIS__NL_LWR__8917DD",
+        "to": "BillyWoo_Repeater",
+        "snr": 10.22,
+        "rssi": -109.82,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -4606,11 +4014,44 @@
         "bidir": true
       },
       {
+        "from": "NLGRNJM01",
+        "to": "NLVDMRP964601",
+        "snr": 9.35,
+        "rssi": -110.69,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLLWDZpl868RP01",
+        "to": "BraMo_RoomRepeat",
+        "snr": 11.9,
+        "rssi": -108.14,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
         "from": "NLGRQ9728RPtest",
         "to": "Windwijzer",
         "snr": 6.61,
         "rssi": -113.44,
         "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "DTIS__NL_GRQ__9747AS",
+        "to": "NLGRNL12296",
+        "snr": 14.7,
+        "rssi": -105.34,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "PSR_Repeater_Eelde",
+        "to": "NLGRQJJ1RPT02",
+        "snr": 1.83,
+        "rssi": -118.21,
+        "snr_std_dev": 0.5,
+        "loss": 0.0019,
         "bidir": true
       },
       {
@@ -4622,26 +4063,10 @@
         "bidir": true
       },
       {
-        "from": "PINDAr01",
-        "to": "NLVDMRP964601",
-        "snr": 5.38,
-        "rssi": -114.66,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "NLGRKRET4",
         "to": "oosterkade8solar",
         "snr": 9.46,
         "rssi": -110.58,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLGRKRET4",
-        "to": "oosterkade8zolder",
-        "snr": 9.41,
-        "rssi": -110.63,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -4663,14 +4088,6 @@
         "bidir": true
       },
       {
-        "from": "Repeater9843AG",
-        "to": "DigitalPRoom",
-        "snr": 11.43,
-        "rssi": -108.61,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "DigitalPRoom",
         "to": "oosterkade8solar",
         "snr": 9.41,
@@ -4687,11 +4104,28 @@
         "bidir": true
       },
       {
-        "from": "mrKINGbastion",
-        "to": "NLHGZRPGFR1",
-        "snr": 12.91,
-        "rssi": -107.13,
+        "from": "NLGRQJJ1RPT04",
+        "to": "NLGRNL12296",
+        "snr": 5.4,
+        "rssi": -114.64,
         "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLLWRNoisySRPT02",
+        "to": "BraMo_RoomRepeat",
+        "snr": 10.66,
+        "rssi": -109.38,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLGRQJJ1RPT02",
+        "to": "NLGRNL12296",
+        "snr": 2.54,
+        "rssi": -117.5,
+        "snr_std_dev": 0.5,
+        "loss": 0.0011,
         "bidir": true
       },
       {
@@ -4699,6 +4133,14 @@
         "to": "NL_2eEXLMND_Rep",
         "snr": 6.78,
         "rssi": -113.27,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "JJ1_Repeater_Test",
+        "to": "NLGRNL12296",
+        "snr": 5.83,
+        "rssi": -114.21,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -4719,18 +4161,18 @@
         "bidir": true
       },
       {
-        "from": "NLLWRNoisyRPT01",
+        "from": "NLLWRNoisyRPT05",
         "to": "RPWwxOkrk",
-        "snr": 11.94,
-        "rssi": -108.1,
+        "snr": 13.43,
+        "rssi": -106.61,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "NLSTNRP01",
-        "to": "mvd_Heltec_Repeater",
-        "snr": 10.62,
-        "rssi": -109.42,
+        "from": "BillyWoo_Repeater",
+        "to": "NLLWRNoisyRP01",
+        "snr": 7.94,
+        "rssi": -112.1,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -4739,14 +4181,6 @@
         "to": "Vossenburcht__Repeat",
         "snr": 16.99,
         "rssi": -103.05,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLGRNTO_Centrum_E9",
-        "to": "NL050BeijumDKP",
-        "snr": 15.09,
-        "rssi": -104.95,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -4768,14 +4202,6 @@
       },
       {
         "from": "HGZNOD2_Repeater",
-        "to": "Zuidbroek",
-        "snr": 8.98,
-        "rssi": -111.06,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "HGZNOD2_Repeater",
         "to": "Zuidbroek_2",
         "snr": 8.98,
         "rssi": -111.06,
@@ -4791,18 +4217,10 @@
         "bidir": true
       },
       {
-        "from": "DLB_BASE_REPEATER",
-        "to": "Zuidbroek_2",
-        "snr": 8.95,
-        "rssi": -111.09,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "BB_Southpants_repiep",
-        "to": "NLGRG7RSolar_2",
-        "snr": 8.23,
-        "rssi": -111.81,
+        "from": "PSR_Repeater_Eelde",
+        "to": "Gert_Heltec_Room__Ho",
+        "snr": 11.86,
+        "rssi": -108.18,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -4831,47 +4249,6 @@
         "bidir": true
       },
       {
-        "from": "mrKINGbastion",
-        "to": "HGZNOD_Repeater",
-        "snr": 10.92,
-        "rssi": -109.13,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLGRQdeHeld",
-        "to": "NLGRQEUVELGUNNE_T3",
-        "snr": 0.51,
-        "rssi": -119.53,
-        "snr_std_dev": 0.5,
-        "loss": 0.0054,
-        "bidir": true
-      },
-      {
-        "from": "NL_HGZ_RA_Rmax",
-        "to": "Zuidbroek_2",
-        "snr": 7.68,
-        "rssi": -112.36,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NL_HGZ_RA_H401",
-        "to": "Zuidbroek",
-        "snr": 7.95,
-        "rssi": -112.1,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLGRQLWB",
-        "to": "NLBEDUMPVL",
-        "snr": 11.19,
-        "rssi": -108.86,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "NLVDMRP964601",
         "to": "NLHGZRPGFR1",
         "snr": 9.8,
@@ -4888,6 +4265,14 @@
         "bidir": true
       },
       {
+        "from": "mrKINGbastion",
+        "to": "mrKINGtower",
+        "snr": 10.93,
+        "rssi": -109.11,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
         "from": "NLZRPRP01",
         "to": "WB_XiaoS3_Repeater",
         "snr": 8.92,
@@ -4896,10 +4281,10 @@
         "bidir": true
       },
       {
-        "from": "NL_BED_RP01",
-        "to": "NLGRQWINSUM",
-        "snr": 5.16,
-        "rssi": -114.88,
+        "from": "Gert_Heltec_Room__Ho",
+        "to": "NLGRNL12296",
+        "snr": 9.53,
+        "rssi": -110.51,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -4920,12 +4305,12 @@
         "bidir": true
       },
       {
-        "from": "PE1HTBYagi",
-        "to": "NLLGWRP01",
-        "snr": 2.59,
-        "rssi": -117.45,
+        "from": "NLGRQNO",
+        "to": "NL_BED_RP01",
+        "snr": 4.74,
+        "rssi": -115.3,
         "snr_std_dev": 0.5,
-        "loss": 0.001,
+        "loss": 0.0002,
         "bidir": true
       },
       {
@@ -4937,10 +4322,34 @@
         "bidir": true
       },
       {
-        "from": "NLZRPRP01",
-        "to": "NLUHMMBTRPT",
-        "snr": 11.57,
-        "rssi": -108.47,
+        "from": "NL_LWD_PI2FRL",
+        "to": "NLSTNRP01",
+        "snr": 5.07,
+        "rssi": -114.97,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "RPRyptsjerk",
+        "to": "NLLWRNoisyRPT01",
+        "snr": 6.74,
+        "rssi": -113.3,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "RPRyptsjerk",
+        "to": "NLLWRNoisyRP01",
+        "snr": 6.79,
+        "rssi": -113.25,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "RPRyptsjerk",
+        "to": "NLLWRNoisyRPT02_2",
+        "snr": 5.24,
+        "rssi": -114.8,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -4954,14 +4363,6 @@
         "bidir": true
       },
       {
-        "from": "NLDRAWST01",
-        "to": "RP_Frieschepalen_v3",
-        "snr": 7.05,
-        "rssi": -112.99,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "NLGRQEUVELGUNNE_T3",
         "to": "WontonGoodMesh_Repea",
         "snr": 2.64,
@@ -4971,26 +4372,18 @@
         "bidir": true
       },
       {
-        "from": "NLDRNWBRP1",
-        "to": "NL9571Repeater",
-        "snr": 6.19,
-        "rssi": -113.85,
+        "from": "PINDAr01",
+        "to": "NLVDMKERN01",
+        "snr": 7.55,
+        "rssi": -112.49,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "NLSMDJulianalaan",
-        "to": "BB_Southpants_repiep",
-        "snr": 9.79,
-        "rssi": -110.25,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "PE1RWP_Repeater",
-        "to": "PH1J",
-        "snr": 11.13,
-        "rssi": -108.91,
+        "from": "NLGRQMeerstad",
+        "to": "ipoacnl_zuidoost",
+        "snr": 7.6,
+        "rssi": -112.44,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -5003,10 +4396,10 @@
         "bidir": true
       },
       {
-        "from": "NLGRKRET4",
-        "to": "NLNRBR01",
-        "snr": 7.26,
-        "rssi": -112.78,
+        "from": "mrKINGbastion",
+        "to": "NLGRNJM01",
+        "snr": 8.25,
+        "rssi": -111.8,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -5015,6 +4408,14 @@
         "to": "BB_Southpants_repiep",
         "snr": 7.29,
         "rssi": -112.75,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NL_HGZ_RA_Rmax",
+        "to": "BB_Southpants_repiep",
+        "snr": 6.07,
+        "rssi": -113.98,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -5028,20 +4429,37 @@
         "bidir": true
       },
       {
-        "from": "repeater_diever",
-        "to": "Repeater_ZW_Drenthe_",
-        "snr": 12.51,
-        "rssi": -107.53,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "NLGRKRET4",
         "to": "NL_ROD_AD",
         "snr": 3.49,
         "rssi": -116.55,
         "snr_std_dev": 0.5,
         "loss": 0.0005,
+        "bidir": true
+      },
+      {
+        "from": "Zuidbroek_2",
+        "to": "NLGRG7RSolar_2",
+        "snr": 6.31,
+        "rssi": -113.73,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "mrKINGbase",
+        "to": "mrKINGbastion",
+        "snr": 7.38,
+        "rssi": -112.66,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "PSR_Repeater_Eelde",
+        "to": "mrKINGtower",
+        "snr": 1.28,
+        "rssi": -118.76,
+        "snr_std_dev": 0.5,
+        "loss": 0.0029,
         "bidir": true
       },
       {
@@ -5071,18 +4489,18 @@
         "bidir": true
       },
       {
-        "from": "MvE_Heltec_T114_Repe",
-        "to": "PE1HTB_Repeater",
-        "snr": 5.4,
-        "rssi": -114.64,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "NLGRMRMR01Marum",
         "to": "DigitalPRoom",
         "snr": 7.16,
         "rssi": -112.88,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "PINDAr01",
+        "to": "mrKINGbastion",
+        "snr": 6.2,
+        "rssi": -113.84,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -5130,19 +4548,12 @@
         "bidir": true
       },
       {
-        "from": "NLVDMKERN01",
-        "to": "NLGRG7RSolar_2",
-        "snr": 5.15,
-        "rssi": -114.89,
+        "from": "Gp8",
+        "to": "PD0PXXRAssen",
+        "snr": 2.92,
+        "rssi": -117.12,
         "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "EF_NLSNK1_R",
-        "to": "NLLGWRP01",
-        "snr": 6.43,
-        "rssi": -113.61,
-        "snr_std_dev": 0.5,
+        "loss": 0.0008,
         "bidir": true
       },
       {
@@ -5152,22 +4563,6 @@
         "rssi": -115.17,
         "snr_std_dev": 0.5,
         "loss": 0.0002,
-        "bidir": true
-      },
-      {
-        "from": "TLoraV2116_Repeater",
-        "to": "1MT",
-        "snr": 11.2,
-        "rssi": -108.84,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NL1FRAR",
-        "to": "NLREDRPT03",
-        "snr": 8.35,
-        "rssi": -111.69,
-        "snr_std_dev": 0.5,
         "bidir": true
       },
       {
@@ -5187,36 +4582,30 @@
         "bidir": true
       },
       {
-        "from": "Vossenburcht__Repeat",
-        "to": "NLOOLElslooPPC",
-        "snr": 14.03,
-        "rssi": -106.01,
+        "from": "BB_Southpants_repiep",
+        "to": "HGZNOD_Repeater",
+        "snr": 3.54,
+        "rssi": -116.5,
         "snr_std_dev": 0.5,
+        "loss": 0.0005,
         "bidir": true
       },
       {
-        "from": "BillyWoo_Repeater",
-        "to": "NLLWRHuizum1",
-        "snr": 2.11,
-        "rssi": -117.93,
+        "from": "NLLWDHuizum1",
+        "to": "BillyWoo_Repeater",
+        "snr": 2.18,
+        "rssi": -117.86,
         "snr_std_dev": 0.5,
-        "loss": 0.0015,
+        "loss": 0.0014,
         "bidir": true
       },
       {
-        "from": "PE1RWP_Repeater",
-        "to": "Repeater_nij_beets_2",
-        "snr": 7.48,
-        "rssi": -112.56,
+        "from": "Nyro187",
+        "to": "Zuidbroek_2",
+        "snr": 0.3,
+        "rssi": -119.74,
         "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "PE1RWP_Repeater",
-        "to": "pe1rit_repeater",
-        "snr": 7.38,
-        "rssi": -112.66,
-        "snr_std_dev": 0.5,
+        "loss": 0.0064,
         "bidir": true
       },
       {
@@ -5246,30 +4635,6 @@
         "bidir": true
       },
       {
-        "from": "HGZNOD2_Repeater",
-        "to": "NLVDMKERN01",
-        "snr": 9.72,
-        "rssi": -110.32,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLGRQ9728RP01",
-        "to": "NLDRRODENDTR",
-        "snr": 5.43,
-        "rssi": -114.62,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLGRQ9728RPtest",
-        "to": "NLDRRODENDTR",
-        "snr": 5.42,
-        "rssi": -114.62,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "RPWwxOkrk",
         "to": "BraMo_RoomRepeat",
         "snr": 11.2,
@@ -5279,42 +4644,17 @@
       },
       {
         "from": "PSR_Rep_Eelde_Solar",
-        "to": "NLGRQEUVELGUNNE_T3",
-        "snr": 1.18,
-        "rssi": -118.86,
-        "snr_std_dev": 0.5,
-        "loss": 0.0032,
-        "bidir": true
-      },
-      {
-        "from": "PSR_Rep_Eelde_Solar",
-        "to": "NLDRRODENDWAZZIE",
-        "snr": 10.06,
-        "rssi": -109.98,
+        "to": "Jozef_Repeater_2",
+        "snr": 9.94,
+        "rssi": -110.11,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "NLBEDUMPVL",
-        "to": "NLGRQMeerstad",
-        "snr": 5.49,
-        "rssi": -114.56,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "BillyWoo_Repeater",
-        "to": "RPWwxOkrk",
-        "snr": 5.89,
-        "rssi": -114.16,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLZRPRP01",
-        "to": "NLGRNTO_Centrum_E9",
-        "snr": 6.97,
-        "rssi": -113.07,
+        "from": "PINDAr01",
+        "to": "1MT",
+        "snr": 9.24,
+        "rssi": -110.8,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -5336,42 +4676,75 @@
         "bidir": true
       },
       {
-        "from": "NLEEMREP01",
-        "to": "WB_XiaoS3_Repeater",
-        "snr": 4.73,
-        "rssi": -115.31,
+        "from": "NLLWRNoisySRPT02",
+        "to": "NLREDRPT01_v2",
+        "snr": 7.13,
+        "rssi": -112.91,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLLWDZpl868RP01",
+        "to": "RPRyptsjerk",
+        "snr": 4.53,
+        "rssi": -115.51,
         "snr_std_dev": 0.5,
         "loss": 0.0002,
         "bidir": true
       },
       {
-        "from": "NLGRWINSUM",
-        "to": "NLLESOmni",
-        "snr": 10.11,
-        "rssi": -109.94,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLLEMLTRP01",
-        "to": "Heltec_Repeater_01",
-        "snr": 10.89,
-        "rssi": -109.15,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLLGWRP01",
-        "to": "NLFRL_IJLST868",
-        "snr": 4.86,
-        "rssi": -115.18,
+        "from": "RPRyptsjerk",
+        "to": "NLLWDZpl433RP01",
+        "snr": 4.49,
+        "rssi": -115.55,
         "snr_std_dev": 0.5,
         "loss": 0.0002,
+        "bidir": true
+      },
+      {
+        "from": "PSR_Rep_Eelde_Solar",
+        "to": "NLGRQGHH_Belsimpel",
+        "snr": 15.79,
+        "rssi": -104.26,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLDRRODENDTR",
+        "to": "Hoogkerk_room_server",
+        "snr": 8.64,
+        "rssi": -111.4,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NL_BED_RP01",
+        "to": "NLGRQGHH_Belsimpel",
+        "snr": 13.28,
+        "rssi": -106.76,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "RPRyptsjerk",
+        "to": "NLLWRBilgaard1",
+        "snr": 7.04,
+        "rssi": -113.0,
+        "snr_std_dev": 0.5,
         "bidir": true
       },
       {
         "from": "Repeater_Assen_NL",
         "to": "Gp8",
+        "snr": 2.63,
+        "rssi": -117.41,
+        "snr_std_dev": 0.5,
+        "loss": 0.001,
+        "bidir": true
+      },
+      {
+        "from": "Repeater_Assen_NL",
+        "to": "Gp8_2",
         "snr": 2.63,
         "rssi": -117.41,
         "snr_std_dev": 0.5,
@@ -5385,6 +4758,47 @@
         "rssi": -116.51,
         "snr_std_dev": 0.5,
         "loss": 0.0005,
+        "bidir": true
+      },
+      {
+        "from": "DTIS__NL_GRQ__9712CW",
+        "to": "NLBEDUMPVL",
+        "snr": 11.14,
+        "rssi": -108.9,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLREDRPT03",
+        "to": "Weaze_repeater",
+        "snr": 6.38,
+        "rssi": -113.66,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "PA3GOQ_Leeuwarden",
+        "to": "NLREDRPT01_v2",
+        "snr": 7.8,
+        "rssi": -112.24,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLREDRPT02_V1",
+        "to": "Weaze_repeater",
+        "snr": 9.04,
+        "rssi": -111.0,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLGR_Briltil_repeate",
+        "to": "ipoacnl_west",
+        "snr": 4.3,
+        "rssi": -115.75,
+        "snr_std_dev": 0.5,
+        "loss": 0.0003,
         "bidir": true
       },
       {
@@ -5405,15 +4819,6 @@
         "bidir": true
       },
       {
-        "from": "PE4BAS_Roodeschool",
-        "to": "NLLPMRP01",
-        "snr": 4.83,
-        "rssi": -115.21,
-        "snr_std_dev": 0.5,
-        "loss": 0.0002,
-        "bidir": true
-      },
-      {
         "from": "MCF9_YAGI_Gorredijk",
         "to": "NLDRAWST01",
         "snr": -2.71,
@@ -5423,44 +4828,11 @@
         "bidir": true
       },
       {
-        "from": "EF_NLSNK1_R",
-        "to": "RepNLHZ9011A",
-        "snr": 10.01,
-        "rssi": -110.03,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "PSR_Repeater_Eelde",
-        "to": "NLDRRODENDTR",
-        "snr": 8.83,
-        "rssi": -111.22,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "NLVDMKERN01",
         "to": "HGZNOD_Repeater",
         "snr": 6.46,
         "rssi": -113.59,
         "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLSNK1R",
-        "to": "RepNLHZ9011A",
-        "snr": 10.13,
-        "rssi": -109.92,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "repeater_diever",
-        "to": "NLOOLElslooPPC",
-        "snr": 3.94,
-        "rssi": -116.11,
-        "snr_std_dev": 0.5,
-        "loss": 0.0004,
         "bidir": true
       },
       {
@@ -5473,12 +4845,36 @@
         "bidir": true
       },
       {
-        "from": "GP8_Repeater",
-        "to": "ASS02_MC_Repeater",
-        "snr": 1.09,
-        "rssi": -118.95,
+        "from": "PSR_Repeater_Eelde",
+        "to": "Hoogkerk_room_server",
+        "snr": 6.83,
+        "rssi": -113.21,
         "snr_std_dev": 0.5,
-        "loss": 0.0034,
+        "bidir": true
+      },
+      {
+        "from": "WontonGoodMesh_Repea",
+        "to": "mrKINGtower",
+        "snr": 0.09,
+        "rssi": -119.95,
+        "snr_std_dev": 0.5,
+        "loss": 0.0076,
+        "bidir": true
+      },
+      {
+        "from": "NLREDRPT01_v2",
+        "to": "NLLWRPRINSETUN02",
+        "snr": 6.29,
+        "rssi": -113.75,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLGRQJJ1RPT01",
+        "to": "NLDRRODENDWAZZIE",
+        "snr": 6.3,
+        "rssi": -113.75,
+        "snr_std_dev": 0.5,
         "bidir": true
       },
       {
@@ -5507,6 +4903,14 @@
         "bidir": true
       },
       {
+        "from": "NlGRQ_Rocqua_Repeat",
+        "to": "NLGRNTO_Centrum_E9",
+        "snr": 7.37,
+        "rssi": -112.67,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
         "from": "NLLWRDeKlamp2",
         "to": "BraMo_RoomRepeat",
         "snr": 0.59,
@@ -5524,19 +4928,18 @@
         "bidir": true
       },
       {
-        "from": "NLLWRDeKlamp1",
-        "to": "BraMo_RoomRepeat",
-        "snr": -4.06,
-        "rssi": -124.1,
-        "snr_std_dev": 0.5,
-        "loss": 0.1749,
-        "bidir": true
-      },
-      {
         "from": "Repeater_Annen",
         "to": "DLB_BASE_REPEATER",
         "snr": 10.91,
         "rssi": -109.14,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Gravenburg_Repeater",
+        "to": "NLDRRODENDWAZZIE",
+        "snr": 6.23,
+        "rssi": -113.82,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -5550,12 +4953,30 @@
         "bidir": true
       },
       {
-        "from": "NLLWRDeKlamp1",
-        "to": "RPRyptsjerk",
-        "snr": -4.98,
-        "rssi": -125.02,
+        "from": "NLLWRNoisyRPT05",
+        "to": "NLREDRPT03",
+        "snr": 2.25,
+        "rssi": -117.79,
         "snr_std_dev": 0.5,
-        "loss": 0.3066,
+        "loss": 0.0014,
+        "bidir": true
+      },
+      {
+        "from": "NLREDRPT02_V1",
+        "to": "NLLWRNoisyRPT01",
+        "snr": 3.64,
+        "rssi": -116.4,
+        "snr_std_dev": 0.5,
+        "loss": 0.0004,
+        "bidir": true
+      },
+      {
+        "from": "NLREDRPT02_V1",
+        "to": "NLLWRNoisyRP01",
+        "snr": 3.6,
+        "rssi": -116.44,
+        "snr_std_dev": 0.5,
+        "loss": 0.0005,
         "bidir": true
       },
       {
@@ -5563,6 +4984,23 @@
         "to": "NLRODJD6RO",
         "snr": 7.3,
         "rssi": -112.75,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NLDRRODENDTR",
+        "to": "Gravenburg_Repeater2",
+        "snr": 4.87,
+        "rssi": -115.17,
+        "snr_std_dev": 0.5,
+        "loss": 0.0002,
+        "bidir": true
+      },
+      {
+        "from": "DTIS__NL_GRQ__9712CW",
+        "to": "NLGRNTO_Centrum_E9",
+        "snr": 10.72,
+        "rssi": -109.32,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -5575,19 +5013,18 @@
         "bidir": true
       },
       {
-        "from": "RPRyptsjerk",
-        "to": "NLSTNRP01",
-        "snr": 0.39,
-        "rssi": -119.65,
-        "snr_std_dev": 0.5,
-        "loss": 0.006,
-        "bidir": true
-      },
-      {
         "from": "oosterkade8zolder",
         "to": "NLGRMRMR02BroodBak1",
         "snr": 5.95,
         "rssi": -114.09,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "PSR_Rep_Eelde_Solar",
+        "to": "NLRODJD6RO",
+        "snr": 5.59,
+        "rssi": -114.45,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -5598,6 +5035,22 @@
         "rssi": -117.31,
         "snr_std_dev": 0.5,
         "loss": 0.0009,
+        "bidir": true
+      },
+      {
+        "from": "NLGRQWINSUM",
+        "to": "NL050BeijumDKP",
+        "snr": 7.48,
+        "rssi": -112.56,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Jozef_Repeater",
+        "to": "NLDRRODENDWAZZIE",
+        "snr": 11.11,
+        "rssi": -108.93,
+        "snr_std_dev": 0.5,
         "bidir": true
       },
       {
@@ -5618,12 +5071,20 @@
         "bidir": true
       },
       {
-        "from": "NLGR_Briltil_repeate",
-        "to": "Moarten_Repeater",
-        "snr": -3.99,
-        "rssi": -124.03,
+        "from": "PE1RWP_Repeater",
+        "to": "RPBurgum",
+        "snr": 7.54,
+        "rssi": -112.51,
         "snr_std_dev": 0.5,
-        "loss": 0.1664,
+        "bidir": true
+      },
+      {
+        "from": "PSR_Rep_Eelde_Solar",
+        "to": "HGZNOD_Repeater",
+        "snr": 0.6,
+        "rssi": -119.44,
+        "snr_std_dev": 0.5,
+        "loss": 0.0051,
         "bidir": true
       },
       {
@@ -5644,29 +5105,11 @@
         "bidir": true
       },
       {
-        "from": "Repeater9843AG",
-        "to": "NLLESOmni",
-        "snr": 3.94,
-        "rssi": -116.1,
-        "snr_std_dev": 0.5,
-        "loss": 0.0004,
-        "bidir": true
-      },
-      {
         "from": "NLLESOmni",
         "to": "oosterkade8solar",
         "snr": 5.28,
         "rssi": -114.76,
         "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "NLGRQJJ1RPT01",
-        "to": "NLBEDUMPVL",
-        "snr": -5.09,
-        "rssi": -125.14,
-        "snr_std_dev": 0.5,
-        "loss": 0.3265,
         "bidir": true
       },
       {
@@ -5687,48 +5130,20 @@
         "bidir": true
       },
       {
-        "from": "PE4BAS_BBSRoom",
-        "to": "TLoraV2116_Repeater",
-        "snr": 3.93,
-        "rssi": -116.11,
+        "from": "NLGRQGHH_Belsimpel",
+        "to": "NLDRRODENDWAZZIE",
+        "snr": 14.29,
+        "rssi": -105.75,
         "snr_std_dev": 0.5,
-        "loss": 0.0004,
         "bidir": true
       },
       {
-        "from": "Heltec_Repeater_01",
-        "to": "MvE_RAK4631_Repeater",
-        "snr": 4.02,
-        "rssi": -116.02,
+        "from": "NLGRNTO_Centrum_E9",
+        "to": "ipoacnl_zuidoost",
+        "snr": 3.1,
+        "rssi": -116.95,
         "snr_std_dev": 0.5,
-        "loss": 0.0003,
-        "bidir": true
-      },
-      {
-        "from": "NLKLMWGNRRepeater",
-        "to": "Repeater9843AG",
-        "snr": 0.13,
-        "rssi": -119.92,
-        "snr_std_dev": 0.5,
-        "loss": 0.0074,
-        "bidir": true
-      },
-      {
-        "from": "MvE_RAK4631_Repeater",
-        "to": "NLLGWRP01",
-        "snr": 2.63,
-        "rssi": -117.41,
-        "snr_std_dev": 0.5,
-        "loss": 0.001,
-        "bidir": true
-      },
-      {
-        "from": "NLGRQJJ1RPT04",
-        "to": "Nyro187",
-        "snr": -5.99,
-        "rssi": -126.04,
-        "snr_std_dev": 0.5,
-        "loss": 0.4988,
+        "loss": 0.0007,
         "bidir": true
       },
       {
@@ -5740,21 +5155,11 @@
         "bidir": true
       },
       {
-        "from": "GP4_Repeater",
-        "to": "NLGRQPA3EKM",
-        "snr": -4.38,
-        "rssi": -124.42,
+        "from": "NLDRRODENDTR",
+        "to": "ipoacnl_west",
+        "snr": 7.43,
+        "rssi": -112.61,
         "snr_std_dev": 0.5,
-        "loss": 0.2145,
-        "bidir": true
-      },
-      {
-        "from": "NLLWDHuizum1",
-        "to": "RepNLHZ9011A",
-        "snr": -0.32,
-        "rssi": -120.36,
-        "snr_std_dev": 0.5,
-        "loss": 0.0105,
         "bidir": true
       },
       {
@@ -5764,15 +5169,6 @@
         "rssi": -119.01,
         "snr_std_dev": 0.5,
         "loss": 0.0036,
-        "bidir": true
-      },
-      {
-        "from": "MvE_Heltec_T114_Repe",
-        "to": "RepNLHZ9011A",
-        "snr": -3.59,
-        "rssi": -123.63,
-        "snr_std_dev": 0.5,
-        "loss": 0.1271,
         "bidir": true
       },
       {
@@ -5803,21 +5199,12 @@
         "bidir": true
       },
       {
-        "from": "pe1rit_repeater",
-        "to": "MvE_Heltec_T114_Repe",
-        "snr": 3.68,
-        "rssi": -116.36,
+        "from": "NLGRQJJ1RPT04",
+        "to": "NLRODJD6RO",
+        "snr": 4.59,
+        "rssi": -115.45,
         "snr_std_dev": 0.5,
-        "loss": 0.0004,
-        "bidir": true
-      },
-      {
-        "from": "MvE_Heltec_T114_Repe",
-        "to": "Repeater_nij_beets_2",
-        "snr": 2.5,
-        "rssi": -117.54,
-        "snr_std_dev": 0.5,
-        "loss": 0.0011,
+        "loss": 0.0002,
         "bidir": true
       },
       {
@@ -5830,6 +5217,15 @@
         "bidir": true
       },
       {
+        "from": "NL_HGZ_RA_H401",
+        "to": "NLGRQLWB",
+        "snr": 4.59,
+        "rssi": -115.45,
+        "snr_std_dev": 0.5,
+        "loss": 0.0002,
+        "bidir": true
+      },
+      {
         "from": "LWRDEEDEE01",
         "to": "RepNLHZ9011A",
         "snr": -3.79,
@@ -5839,12 +5235,12 @@
         "bidir": true
       },
       {
-        "from": "mrKINGtower",
-        "to": "HGZNOD_Repeater",
-        "snr": -0.09,
-        "rssi": -120.13,
+        "from": "Windwijzer",
+        "to": "mrKINGbastion",
+        "snr": 0.83,
+        "rssi": -119.21,
         "snr_std_dev": 0.5,
-        "loss": 0.0088,
+        "loss": 0.0042,
         "bidir": true
       },
       {
@@ -5902,57 +5298,12 @@
         "bidir": true
       },
       {
-        "from": "NLGRWVKSOLAR",
-        "to": "nldr_ZLR_Guppy",
-        "snr": 3.1,
-        "rssi": -116.94,
-        "snr_std_dev": 0.5,
-        "loss": 0.0007,
-        "bidir": true
-      },
-      {
         "from": "NLGRQJJ1RPT04",
         "to": "REVR_Repeater_2",
         "snr": -3.37,
         "rssi": -123.41,
         "snr_std_dev": 0.5,
         "loss": 0.1084,
-        "bidir": true
-      },
-      {
-        "from": "Gp8",
-        "to": "HGZNOD_Repeater",
-        "snr": -0.11,
-        "rssi": -120.15,
-        "snr_std_dev": 0.5,
-        "loss": 0.0089,
-        "bidir": true
-      },
-      {
-        "from": "NL_GRQ_STK_NOORD",
-        "to": "NLVDMKERN01",
-        "snr": 1.36,
-        "rssi": -118.68,
-        "snr_std_dev": 0.5,
-        "loss": 0.0028,
-        "bidir": true
-      },
-      {
-        "from": "EF_NLSNK1_R",
-        "to": "Heltec_Repeater_01",
-        "snr": -4.47,
-        "rssi": -124.52,
-        "snr_std_dev": 0.5,
-        "loss": 0.2278,
-        "bidir": true
-      },
-      {
-        "from": "NLGRQJJ1RPT01",
-        "to": "REVR_Repeater_2",
-        "snr": -5.25,
-        "rssi": -125.29,
-        "snr_std_dev": 0.5,
-        "loss": 0.354,
         "bidir": true
       },
       {
@@ -5974,12 +5325,11 @@
         "bidir": true
       },
       {
-        "from": "Repeater_Annen",
-        "to": "Nyro187",
-        "snr": 3.49,
-        "rssi": -116.55,
+        "from": "RPBurgum",
+        "to": "NLLWRNoisyRPT02",
+        "snr": 5.98,
+        "rssi": -114.07,
         "snr_std_dev": 0.5,
-        "loss": 0.0005,
         "bidir": true
       },
       {
@@ -5989,6 +5339,15 @@
         "rssi": -119.64,
         "snr_std_dev": 0.5,
         "loss": 0.006,
+        "bidir": true
+      },
+      {
+        "from": "NL1FRAR",
+        "to": "PH1J_Tbeam_SX1262_Re",
+        "snr": 4.41,
+        "rssi": -115.63,
+        "snr_std_dev": 0.5,
+        "loss": 0.0002,
         "bidir": true
       },
       {
@@ -6010,24 +5369,6 @@
         "bidir": true
       },
       {
-        "from": "NL_HGZ_RA_Rmax",
-        "to": "Gp8",
-        "snr": -2.11,
-        "rssi": -122.16,
-        "snr_std_dev": 0.5,
-        "loss": 0.0428,
-        "bidir": true
-      },
-      {
-        "from": "BpmsCap",
-        "to": "Repeater_nij_beets_2",
-        "snr": -1.52,
-        "rssi": -121.56,
-        "snr_std_dev": 0.5,
-        "loss": 0.0271,
-        "bidir": true
-      },
-      {
         "from": "NLGRWINSUM",
         "to": "HB_Uithuizen",
         "snr": 2.14,
@@ -6037,48 +5378,12 @@
         "bidir": true
       },
       {
-        "from": "GP4_Repeater",
-        "to": "NLDRRODENDTR",
-        "snr": 1.28,
-        "rssi": -118.76,
+        "from": "Heltec_Room_TEST",
+        "to": "RPBurgum",
+        "snr": -0.65,
+        "rssi": -120.69,
         "snr_std_dev": 0.5,
-        "loss": 0.003,
-        "bidir": true
-      },
-      {
-        "from": "Gert_Repeat__Home",
-        "to": "DigitalPRoom",
-        "snr": -2.65,
-        "rssi": -122.7,
-        "snr_std_dev": 0.5,
-        "loss": 0.0644,
-        "bidir": true
-      },
-      {
-        "from": "Gp8_2",
-        "to": "NLGRQJJ1RPT02",
-        "snr": -5.65,
-        "rssi": -125.69,
-        "snr_std_dev": 0.5,
-        "loss": 0.43,
-        "bidir": true
-      },
-      {
-        "from": "NLFRSNKGauw",
-        "to": "NLFRLNBRRKNSR01",
-        "snr": 1.61,
-        "rssi": -118.43,
-        "snr_std_dev": 0.5,
-        "loss": 0.0023,
-        "bidir": true
-      },
-      {
-        "from": "NLFRSNKGauw",
-        "to": "MvE_Heltec_T114_Repe",
-        "snr": 1.61,
-        "rssi": -118.43,
-        "snr_std_dev": 0.5,
-        "loss": 0.0023,
+        "loss": 0.0136,
         "bidir": true
       },
       {
@@ -6091,12 +5396,19 @@
         "bidir": true
       },
       {
-        "from": "NLGRQWINSUM",
-        "to": "NLGRNTO_Centrum_E9",
-        "snr": 2.78,
-        "rssi": -117.26,
+        "from": "Jozef_Repeater",
+        "to": "NL_ROD_AD",
+        "snr": 5.75,
+        "rssi": -114.29,
         "snr_std_dev": 0.5,
-        "loss": 0.0009,
+        "bidir": true
+      },
+      {
+        "from": "DTIS__NL_GRQ__9712CW",
+        "to": "NLRODJD6RO",
+        "snr": 8.68,
+        "rssi": -111.36,
+        "snr_std_dev": 0.5,
         "bidir": true
       },
       {
@@ -6109,6 +5421,15 @@
         "bidir": true
       },
       {
+        "from": "NLGRQGHH_Belsimpel",
+        "to": "HGZNOD_Repeater",
+        "snr": 4.81,
+        "rssi": -115.23,
+        "snr_std_dev": 0.5,
+        "loss": 0.0002,
+        "bidir": true
+      },
+      {
         "from": "Jozef_Repeater",
         "to": "NLNRBR01",
         "snr": -0.85,
@@ -6118,12 +5439,20 @@
         "bidir": true
       },
       {
-        "from": "NLGRQNO",
-        "to": "NLDRRODENDTR",
-        "snr": -6.76,
-        "rssi": -126.8,
+        "from": "NLGRQGHH_Belsimpel",
+        "to": "NLRODJD6RO",
+        "snr": 10.46,
+        "rssi": -109.58,
         "snr_std_dev": 0.5,
-        "loss": 0.6479,
+        "bidir": true
+      },
+      {
+        "from": "MvE_Heltec_T114_Repe",
+        "to": "NLSNKRP01",
+        "snr": 3.51,
+        "rssi": -116.53,
+        "snr_std_dev": 0.5,
+        "loss": 0.0005,
         "bidir": true
       },
       {
@@ -6137,20 +5466,20 @@
       },
       {
         "from": "NL_HGZ_RA_H401",
-        "to": "Jozef_Repeater_2",
-        "snr": -0.08,
-        "rssi": -120.12,
+        "to": "Jozef_Repeater",
+        "snr": 0.01,
+        "rssi": -120.03,
         "snr_std_dev": 0.5,
-        "loss": 0.0087,
+        "loss": 0.0081,
         "bidir": true
       },
       {
-        "from": "DTIS__NL_GRQ__9747AS",
-        "to": "oosterkade8solar",
-        "snr": -0.16,
-        "rssi": -120.2,
+        "from": "RPBurgum",
+        "to": "NLLWRBilgaard1",
+        "snr": 3.89,
+        "rssi": -116.15,
         "snr_std_dev": 0.5,
-        "loss": 0.0093,
+        "loss": 0.0004,
         "bidir": true
       },
       {
@@ -6163,57 +5492,30 @@
         "bidir": true
       },
       {
-        "from": "TLoraV2116_Repeater",
-        "to": "mrKINGbastion",
-        "snr": -1.27,
-        "rssi": -121.31,
-        "snr_std_dev": 0.5,
-        "loss": 0.0223,
-        "bidir": true
-      },
-      {
         "from": "PH1J",
-        "to": "NLLWRNoisySRPT02",
-        "snr": -1.67,
-        "rssi": -121.71,
+        "to": "NLLWRNoisyRPT02_2",
+        "snr": 1.2,
+        "rssi": -118.84,
         "snr_std_dev": 0.5,
-        "loss": 0.0303,
+        "loss": 0.0031,
         "bidir": true
       },
       {
-        "from": "oosterkade8zolder",
-        "to": "NLNRBR01",
-        "snr": 1.76,
-        "rssi": -118.28,
+        "from": "NLLWRNoisyRPT05",
+        "to": "PH1J_Tbeam_SX1262_Re",
+        "snr": 0.03,
+        "rssi": -120.01,
         "snr_std_dev": 0.5,
-        "loss": 0.002,
+        "loss": 0.0079,
         "bidir": true
       },
       {
-        "from": "mrKINGbase",
-        "to": "NLBAF",
-        "snr": -0.64,
-        "rssi": -120.68,
+        "from": "GP4_Repeater",
+        "to": "NLHGZRPGFR1",
+        "snr": 0.42,
+        "rssi": -119.63,
         "snr_std_dev": 0.5,
-        "loss": 0.0135,
-        "bidir": true
-      },
-      {
-        "from": "NLLWDHuizum1",
-        "to": "PH1J",
-        "snr": -0.53,
-        "rssi": -120.57,
-        "snr_std_dev": 0.5,
-        "loss": 0.0124,
-        "bidir": true
-      },
-      {
-        "from": "PH1J_Tbeam_SX1262_Re",
-        "to": "NLLWRHuizum1",
-        "snr": 0.56,
-        "rssi": -119.48,
-        "snr_std_dev": 0.5,
-        "loss": 0.0052,
+        "loss": 0.0059,
         "bidir": true
       },
       {
@@ -6235,24 +5537,6 @@
         "bidir": true
       },
       {
-        "from": "PSR_Repeater_Eelde",
-        "to": "ASS00_MC_Repeater",
-        "snr": -2.17,
-        "rssi": -122.21,
-        "snr_std_dev": 0.5,
-        "loss": 0.0446,
-        "bidir": true
-      },
-      {
-        "from": "NLREDRPT02_V1",
-        "to": "MvE_RAK4631_Repeater",
-        "snr": -4.69,
-        "rssi": -124.73,
-        "snr_std_dev": 0.5,
-        "loss": 0.259,
-        "bidir": true
-      },
-      {
         "from": "Alpha_00_Repeater",
         "to": "NLREDRPT03",
         "snr": -6.54,
@@ -6270,21 +5554,21 @@
         "bidir": true
       },
       {
-        "from": "mrKINGbase",
-        "to": "GP8_Repeater",
-        "snr": -9.42,
-        "rssi": -129.46,
+        "from": "NLGRQGHH_Belsimpel",
+        "to": "NLGRNJM01",
+        "snr": 4.13,
+        "rssi": -115.92,
         "snr_std_dev": 0.5,
-        "loss": 0.939,
+        "loss": 0.0003,
         "bidir": true
       },
       {
-        "from": "GP4_Repeater",
-        "to": "mrKINGbastion",
-        "snr": -5.95,
-        "rssi": -125.99,
+        "from": "Gp8",
+        "to": "Hoogkerk_room_server",
+        "snr": 2.9,
+        "rssi": -117.14,
         "snr_std_dev": 0.5,
-        "loss": 0.4904,
+        "loss": 0.0008,
         "bidir": true
       },
       {
@@ -6297,33 +5581,6 @@
         "bidir": true
       },
       {
-        "from": "NL_BED_RP01",
-        "to": "PE4BAS_BBSRoom",
-        "snr": -6.09,
-        "rssi": -126.13,
-        "snr_std_dev": 0.5,
-        "loss": 0.5174,
-        "bidir": true
-      },
-      {
-        "from": "ipoacnl_west",
-        "to": "HGZNOD_Repeater",
-        "snr": -5.73,
-        "rssi": -125.77,
-        "snr_std_dev": 0.5,
-        "loss": 0.4454,
-        "bidir": true
-      },
-      {
-        "from": "NLFRSNKGauw",
-        "to": "NLLWRPRINSETUN02",
-        "snr": -1.07,
-        "rssi": -121.12,
-        "snr_std_dev": 0.5,
-        "loss": 0.0191,
-        "bidir": true
-      },
-      {
         "from": "PH1J",
         "to": "NLFRLNBRRKNSR01",
         "snr": -2.67,
@@ -6333,21 +5590,12 @@
         "bidir": true
       },
       {
-        "from": "NLFAR01",
-        "to": "Zuidbroek",
-        "snr": -8.36,
-        "rssi": -128.4,
+        "from": "RPBurgum",
+        "to": "BraMo_RoomRepeat",
+        "snr": -2.84,
+        "rssi": -122.88,
         "snr_std_dev": 0.5,
-        "loss": 0.8688,
-        "bidir": true
-      },
-      {
-        "from": "TLoraV2116_Repeater",
-        "to": "NLHGZRPGFR1",
-        "snr": -7.87,
-        "rssi": -127.92,
-        "snr_std_dev": 0.5,
-        "loss": 0.8175,
+        "loss": 0.0738,
         "bidir": true
       },
       {
@@ -6369,24 +5617,6 @@
         "bidir": true
       },
       {
-        "from": "1MT",
-        "to": "mrKINGtower",
-        "snr": -0.58,
-        "rssi": -120.62,
-        "snr_std_dev": 0.5,
-        "loss": 0.013,
-        "bidir": true
-      },
-      {
-        "from": "NL1FRAR",
-        "to": "NLSNKRP01",
-        "snr": -3.67,
-        "rssi": -123.72,
-        "snr_std_dev": 0.5,
-        "loss": 0.1347,
-        "bidir": true
-      },
-      {
         "from": "NLBEDUMPVL",
         "to": "HGZNOD_Repeater",
         "snr": -8.75,
@@ -6405,33 +5635,6 @@
         "bidir": true
       },
       {
-        "from": "mrKINGbase",
-        "to": "NLGR9915PAXS",
-        "snr": -6.31,
-        "rssi": -126.35,
-        "snr_std_dev": 0.5,
-        "loss": 0.562,
-        "bidir": true
-      },
-      {
-        "from": "mrKINGbase",
-        "to": "WB_XiaoS3_Repeater",
-        "snr": -7.83,
-        "rssi": -127.87,
-        "snr_std_dev": 0.5,
-        "loss": 0.812,
-        "bidir": true
-      },
-      {
-        "from": "NLGRQGHH_Belsimpel",
-        "to": "MMRogue1",
-        "snr": -1.97,
-        "rssi": -122.01,
-        "snr_std_dev": 0.5,
-        "loss": 0.0382,
-        "bidir": true
-      },
-      {
         "from": "PE1RWP_Repeater",
         "to": "MvE_Heltec_T114_Repe",
         "snr": -3.52,
@@ -6441,48 +5644,12 @@
         "bidir": true
       },
       {
-        "from": "NLGRNTO_Centrum_E9",
-        "to": "nldr_ZLR_Guppy",
-        "snr": -3.24,
-        "rssi": -123.29,
-        "snr_std_dev": 0.5,
-        "loss": 0.0993,
-        "bidir": true
-      },
-      {
-        "from": "NLUHMMBTRPT",
-        "to": "NL050BeijumDKP",
-        "snr": -6.07,
-        "rssi": -126.11,
-        "snr_std_dev": 0.5,
-        "loss": 0.514,
-        "bidir": true
-      },
-      {
-        "from": "NLDRAWST01",
-        "to": "NL_LWD_PI2FRL",
-        "snr": -9.92,
-        "rssi": -129.96,
-        "snr_std_dev": 0.5,
-        "loss": 0.9582,
-        "bidir": true
-      },
-      {
         "from": "Nyro187",
         "to": "NLGR9915PAXS",
         "snr": -9.12,
         "rssi": -129.16,
         "snr_std_dev": 0.5,
         "loss": 0.9238,
-        "bidir": true
-      },
-      {
-        "from": "NLLEMLTRP01",
-        "to": "NLOHPVOS01",
-        "snr": -8.97,
-        "rssi": -129.02,
-        "snr_std_dev": 0.5,
-        "loss": 0.9153,
         "bidir": true
       },
       {
