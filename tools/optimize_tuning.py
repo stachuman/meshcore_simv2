@@ -116,16 +116,12 @@ def sanitize_config(config):
             if not any(c.get("command", "").startswith(d) for d in delay_cmds)
         ]
 
-    # Inject 'set autotune on' for all repeaters
-    repeaters = [n["name"] for n in cfg["nodes"]
-                 if n.get("role", "repeater") == "repeater"]
+    # Inject 'set autotune on' for all repeaters (using @repeaters shorthand)
     warmup_ms = cfg.get("simulation", {}).get("warmup_ms", 0)
     inject_ms = warmup_ms + 1
-    autotune_cmds = [
-        {"at_ms": inject_ms, "node": rpt, "command": "set autotune on"}
-        for rpt in repeaters
-    ]
-    cfg["commands"] = autotune_cmds + cfg.get("commands", [])
+    autotune_cmd = {"at_ms": inject_ms, "node": "@repeaters",
+                    "command": "set autotune on"}
+    cfg["commands"] = [autotune_cmd] + cfg.get("commands", [])
 
     cfg.pop("expect", None)
     return cfg

@@ -1,0 +1,202 @@
+{
+  "main": {
+    "id": "230bf8e6e57b9430",
+    "type": "split",
+    "children": [
+      {
+        "id": "cb1a909046a2d248",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "9442ae9149e69cb1",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "delay_optimization/DELAY_OPTIMIZATION.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "DELAY_OPTIMIZATION"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "986321383c47bbd1",
+    "type": "split",
+    "children": [
+      {
+        "id": "1e5f34b46edc5d13",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "2a19f603a5b33614",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "75902ede701ebd33",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "7537edcf8415e7a6",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "right": {
+    "id": "db8568549e660428",
+    "type": "split",
+    "children": [
+      {
+        "id": "9b2234a0aae012fe",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "d3f7d7eff591e13c",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "delay_optimization/DELAY_OPTIMIZATION.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for DELAY_OPTIMIZATION"
+            }
+          },
+          {
+            "id": "126c6b53d37fd5db",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "delay_optimization/DELAY_OPTIMIZATION.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from DELAY_OPTIMIZATION"
+            }
+          },
+          {
+            "id": "0d42a7b125509051",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "58f0e9f45317dce0",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "408e1e5a9b3f6221",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "delay_optimization/DELAY_OPTIMIZATION.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of DELAY_OPTIMIZATION"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "9442ae9149e69cb1",
+  "lastOpenFiles": [
+    "docs/CONFIG_FORMAT.md",
+    "delay_optimization/validation_test.json",
+    "tools/set_delays.py.tmp.2243214.1775552282845",
+    "tools/optimize_delays.py.tmp.2243214.1775552186153",
+    "tools/optimize_tuning.py.tmp.2243214.1775552131925",
+    "delay_optimization/run_medium_validation.sh.tmp.2243214.1775552111257",
+    "delay_optimization/DELAY_OPTIMIZATION.md.tmp.2243214.1775551943248",
+    "delay_optimization/DELAY_OPTIMIZATION.md.tmp.2243214.1775551922103",
+    "delay_optimization/DELAY_OPTIMIZATION.md",
+    "delay_optimization/DELAY_OPTIMIZATION.md.tmp.2243214.1775551824806",
+    "delay_optimization/DELAY_OPTIMIZATION.md.tmp.2243214.1775551815447",
+    "delay_optimization/DELAY_OPTIMIZATION.md.tmp.2243214.1775551796809"
+  ]
+}

@@ -328,7 +328,8 @@ def _random_times(rng, phase_base, mean_interval_ms, count):
     return times
 
 
-def generate_auto_schedules(companions, interval_ms, count, warmup_ms, rng):
+def generate_auto_schedules(companions, interval_ms, count, warmup_ms, rng,
+                            random_pairs=0):
     """Generate diverse message schedules with Poisson-distributed timing.
 
     Each message gets its own random send time (exponential inter-arrival
@@ -339,6 +340,7 @@ def generate_auto_schedules(companions, interval_ms, count, warmup_ms, rng):
     - 1-to-1: round-robin pairing (c01->c02, c02->c03, ..., cN->c01)
     - 1-to-many: first companion broadcasts to all others
     - many-to-1: all companions send to last companion
+    - random-pairs: N random sender-receiver pairs (if random_pairs > 0)
     """
     schedules = []
     phase_base = warmup_ms + 5000
@@ -371,6 +373,13 @@ def generate_auto_schedules(companions, interval_ms, count, warmup_ms, rng):
     target = companions[-1]
     for i in range(n - 1):
         _add_pair_schedules(companions[i], target, "Nto1")
+
+    # random pairs: N random sender-receiver pairs
+    if random_pairs > 0:
+        all_pairs = [(s, r) for s in companions for r in companions if s != r]
+        rng.shuffle(all_pairs)
+        for sender, receiver in all_pairs[:random_pairs]:
+            _add_pair_schedules(sender, receiver, "rand")
 
     return schedules, phase_base
 
@@ -488,6 +497,8 @@ def main():
                         help="Message interval in seconds for auto-schedule (default: 30)")
     parser.add_argument("--msg-count", type=int, default=5,
                         help="Messages per schedule entry for auto-schedule (default: 5)")
+    parser.add_argument("--random-pairs", type=int, default=0,
+                        help="Number of random sender-receiver pairs for auto-schedule (default: 0)")
 
     # Channel schedule
     parser.add_argument("--channel", action="store_true", default=False,
@@ -564,12 +575,14 @@ def main():
 
         schedules, phase_base = generate_auto_schedules(
             companion_names, interval_ms, args.msg_count, warmup_ms, rng,
+            random_pairs=args.random_pairs,
         )
         config["message_schedule"] = config.get("message_schedule", []) + schedules
 
         n_1to1 = len(companion_names)
         n_1toN = len(companion_names) - 1
         n_Nto1 = len(companion_names) - 1
+        n_rand = min(args.random_pairs, len(companion_names) * (len(companion_names) - 1))
         total_msgs = len(schedules)
         print(f"Auto-schedule: {total_msgs} messages "
               f"(mean interval {args.msg_interval}s, Poisson-distributed)",
@@ -581,6 +594,9 @@ def main():
                   file=sys.stderr)
             print(f"  many-to-1: {n_Nto1} senders x {args.msg_count} msgs to {companion_names[-1]}",
                   file=sys.stderr)
+            if args.random_pairs > 0:
+                print(f"  random: {n_rand} pairs x {args.msg_count} msgs",
+                      file=sys.stderr)
 
         # Channel broadcasts
         if args.channel:

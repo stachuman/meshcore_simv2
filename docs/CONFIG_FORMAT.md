@@ -130,10 +130,10 @@ One-shot commands executed at specific simulation times. Sorted by `at_ms` at ru
 
 **Group targeting**: The `node` field accepts special `@` prefixes that expand to one command per matching node at parse time:
 
-| Target | Expands to |
-|---|---|
-| `@all` | Every node |
-| `@repeaters` | All nodes with `role: "repeater"` |
+| Target        | Expands to                         |
+| ------------- | ---------------------------------- |
+| `@all`        | Every node                         |
+| `@repeaters`  | All nodes with `role: "repeater"`  |
 | `@companions` | All nodes with `role: "companion"` |
 
 ```json

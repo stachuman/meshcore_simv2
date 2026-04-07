@@ -44,18 +44,22 @@ def _compute_link_worker(args):
     )
 
 
-def survival_filter(raw_links, survival_prob, seed=42, verbose=False):
+def survival_filter(raw_links, survival_prob, seed=42, snr_mid=10.0,
+                    verbose=False):
     """Stochastically drop links to simulate real-world connectivity loss.
 
     Each link survives with probability:
-      p = survival_prob / (1 + exp(-(snr - SNR_MID) / SNR_SCALE))
+      p = survival_prob / (1 + exp(-(snr - snr_mid) / SNR_SCALE))
 
     Strong links (high SNR) survive at up to `survival_prob`.
     Weak links (low SNR) survive at much lower rates.
     This naturally creates a skewed neighbor distribution: hub nodes
     (many strong candidates) keep more links, peripheral nodes keep fewer.
+
+    snr_mid controls the sigmoid midpoint — lower values preserve more
+    weak bridge links (appropriate for flat terrain).
     """
-    SNR_MID = 10.0   # dB: 50% of max survival at this SNR
+    SNR_MID = snr_mid
     SNR_SCALE = 4.0   # dB: sigmoid steepness
 
     rng = random.Random(seed)
@@ -216,6 +220,8 @@ def main():
                         help="Stochastic link survival ceiling 0.0-1.0 (default: 1.0 = disabled)")
     parser.add_argument("--survival-seed", type=int, default=42,
                         help="RNG seed for link survival filter (default: 42)")
+    parser.add_argument("--survival-snr-mid", type=float, default=10.0,
+                        help="Sigmoid midpoint for survival filter in dB (default: 10.0, lower preserves weak bridge links)")
 
     # Simulation
     parser.add_argument("--duration", type=int, default=300000,
@@ -373,10 +379,11 @@ def main():
         print("Step 6b: Applying link survival filter...", file=sys.stderr)
         raw_links = survival_filter(
             raw_links, args.link_survival, seed=args.survival_seed,
-            verbose=args.verbose,
+            snr_mid=args.survival_snr_mid, verbose=args.verbose,
         )
-        # When survival is active, caps become a safety net only
-        effective_good = args.max_edges_per_node
+        # When survival is active, still honour max-good-links to
+        # control density (especially with shifted snr_mid).
+        effective_good = args.max_good_links
     else:
         effective_good = args.max_good_links
 

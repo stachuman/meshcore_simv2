@@ -29,20 +29,16 @@ def main():
     with open(args.config) as f:
         config = json.load(f)
 
-    repeaters = [n["name"] for n in config["nodes"]
-                 if n.get("role", "repeater") == "repeater"]
-
     warmup_ms = config.get("simulation", {}).get("warmup_ms", 0)
     inject_ms = warmup_ms + 1
 
     cmds = []
-    for rpt in repeaters:
-        if args.rxdelay is not None:
-            cmds.append({"at_ms": inject_ms, "node": rpt, "command": f"set rxdelay {args.rxdelay}"})
-        if args.txdelay is not None:
-            cmds.append({"at_ms": inject_ms, "node": rpt, "command": f"set txdelay {args.txdelay}"})
-        if args.direct_txdelay is not None:
-            cmds.append({"at_ms": inject_ms, "node": rpt, "command": f"set direct.txdelay {args.direct_txdelay}"})
+    if args.rxdelay is not None:
+        cmds.append({"at_ms": inject_ms, "node": "@repeaters", "command": f"set rxdelay {args.rxdelay}"})
+    if args.txdelay is not None:
+        cmds.append({"at_ms": inject_ms, "node": "@repeaters", "command": f"set txdelay {args.txdelay}"})
+    if args.direct_txdelay is not None:
+        cmds.append({"at_ms": inject_ms, "node": "@repeaters", "command": f"set direct.txdelay {args.direct_txdelay}"})
 
     config["commands"] = cmds + config.get("commands", [])
 
@@ -53,7 +49,7 @@ def main():
         vals.append(f"txdelay={args.txdelay}")
     if args.direct_txdelay is not None:
         vals.append(f"direct.txdelay={args.direct_txdelay}")
-    print(f"Injected {len(cmds)} set commands for {len(repeaters)} repeaters: {', '.join(vals)}",
+    print(f"Injected {len(cmds)} @repeaters set commands: {', '.join(vals)}",
           file=sys.stderr)
 
     out = json.dumps(config, indent=2) + "\n"

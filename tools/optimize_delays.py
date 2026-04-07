@@ -50,20 +50,17 @@ def parse_range(s):
 
 def run_single(orchestrator_path, config, rxd, txd, dtxd, seed, run_id):
     """Run one orchestrator invocation with a specific seed."""
-    repeaters = [n["name"] for n in config["nodes"]
-                 if n.get("role", "repeater") == "repeater"]
-
     cfg = copy.deepcopy(config)
     cfg.setdefault("simulation", {})["seed"] = seed
 
-    # Inject set commands just after warmup (before first real messages)
+    # Inject set commands just after warmup (using @repeaters shorthand)
     warmup_ms = cfg.get("simulation", {}).get("warmup_ms", 0)
     inject_ms = warmup_ms + 1
-    set_cmds = []
-    for rpt in repeaters:
-        set_cmds.append({"at_ms": inject_ms, "node": rpt, "command": f"set rxdelay {rxd}"})
-        set_cmds.append({"at_ms": inject_ms, "node": rpt, "command": f"set txdelay {txd}"})
-        set_cmds.append({"at_ms": inject_ms, "node": rpt, "command": f"set direct.txdelay {dtxd}"})
+    set_cmds = [
+        {"at_ms": inject_ms, "node": "@repeaters", "command": f"set rxdelay {rxd}"},
+        {"at_ms": inject_ms, "node": "@repeaters", "command": f"set txdelay {txd}"},
+        {"at_ms": inject_ms, "node": "@repeaters", "command": f"set direct.txdelay {dtxd}"},
+    ]
 
     cfg["commands"] = set_cmds + cfg.get("commands", [])
     cfg.pop("expect", None)
