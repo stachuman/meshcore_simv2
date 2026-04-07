@@ -4,6 +4,7 @@ __pycache__/
 *.pyc
 *.o
 *.a
+*.obsidian
 
 # Generated simulation outputs
 simulation/real_network.json
