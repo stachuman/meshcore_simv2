@@ -29,12 +29,14 @@
   "commands": [
     { "at_ms": 5001, "node": "hub", "command": "set txdelay 0" },
     { "at_ms": 5001, "node": "hub", "command": "set rxdelay 0" },
-    { "at_ms": 5001, "node": "relay_a", "command": "set txdelay 2.0" },
+    { "at_ms": 5001, "node": "relay_a", "command": "set txdelay 4.0" },
     { "at_ms": 5001, "node": "relay_a", "command": "set rxdelay 0" },
-    { "at_ms": 5001, "node": "relay_b", "command": "set txdelay 2.0" },
+    { "at_ms": 5001, "node": "relay_b", "command": "set txdelay 4.0" },
     { "at_ms": 5001, "node": "relay_b", "command": "set rxdelay 0" },
     { "at_ms": 5001, "node": "dest", "command": "set txdelay 0" },
     { "at_ms": 5001, "node": "dest", "command": "set rxdelay 0" },
+
+    { "at_ms": 5005, "node": "relay_a", "command": "get txdelay" },
 
     { "at_ms": 8000, "node": "alice", "command": "msg bob txdelay-spread test" }
   ],

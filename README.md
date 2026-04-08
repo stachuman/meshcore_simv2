@@ -26,6 +26,9 @@ pip install -r requirements.txt
 # Build
 cmake -S . -B build
 cmake --build build
+
+# Quick run - simulation and then visualization
+./tools/run_sim.ph ./test/t34_delay_bench_butterfly
 ```
 
 If you already cloned without `--recursive`, initialize the MeshCore submodule:

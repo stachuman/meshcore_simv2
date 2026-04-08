@@ -1,0 +1,90 @@
+{
+  "_name": "t34_delay_bench_butterfly",
+  "_desc": "Minimal delay test bench. Asymmetric butterfly: short path (A-R_short-D, 2 hops, strong SNR=13) vs long path (A-R_long1-R_long2-D, 3 hops, weak SNR=8). With zero delay, R_short always arrives first → preamble lock → capture (5dB > 3dB locked threshold). With stock delay, random jitter sometimes puts R_long2 first → collision (8-13=-5 < 3dB). Demonstrates why zero delay wins in networks with path diversity.",
+  "_topology": "              R_short (snr=13 to D)     \n            /          \\                 \nalice -- A               D -- bob        \n            \\          /                 \n           R_long1 -- R_long2 (snr=8 to D)\n\nR_short and R_long1/R_long2 cannot hear each other. No cross-links.",
+  "_phases": "Phase 1 (8-31s): zero delays → R_short always wins capture → high delivery. Phase 2 (40-63s): stock defaults → random order, sometimes R_long2 first → collisions. Phase 3 (70-93s): large delays → large jitter, more randomized order.",
+  "_mechanism": "SNR diff at D: 13-8=5dB. Locked capture threshold: 3.0dB. Unlocked: 6.0dB. If strong (R_short) locks first: 5>3.0 → captured. If weak (R_long2) locks first: -5<3.0 → collision. If simultaneous: 5<6.0 → collision.",
+  "simulation": {
+    "duration_ms": 160000,
+    "step_ms": 2,
+    "warmup_ms": 5000,
+    "hot_start": true,
+    "seed": 45,
+    "radio": {
+      "sf": 8,
+      "bw": 62500,
+      "cr": 4,
+      "cad_miss_prob": 0.0
+    }
+  },
+  "nodes": [
+    { "name": "alice", "role": "companion" },
+    { "name": "A", "role": "repeater" },
+    { "name": "R_short", "role": "repeater" },
+    { "name": "R_long1", "role": "repeater" },
+    { "name": "R_long2", "role": "repeater" },
+    { "name": "D", "role": "repeater" },
+    { "name": "bob", "role": "companion" }
+  ],
+  "topology": {
+    "links": [
+      { "from": "alice", "to": "A", "snr": 15.0, "rssi": -65.0, "bidir": true },
+      { "from": "A", "to": "R_short", "snr": 10.0, "rssi": -70.0, "bidir": true },
+      { "from": "A", "to": "R_long1", "snr": 10.0, "rssi": -70.0, "bidir": true },
+      { "from": "R_short", "to": "D", "snr": 13.0, "rssi": -67.0, "bidir": true, "_note": "strong arm" },
+      { "from": "R_long1", "to": "R_long2", "snr": 10.0, "rssi": -70.0, "bidir": true },
+      { "from": "R_long2", "to": "D", "snr": 8.0, "rssi": -72.0, "bidir": true, "_note": "weak arm" },
+      { "from": "D", "to": "bob", "snr": 15.0, "rssi": -65.0, "bidir": true }
+    ]
+  },
+  "commands": [
+    { "at_ms": 5001, "node": "@repeaters", "command": "set txdelay 0", "_phase": "1: zero delays" },
+    { "at_ms": 5001, "node": "@repeaters", "command": "set direct.txdelay 0" },
+    { "at_ms": 5001, "node": "@repeaters", "command": "set rxdelay 0" },
+
+    { "at_ms": 8000,  "node": "alice", "command": "msga bob p1_msg1" },
+    { "at_ms": 11000, "node": "alice", "command": "msga bob p1_msg2" },
+    { "at_ms": 14000, "node": "alice", "command": "msga bob p1_msg3" },
+    { "at_ms": 17000, "node": "alice", "command": "msga bob p1_msg4" },
+    { "at_ms": 20000, "node": "alice", "command": "msga bob p1_msg5" },
+    { "at_ms": 23000, "node": "alice", "command": "msga bob p1_msg6" },
+    { "at_ms": 26000, "node": "alice", "command": "msga bob p1_msg7" },
+    { "at_ms": 29000, "node": "alice", "command": "msga bob p1_msg8" },
+
+    { "at_ms": 35000, "node": "@repeaters", "command": "set txdelay 0.5", "_phase": "2: stock defaults" },
+    { "at_ms": 35000, "node": "@repeaters", "command": "set direct.txdelay 0.3" },
+    { "at_ms": 35000, "node": "@repeaters", "command": "set rxdelay 0" },
+    { "at_ms": 36000, "node": "alice", "command": "reset_path bob" },
+    { "at_ms": 36000, "node": "bob", "command": "reset_path alice" },
+
+    { "at_ms": 40000, "node": "alice", "command": "msga bob p2_msg1" },
+    { "at_ms": 46000, "node": "alice", "command": "msga bob p2_msg2" },
+    { "at_ms": 52000, "node": "alice", "command": "msga bob p2_msg3" },
+    { "at_ms": 58000, "node": "alice", "command": "msga bob p2_msg4" },
+    { "at_ms": 64000, "node": "alice", "command": "msga bob p2_msg5" },
+    { "at_ms": 70000, "node": "alice", "command": "msga bob p2_msg6" },
+    { "at_ms": 76000, "node": "alice", "command": "msga bob p2_msg7" },
+    { "at_ms": 82000, "node": "alice", "command": "msga bob p2_msg8" },
+
+    { "at_ms": 96000, "node": "@repeaters", "command": "set txdelay 3.0", "_phase": "3: large delays" },
+    { "at_ms": 96000, "node": "@repeaters", "command": "set direct.txdelay 3.0" },
+    { "at_ms": 96000, "node": "@repeaters", "command": "set rxdelay 3.0" },
+    { "at_ms": 97000, "node": "alice", "command": "reset_path bob" },
+    { "at_ms": 97000, "node": "bob", "command": "reset_path alice" },
+
+    { "at_ms": 100000, "node": "alice", "command": "msga bob p3_msg1" },
+    { "at_ms": 106000, "node": "alice", "command": "msga bob p3_msg2" },
+    { "at_ms": 112000, "node": "alice", "command": "msga bob p3_msg3" },
+    { "at_ms": 118000, "node": "alice", "command": "msga bob p3_msg4" },
+    { "at_ms": 124000, "node": "alice", "command": "msga bob p3_msg5" },
+    { "at_ms": 130000, "node": "alice", "command": "msga bob p3_msg6" },
+    { "at_ms": 136000, "node": "alice", "command": "msga bob p3_msg7" },
+    { "at_ms": 142000, "node": "alice", "command": "msga bob p3_msg8" }
+  ],
+  "expect": [
+    { "type": "cmd_reply_contains", "node": "alice", "command": "msga bob p1_msg1", "value": "sent" },
+    { "type": "cmd_reply_contains", "node": "alice", "command": "msga bob p2_msg1", "value": "sent" },
+    { "type": "cmd_reply_contains", "node": "alice", "command": "msga bob p3_msg1", "value": "sent" },
+    { "type": "event_count", "event_type": "collision", "min": 1 }
+  ]
+}
