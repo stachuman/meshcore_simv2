@@ -78,18 +78,36 @@ def survival_filter(raw_links, survival_prob, seed=42, snr_mid=10.0,
     return survivors
 
 
-def select_links(raw_links, max_edges, max_good, verbose=False):
-    """Select links with per-node edge caps, closest-first priority.
+def select_links(raw_links, max_edges, max_good, seed=42, verbose=False):
+    """Select links with soft per-node edge caps, closest-first priority.
 
     Sorts all candidate links by distance (ascending), then walks through
-    and keeps a link only if both endpoints are below their edge caps.
+    and keeps a link with decreasing probability as endpoints approach their
+    caps.  This avoids the pile-up artifact of hard caps (where all nodes
+    that naturally want N+1..N+k neighbors get clamped to exactly N).
+
+    The soft taper starts SOFT_KNEE links before the cap:
+      - below (cap - SOFT_KNEE): always accept (p=1)
+      - at (cap - SOFT_KNEE + i): p = 0.5^i
+      - at cap or above: never accept (p=0)
 
     This matches convert_topology.py's gap-fill strategy:
-    - max_edges: hard cap on total edges per node
+    - max_edges: cap on total edges per node
     - max_good: cap on SNR > 0 edges per node (prevents over-optimistic density)
     """
+    SOFT_KNEE = 3  # taper radius: starts SOFT_KNEE before cap, ends SOFT_KNEE after
+
+    def _accept_prob(count, cap):
+        if count >= cap + SOFT_KNEE:
+            return 0.0
+        excess = count - (cap - SOFT_KNEE)
+        if excess <= 0:
+            return 1.0
+        return 0.5 ** excess
+
     # Sort by distance (closest first)
     sorted_links = sorted(raw_links, key=lambda l: l.get("dist_km", 0))
+    rng = random.Random(seed)
 
     total_count = defaultdict(int)
     good_count = defaultdict(int)
@@ -99,15 +117,20 @@ def select_links(raw_links, max_edges, max_good, verbose=False):
         a = link["from"]
         b = link["to"]
 
-        # Check total edge caps
-        if total_count[a] >= max_edges or total_count[b] >= max_edges:
-            continue
+        # Soft cap on total edges
+        p = min(_accept_prob(total_count[a], max_edges),
+                _accept_prob(total_count[b], max_edges))
 
-        # Check good-link caps (SNR > 0)
+        # Soft cap on good links (SNR > 0)
         snr = link["snr"]
         if snr > 0.0:
-            if good_count[a] >= max_good or good_count[b] >= max_good:
-                continue
+            p = min(p, _accept_prob(good_count[a], max_good),
+                       _accept_prob(good_count[b], max_good))
+
+        if p <= 0.0:
+            continue
+        if p < 1.0 and rng.random() >= p:
+            continue
 
         selected.append(link)
         total_count[a] += 1
@@ -391,7 +414,7 @@ def main():
     print("Step 6: Applying edge caps...", file=sys.stderr)
     links_out = select_links(
         raw_links, args.max_edges_per_node, effective_good,
-        verbose=args.verbose,
+        seed=args.survival_seed, verbose=args.verbose,
     )
     print(f"  {len(links_out)} links after caps "
           f"(max {args.max_edges_per_node} edges/node, "
