@@ -906,6 +906,22 @@ bool Orchestrator::run() {
     // Deliver any remaining receptions at end
     deliverReceptions(current_ms);
 
+    // Collect per-node radio/packet stats from repeaters
+    for (auto& node : _nodes) {
+        if (node->role != NodeRole::Repeater) continue;
+        static const char* cmds[][2] = {
+            {"stats-core", "core"},
+            {"stats-radio", "radio"},
+            {"stats-packets", "packets"},
+        };
+        for (auto& [cmd, stype] : cmds) {
+            std::string reply = node->mesh->handleCommand(0, cmd);
+            if (!reply.empty() && reply[0] == '{') {
+                EventLog::nodeStats(current_ms, node->name.c_str(), stype, reply.c_str());
+            }
+        }
+    }
+
     // Emit per-node message stats (JSON to stdout)
     int total_direct_sent = 0, total_direct_recv = 0;
     int total_group_sent = 0, total_group_recv = 0;

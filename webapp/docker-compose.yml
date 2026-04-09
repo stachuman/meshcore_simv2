@@ -1,0 +1,17 @@
+services:
+  simulator:
+    build:
+      context: ..
+      dockerfile: webapp/Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - sim-data:/app/data
+    environment:
+      - ORCHESTRATOR_PATH=/usr/local/bin/orchestrator
+      - DATA_DIR=/app/data
+      - MAX_CONCURRENT_SIMS=4
+    restart: unless-stopped
+
+volumes:
+  sim-data:

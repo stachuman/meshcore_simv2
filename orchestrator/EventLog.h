@@ -35,6 +35,9 @@ void dropLoss(unsigned long time_ms, const char* from, const char* to, float los
 // TX failure events
 void txFail(unsigned long time_ms, const char* node, uint32_t count);
 
+// Per-node stats (post-simulation)
+void nodeStats(unsigned long time_ms, const char* node, const char* stats_type, const char* json_data);
+
 // Adversarial events
 void adversarialDrop(unsigned long time_ms, const char* node, const uint8_t* data, int len);
 void adversarialCorrupt(unsigned long time_ms, const char* node, const uint8_t* data, int len,

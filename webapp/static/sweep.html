@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Parameter Sweep - MeshCore Simulator</title>
+<link rel="stylesheet" href="/static/css/common.css">
+<style>
+  /* Layout: two-column on wide screens */
+  .sweep-layout {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 16px;
+    align-items: start;
+  }
+
+  @media (max-width: 960px) {
+    .sweep-layout {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Param group */
+  .param-group {
+    margin-bottom: 12px;
+  }
+
+  .param-group h3 {
+    margin-bottom: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .param-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+  }
+
+  .param-inputs label {
+    font-size: 10px;
+    color: var(--text-dim);
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  .param-inputs input {
+    width: 100%;
+  }
+
+  /* Progress area */
+  .progress-area {
+    margin-top: 12px;
+  }
+
+  .progress-text {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  /* Results table */
+  table.results-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+  }
+
+  table.results-table th {
+    text-align: right;
+    padding: 6px 8px;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  table.results-table th:hover {
+    color: var(--accent);
+  }
+
+  table.results-table th.sort-asc::after { content: " ^"; color: var(--accent); }
+  table.results-table th.sort-desc::after { content: " v"; color: var(--accent); }
+
+  table.results-table td {
+    text-align: right;
+    padding: 5px 8px;
+    border-bottom: 1px solid #e5e7eb;
+    font-family: var(--font-mono);
+  }
+
+  table.results-table tr:hover td {
+    background: rgba(37, 99, 235, 0.06);
+  }
+
+  table.results-table tr.best-row td {
+    background: rgba(22, 163, 74, 0.08);
+    color: var(--success);
+  }
+
+  /* Sweep list table */
+  .sweep-list-card {
+    margin-top: 24px;
+  }
+
+  /* Config textarea */
+  .config-textarea {
+    min-height: 120px;
+    resize: vertical;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  /* JSON config source selector */
+  .config-source-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+    align-items: center;
+  }
+
+  .config-source-row select {
+    flex: 1;
+  }
+</style>
+</head>
+<body>
+
+<!-- Nav bar -->
+<nav class="navbar">
+  <span class="brand">MeshCore Sim</span>
+  <ul class="nav-links">
+    <li><a href="/static/index.html">Dashboard</a></li>
+    <li><a href="/static/simulations.html">Simulations</a></li>
+    <li><a href="/static/topologies.html">Topologies</a></li>
+    <li><a href="/static/scenarios.html">Scenarios</a></li>
+    <li><a href="/static/sweep.html" class="active">Sweeps</a></li>
+  </ul>
+  <span class="spacer"></span>
+</nav>
+
+<!-- Page content -->
+<div class="page-wide">
+  <h1>Parameter Sweep</h1>
+
+  <div class="sweep-layout">
+    <!-- Left: Config + params form -->
+    <div>
+      <!-- Config source -->
+      <div class="card">
+        <h2>Configuration</h2>
+        <div class="config-source-row">
+          <label class="form-label" style="display:inline; margin:0; white-space:nowrap;">Source:</label>
+          <select id="config-source" class="form-select" onchange="onConfigSourceChange()">
+            <option value="paste">Paste JSON</option>
+            <option value="saved">Saved config</option>
+          </select>
+          <select id="config-select" class="form-select hidden" onchange="onConfigSelected()">
+            <option value="">-- select --</option>
+          </select>
+        </div>
+        <textarea id="config-json" class="form-textarea config-textarea"
+          placeholder="Paste orchestrator config JSON here...">{}</textarea>
+      </div>
+
+      <!-- Parameter ranges -->
+      <div class="card">
+        <h2>Sweep Parameters</h2>
+
+        <div class="param-group">
+          <h3>rxdelay</h3>
+          <div class="param-inputs">
+            <div><label>Min</label><input id="rxd-min" class="form-input" type="number" step="0.1" value="0.0"></div>
+            <div><label>Max</label><input id="rxd-max" class="form-input" type="number" step="0.1" value="5.0"></div>
+            <div><label>Step</label><input id="rxd-step" class="form-input" type="number" step="0.1" value="1.0"></div>
+          </div>
+        </div>
+
+        <div class="param-group">
+          <h3>txdelay</h3>
+          <div class="param-inputs">
+            <div><label>Min</label><input id="txd-min" class="form-input" type="number" step="0.1" value="0.0"></div>
+            <div><label>Max</label><input id="txd-max" class="form-input" type="number" step="0.1" value="1.0"></div>
+            <div><label>Step</label><input id="txd-step" class="form-input" type="number" step="0.1" value="0.2"></div>
+          </div>
+        </div>
+
+        <div class="param-group">
+          <h3>direct.txdelay</h3>
+          <div class="param-inputs">
+            <div><label>Min</label><input id="dtxd-min" class="form-input" type="number" step="0.1" value="0.0"></div>
+            <div><label>Max</label><input id="dtxd-max" class="form-input" type="number" step="0.1" value="0.5"></div>
+            <div><label>Step</label><input id="dtxd-step" class="form-input" type="number" step="0.1" value="0.1"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Seeds + workers -->
+      <div class="card">
+        <h2>Execution</h2>
+        <div class="grid grid-3" style="gap:8px;">
+          <div>
+            <label class="form-label">Seed count</label>
+            <input id="seed-count" class="form-input" type="number" min="1" max="50" value="3">
+          </div>
+          <div>
+            <label class="form-label">Base seed</label>
+            <input id="seed-base" class="form-input" type="number" min="0" value="42">
+          </div>
+          <div>
+            <label class="form-label">Workers</label>
+            <input id="max-workers" class="form-input" type="number" min="1" max="32" value="4">
+          </div>
+        </div>
+
+        <div id="combo-info" class="mt-8" style="font-size:11px; color:var(--text-muted);"></div>
+
+        <div class="mt-12 flex gap-8">
+          <button id="start-btn" class="btn btn-primary btn-lg" onclick="startSweep()">Start Sweep</button>
+          <span id="start-error" class="alert alert-error hidden" style="margin:0; padding:6px 10px;"></span>
+        </div>
+
+        <!-- Progress -->
+        <div id="progress-area" class="progress-area hidden">
+          <div class="flex items-center justify-between mb-8">
+            <span id="progress-label" style="font-size:12px; color:var(--text);">Running...</span>
+            <span id="progress-pct" style="font-size:12px; color:var(--accent);">0%</span>
+          </div>
+          <div class="progress-bar">
+            <div id="progress-fill" class="fill" style="width:0%"></div>
+          </div>
+          <div id="progress-detail" class="progress-text"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Results -->
+    <div>
+      <!-- Active sweep results -->
+      <div id="results-card" class="card hidden">
+        <div class="card-header">
+          <h2>Results</h2>
+          <span id="results-count" style="font-size:11px; color:var(--text-muted);"></span>
+        </div>
+        <div id="results-empty" class="empty-state" style="padding:24px;">
+          <p>No results yet. Start a sweep to see results here.</p>
+        </div>
+        <div id="results-table-wrap" class="table-wrap hidden">
+          <table class="results-table" id="results-table">
+            <thead>
+              <tr>
+                <th data-col="rank">#</th>
+                <th data-col="rxd">rxd</th>
+                <th data-col="txd">txd</th>
+                <th data-col="dtxd">d.txd</th>
+                <th data-col="mean_pct">mean%</th>
+                <th data-col="std_pct">std%</th>
+                <th data-col="min_pct">min%</th>
+                <th data-col="max_pct">max%</th>
+                <th data-col="mean_ack">ack%</th>
+                <th data-col="mean_chan">chan%</th>
+              </tr>
+            </thead>
+            <tbody id="results-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Past sweeps list -->
+      <div class="card sweep-list-card">
+        <div class="card-header">
+          <h2>Past Sweeps</h2>
+          <button class="btn btn-sm" onclick="loadSweepList()">Refresh</button>
+        </div>
+        <div id="sweeps-loading" class="empty-state" style="padding:16px;">
+          <div class="spinner"></div>
+        </div>
+        <div id="sweeps-empty" class="empty-state hidden" style="padding:16px;">
+          <p>No sweeps found.</p>
+        </div>
+        <div id="sweeps-table-wrap" class="table-wrap hidden">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Status</th>
+                <th>Runs</th>
+                <th>Best</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="sweeps-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/api.js"></script>
+<script>
+(function() {
+  // ── State ──────────────────────────────────────────────
+  let activeSweepId = null;
+  let activeSse = null;
+  let currentResults = [];       // aggregated results for active sweep
+  let sortCol = 'mean_pct';
+  let sortAsc = false;           // descending by default for mean_pct
+  let allSweeps = [];
+  let savedConfigs = [];
+
+  // ── Initialization ─────────────────────────────────────
+  updateComboInfo();
+  loadSweepList();
+  loadSavedConfigs();
+
+  // Recalculate combo info when params change
+  document.querySelectorAll('.param-inputs input, #seed-count').forEach(function(el) {
+    el.addEventListener('input', updateComboInfo);
+  });
+
+  // Sort headers
+  document.querySelectorAll('#results-table thead th[data-col]').forEach(function(th) {
+    th.addEventListener('click', function() {
+      var col = th.dataset.col;
+      if (col === 'rank') return;
+      if (sortCol === col) {
+        sortAsc = !sortAsc;
+      } else {
+        sortCol = col;
+        sortAsc = (col === 'std_pct');  // ascending for std, descending for others
+      }
+      renderResults();
+    });
+  });
+
+  // ── Config source ──────────────────────────────────────
+  window.onConfigSourceChange = function() {
+    var source = document.getElementById('config-source').value;
+    var sel = document.getElementById('config-select');
+    if (source === 'saved') {
+      sel.classList.remove('hidden');
+    } else {
+      sel.classList.add('hidden');
+    }
+  };
+
+  window.onConfigSelected = function() {
+    var configId = document.getElementById('config-select').value;
+    if (!configId) return;
+    fetchJSON('/api/configs/' + encodeURIComponent(configId))
+      .then(function(entry) {
+        document.getElementById('config-json').value = JSON.stringify(entry.config, null, 2);
+      })
+      .catch(function(err) {
+        showError('Failed to load config: ' + err.message);
+      });
+  };
+
+  function loadSavedConfigs() {
+    fetchJSON('/api/configs')
+      .then(function(configs) {
+        savedConfigs = configs || [];
+        var sel = document.getElementById('config-select');
+        // Keep the placeholder option
+        sel.innerHTML = '<option value="">-- select --</option>';
+        savedConfigs.forEach(function(c) {
+          var opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = c.name + ' (' + c.node_count + ' nodes)';
+          sel.appendChild(opt);
+        });
+      })
+      .catch(function() {
+        // Silently ignore -- user can still paste JSON
+      });
+  }
+
+  // ── Combo info ─────────────────────────────────────────
+  function updateComboInfo() {
+    var rxdCount = rangeCount('rxd');
+    var txdCount = rangeCount('txd');
+    var dtxdCount = rangeCount('dtxd');
+    var seedCount = parseInt(document.getElementById('seed-count').value) || 1;
+    var combos = rxdCount * txdCount * dtxdCount;
+    var total = combos * seedCount;
+    document.getElementById('combo-info').textContent =
+      combos + ' combinations x ' + seedCount + ' seeds = ' + total + ' total runs';
+  }
+
+  function rangeCount(prefix) {
+    var min = parseFloat(document.getElementById(prefix + '-min').value) || 0;
+    var max = parseFloat(document.getElementById(prefix + '-max').value) || 0;
+    var step = parseFloat(document.getElementById(prefix + '-step').value) || 0;
+    if (step <= 0 || min >= max) return 1;
+    return Math.max(0, Math.round((max - min) / step) + 1);
+  }
+
+  // ── Start sweep ────────────────────────────────────────
+  window.startSweep = async function() {
+    var errEl = document.getElementById('start-error');
+    errEl.classList.add('hidden');
+
+    // Parse config
+    var configText = document.getElementById('config-json').value.trim();
+    var configJson;
+    try {
+      configJson = JSON.parse(configText);
+    } catch (e) {
+      showError('Invalid JSON: ' + e.message);
+      return;
+    }
+
+    if (!configJson.nodes || !Array.isArray(configJson.nodes) || configJson.nodes.length === 0) {
+      showError('Config must have a non-empty "nodes" array.');
+      return;
+    }
+
+    var seedCount = parseInt(document.getElementById('seed-count').value) || 3;
+    var seedBase = parseInt(document.getElementById('seed-base').value) || 42;
+    var seeds = [];
+    for (var i = 0; i < seedCount; i++) seeds.push(seedBase + i);
+
+    var body = {
+      config_json: configJson,
+      params: {
+        rxdelay: {
+          min: parseFloat(document.getElementById('rxd-min').value) || 0,
+          max: parseFloat(document.getElementById('rxd-max').value) || 0,
+          step: parseFloat(document.getElementById('rxd-step').value) || 0,
+        },
+        txdelay: {
+          min: parseFloat(document.getElementById('txd-min').value) || 0,
+          max: parseFloat(document.getElementById('txd-max').value) || 0,
+          step: parseFloat(document.getElementById('txd-step').value) || 0,
+        },
+        direct_txdelay: {
+          min: parseFloat(document.getElementById('dtxd-min').value) || 0,
+          max: parseFloat(document.getElementById('dtxd-max').value) || 0,
+          step: parseFloat(document.getElementById('dtxd-step').value) || 0,
+        },
+      },
+      seeds: seeds,
+      max_workers: parseInt(document.getElementById('max-workers').value) || 4,
+    };
+
+    document.getElementById('start-btn').disabled = true;
+
+    try {
+      var resp = await postJSON('/api/sweeps', body);
+      activeSweepId = resp.id;
+      currentResults = [];
+
+      // Show results card and progress
+      document.getElementById('results-card').classList.remove('hidden');
+      document.getElementById('results-empty').classList.remove('hidden');
+      document.getElementById('results-table-wrap').classList.add('hidden');
+      showProgress(true);
+
+      // Connect SSE
+      connectSweepSSE(activeSweepId);
+
+    } catch (err) {
+      showError('Failed to start sweep: ' + err.message);
+      document.getElementById('start-btn').disabled = false;
+    }
+  };
+
+  // ── SSE progress ───────────────────────────────────────
+  function connectSweepSSE(sweepId) {
+    if (activeSse) {
+      activeSse.close();
+      activeSse = null;
+    }
+
+    activeSse = connectSSE(
+      '/api/sweeps/' + encodeURIComponent(sweepId) + '/progress',
+      function(data) {
+        if (data.done) {
+          showProgress(false);
+          document.getElementById('start-btn').disabled = false;
+          if (activeSse) { activeSse.close(); activeSse = null; }
+          // Fetch final results
+          loadSweepResults(sweepId);
+          loadSweepList();
+          return;
+        }
+
+        if (data.status === 'running') {
+          var pct = data.progress_pct || 0;
+          document.getElementById('progress-fill').style.width = pct + '%';
+          document.getElementById('progress-pct').textContent = pct + '%';
+          document.getElementById('progress-label').textContent =
+            'Running... ' + (data.completed_runs || 0) + '/' + (data.total_runs || 0);
+
+          if (data.last_result) {
+            var lr = data.last_result;
+            document.getElementById('progress-detail').textContent =
+              'Last: rxd=' + lr.rxd + ' txd=' + lr.txd + ' dtxd=' + lr.dtxd +
+              ' seed=' + lr.seed + ' -> ' + lr.pct + '%';
+          }
+        }
+
+        if (data.status === 'failed') {
+          document.getElementById('progress-label').textContent = 'Failed';
+          document.getElementById('progress-label').style.color = 'var(--error)';
+          document.getElementById('progress-detail').textContent = data.error || '';
+          document.getElementById('start-btn').disabled = false;
+          if (activeSse) { activeSse.close(); activeSse = null; }
+          loadSweepList();
+        }
+
+        if (data.status === 'cancelled') {
+          document.getElementById('progress-label').textContent = 'Cancelled';
+          document.getElementById('progress-label').style.color = 'var(--warning)';
+          document.getElementById('start-btn').disabled = false;
+          if (activeSse) { activeSse.close(); activeSse = null; }
+          loadSweepList();
+        }
+      },
+      function(err) {
+        // SSE error -- connection lost
+        document.getElementById('progress-detail').textContent = 'SSE connection lost';
+        document.getElementById('start-btn').disabled = false;
+      }
+    );
+  }
+
+  // ── Load results for a sweep ───────────────────────────
+  async function loadSweepResults(sweepId) {
+    try {
+      var data = await fetchJSON('/api/sweeps/' + encodeURIComponent(sweepId));
+      currentResults = data.results || [];
+      document.getElementById('results-card').classList.remove('hidden');
+      if (currentResults.length > 0) {
+        document.getElementById('results-empty').classList.add('hidden');
+        document.getElementById('results-table-wrap').classList.remove('hidden');
+        document.getElementById('results-count').textContent =
+          currentResults.length + ' combinations';
+      } else {
+        document.getElementById('results-empty').classList.remove('hidden');
+        document.getElementById('results-table-wrap').classList.add('hidden');
+      }
+      renderResults();
+    } catch (err) {
+      showError('Failed to load results: ' + err.message);
+    }
+  }
+
+  // ── Render results table ───────────────────────────────
+  function renderResults() {
+    if (!currentResults || currentResults.length === 0) return;
+
+    // Update sort indicators
+    document.querySelectorAll('#results-table thead th').forEach(function(th) {
+      th.classList.remove('sort-asc', 'sort-desc');
+      if (th.dataset.col === sortCol) {
+        th.classList.add(sortAsc ? 'sort-asc' : 'sort-desc');
+      }
+    });
+
+    // Sort
+    var sorted = currentResults.slice().sort(function(a, b) {
+      var va = a[sortCol], vb = b[sortCol];
+      if (va === undefined) va = 0;
+      if (vb === undefined) vb = 0;
+      if (sortAsc) return va - vb;
+      return vb - va;
+    });
+
+    // Find the best mean_pct
+    var bestMean = Math.max.apply(null, currentResults.map(function(r) { return r.mean_pct; }));
+
+    var tbody = document.getElementById('results-tbody');
+    tbody.innerHTML = '';
+
+    sorted.forEach(function(r, idx) {
+      var tr = document.createElement('tr');
+      if (r.mean_pct === bestMean) tr.className = 'best-row';
+
+      tr.innerHTML =
+        '<td>' + (idx + 1) + '</td>' +
+        '<td>' + r.rxd.toFixed(1) + '</td>' +
+        '<td>' + r.txd.toFixed(1) + '</td>' +
+        '<td>' + r.dtxd.toFixed(1) + '</td>' +
+        '<td>' + r.mean_pct.toFixed(1) + '%</td>' +
+        '<td>' + r.std_pct.toFixed(1) + '%</td>' +
+        '<td>' + r.min_pct + '%</td>' +
+        '<td>' + r.max_pct + '%</td>' +
+        '<td>' + (r.mean_ack >= 0 ? r.mean_ack.toFixed(0) + '%' : 'n/a') + '</td>' +
+        '<td>' + (r.mean_chan >= 0 ? r.mean_chan.toFixed(0) + '%' : 'n/a') + '</td>';
+
+      tbody.appendChild(tr);
+    });
+  }
+
+  // ── Sweep list ─────────────────────────────────────────
+  window.loadSweepList = async function() {
+    var loading = document.getElementById('sweeps-loading');
+    var empty = document.getElementById('sweeps-empty');
+    var tableW = document.getElementById('sweeps-table-wrap');
+    var tbody = document.getElementById('sweeps-tbody');
+
+    loading.classList.remove('hidden');
+    empty.classList.add('hidden');
+    tableW.classList.add('hidden');
+
+    try {
+      var sweeps = await fetchJSON('/api/sweeps');
+      loading.classList.add('hidden');
+      allSweeps = Array.isArray(sweeps) ? sweeps : [];
+
+      if (allSweeps.length === 0) {
+        empty.classList.remove('hidden');
+        return;
+      }
+
+      tableW.classList.remove('hidden');
+      tbody.innerHTML = '';
+
+      allSweeps.forEach(function(s) {
+        var tr = document.createElement('tr');
+
+        // ID
+        var tdId = document.createElement('td');
+        tdId.innerHTML = '<code title="' + escapeHtml(s.id) + '">' +
+          escapeHtml(truncate(s.id, 12)) + '</code>';
+        tr.appendChild(tdId);
+
+        // Status
+        var tdStatus = document.createElement('td');
+        var badge = document.createElement('span');
+        badge.className = 'badge badge-' + (s.status || 'pending');
+        badge.textContent = s.status || 'pending';
+        tdStatus.appendChild(badge);
+        if (s.status === 'running') {
+          var pctSpan = document.createElement('span');
+          pctSpan.style.cssText = 'margin-left:6px; font-size:10px; color:var(--text-muted)';
+          pctSpan.textContent = (s.progress_pct || 0) + '%';
+          tdStatus.appendChild(pctSpan);
+        }
+        tr.appendChild(tdStatus);
+
+        // Runs
+        var tdRuns = document.createElement('td');
+        tdRuns.textContent = (s.completed_runs || 0) + '/' + (s.total_runs || 0);
+        tr.appendChild(tdRuns);
+
+        // Best
+        var tdBest = document.createElement('td');
+        if (s.best) {
+          tdBest.textContent = s.best.mean_pct.toFixed(1) + '%';
+          tdBest.title = 'rxd=' + s.best.rxd + ' txd=' + s.best.txd + ' dtxd=' + s.best.dtxd;
+          tdBest.style.color = 'var(--success)';
+        } else {
+          tdBest.textContent = '--';
+          tdBest.style.color = 'var(--text-dim)';
+        }
+        tr.appendChild(tdBest);
+
+        // Created
+        var tdCreated = document.createElement('td');
+        tdCreated.textContent = formatTime(s.created_at);
+        tr.appendChild(tdCreated);
+
+        // Actions
+        var tdAct = document.createElement('td');
+        var actionsHtml = '';
+        if (s.status === 'completed') {
+          actionsHtml += '<button class="btn btn-sm" onclick="viewSweep(\'' +
+            escapeHtml(s.id) + '\')">View</button>';
+        }
+        actionsHtml += '<button class="btn btn-sm btn-danger" onclick="deleteSweep(\'' +
+          escapeHtml(s.id) + '\')">Del</button>';
+        tdAct.innerHTML = '<div style="display:flex; gap:4px;">' + actionsHtml + '</div>';
+        tr.appendChild(tdAct);
+
+        tbody.appendChild(tr);
+      });
+
+    } catch (err) {
+      loading.classList.add('hidden');
+      empty.classList.remove('hidden');
+    }
+  };
+
+  // ── View past sweep results ────────────────────────────
+  window.viewSweep = function(sweepId) {
+    activeSweepId = sweepId;
+    loadSweepResults(sweepId);
+    // Scroll to results
+    document.getElementById('results-card').scrollIntoView({ behavior: 'smooth' });
+  };
+
+  // ── Delete sweep ───────────────────────────────────────
+  window.deleteSweep = async function(sweepId) {
+    if (!confirm('Delete sweep ' + truncate(sweepId, 12) + '?')) return;
+    try {
+      await deleteJSON('/api/sweeps/' + encodeURIComponent(sweepId));
+      loadSweepList();
+    } catch (err) {
+      alert('Delete failed: ' + err.message);
+    }
+  };
+
+  // ── Helpers ────────────────────────────────────────────
+  function showProgress(visible) {
+    var area = document.getElementById('progress-area');
+    if (visible) {
+      area.classList.remove('hidden');
+      document.getElementById('progress-fill').style.width = '0%';
+      document.getElementById('progress-pct').textContent = '0%';
+      document.getElementById('progress-label').textContent = 'Starting...';
+      document.getElementById('progress-label').style.color = '';
+      document.getElementById('progress-detail').textContent = '';
+    } else {
+      // Keep visible but update label
+      document.getElementById('progress-label').textContent = 'Complete';
+      document.getElementById('progress-fill').style.width = '100%';
+      document.getElementById('progress-pct').textContent = '100%';
+    }
+  }
+
+  function showError(msg) {
+    var el = document.getElementById('start-error');
+    el.textContent = msg;
+    el.classList.remove('hidden');
+    setTimeout(function() { el.classList.add('hidden'); }, 8000);
+  }
+
+  // Expose loadSweepList for the refresh button
+  window.loadSweepList = window.loadSweepList;
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topology Editor - MeshCore Simulator</title>
+<link rel="stylesheet" href="/static/css/common.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  .te-layout {
+    display: flex;
+    height: calc(100vh - 44px);
+    overflow: hidden;
+  }
+
+  /* Sidebar */
+  .te-sidebar {
+    width: 240px;
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow-y: auto;
+  }
+  .te-sidebar .section {
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .te-sidebar .section h3 {
+    font-size: 11px; color: var(--text-muted); text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 8px;
+  }
+  .te-sidebar .btn { width: 100%; justify-content: center; margin-bottom: 6px; }
+  .te-sidebar .btn:last-child { margin-bottom: 0; }
+
+  .radio-row {
+    display: flex; align-items: center; gap: 6px; margin-bottom: 6px;
+  }
+  .radio-row label {
+    font-size: 10px; color: var(--text-dim); min-width: 28px;
+  }
+  .radio-row select { flex: 1; }
+
+  /* Main area -- splits into tables + map */
+  .te-main {
+    flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden;
+  }
+
+  .te-toolbar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px; background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .te-toolbar input { max-width: 220px; }
+  .te-toolbar .name-input { flex: 0 0 200px; }
+  .te-toolbar .desc-input { flex: 1; min-width: 0; }
+  .te-toolbar .btn-save-dirty {
+    border-color: var(--accent);
+    box-shadow: 0 0 6px rgba(37,99,235,0.25);
+  }
+  .te-toolbar .toolbar-gap { width: 8px; flex-shrink: 0; }
+  .te-toolbar .btn-danger { color: var(--error); border-color: var(--error); }
+  .te-toolbar .btn-danger:hover { background: #fee2e2; }
+
+  /* Split: tables left, map right */
+  .te-split {
+    flex: 1; display: flex; overflow: hidden;
+  }
+  .te-tables {
+    flex: 1; overflow-y: auto; padding: 16px; min-width: 0;
+  }
+  .te-map-panel {
+    width: 420px; flex-shrink: 0;
+    border-left: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    background: var(--bg-primary);
+  }
+  .te-map-panel .map-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px;
+    background: var(--bg-secondary); border-bottom: 1px solid var(--border);
+  }
+  .te-map-panel .map-header h3 {
+    font-size: 11px; color: var(--text-muted); text-transform: uppercase;
+    letter-spacing: 0.5px; margin: 0; flex: 1;
+  }
+  .te-map-panel .map-header label {
+    font-size: 10px; color: var(--text-muted); display: flex; align-items: center; gap: 4px; cursor: pointer;
+  }
+  .link-label { background: none !important; border: none !important; box-shadow: none !important; font-size: 10px; color: #4b5563; font-family: var(--font-mono); white-space: nowrap; }
+  #map-preview {
+    flex: 1; min-height: 0;
+  }
+  .leaflet-container { background: #f5f5f8 !important; }
+
+  /* Tables */
+  .edit-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 16px; }
+  .edit-table th {
+    text-align: left; padding: 6px 8px; color: var(--text-muted);
+    border-bottom: 1px solid var(--border); font-weight: 600; font-size: 11px;
+  }
+  .edit-table td {
+    padding: 4px 6px; border-bottom: 1px solid var(--border-light);
+  }
+  .edit-table input, .edit-table select {
+    background: var(--bg-input); color: var(--text); border: 1px solid var(--border);
+    padding: 3px 6px; font-size: 11px; font-family: var(--font-mono);
+    border-radius: var(--radius); width: 100%;
+  }
+  .edit-table input:focus, .edit-table select:focus {
+    outline: none; border-color: var(--accent);
+  }
+  .edit-table .num-input { width: 70px; }
+  .edit-table .name-col { width: 120px; }
+  .edit-table .del-btn {
+    background: none; border: none; color: var(--error); cursor: pointer;
+    font-size: 14px; padding: 2px 6px;
+  }
+  .edit-table .del-btn:hover { color: #ef4444; }
+  .edit-table tr:hover td { background: rgba(37,99,235,0.06); }
+
+  .add-row-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: none; border: 1px dashed var(--border); color: var(--text-muted);
+    padding: 4px 12px; font-size: 11px; font-family: var(--font-mono);
+    border-radius: var(--radius); cursor: pointer; margin-bottom: 16px;
+  }
+  .add-row-btn:hover { border-color: var(--accent); color: var(--text); }
+
+  /* Status */
+  #te-status {
+    padding: 8px 12px; font-size: 11px; background: var(--bg-secondary);
+    border-top: 1px solid var(--border); flex-shrink: 0;
+  }
+
+  /* Generate grid modal */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.3);
+    display: flex; align-items: center; justify-content: center; z-index: 1000;
+  }
+  .modal-dialog {
+    background: var(--bg-secondary); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 24px; max-width: 420px; width: 90%;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+  }
+  .modal-dialog h3 { margin-bottom: 12px; }
+  .modal-dialog .btn-row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+  .gen-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .gen-grid label { font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 2px; }
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <span class="brand">MeshCore Sim</span>
+  <ul class="nav-links">
+    <li><a href="/static/index.html">Dashboard</a></li>
+    <li><a href="/static/simulations.html">Simulations</a></li>
+    <li><a href="/static/topologies.html" class="active">Topologies</a></li>
+    <li><a href="/static/scenarios.html">Scenarios</a></li>
+    <li><a href="/static/sweep.html">Sweeps</a></li>
+  </ul>
+  <span class="spacer"></span>
+</nav>
+
+<div class="te-layout">
+  <!-- Sidebar -->
+  <div class="te-sidebar">
+    <div class="section">
+      <h3>Create / Import</h3>
+      <label class="btn btn-sm" for="import-file" style="cursor:pointer">Import Real Network</label>
+      <input type="file" id="import-file" accept=".json" style="display:none">
+      <button class="btn btn-sm" id="btn-gen-grid">Generate Grid</button>
+      <button class="btn btn-sm" id="btn-from-config">From Config</button>
+    </div>
+
+    <div class="section">
+      <h3>Radio Defaults</h3>
+      <div class="radio-row">
+        <label>SF</label>
+        <select id="radio-sf" class="form-select">
+          <option value="6">6</option>
+          <option value="7">7</option>
+          <option value="8">8</option>
+          <option value="9">9</option>
+          <option value="10">10</option>
+          <option value="11">11</option>
+          <option value="12" selected>12</option>
+        </select>
+      </div>
+      <div class="radio-row">
+        <label>BW</label>
+        <select id="radio-bw" class="form-select">
+          <option value="31250">31.25 kHz</option>
+          <option value="41700">41.7 kHz</option>
+          <option value="62500">62.5 kHz</option>
+          <option value="125000" selected>125 kHz</option>
+          <option value="250000">250 kHz</option>
+          <option value="500000">500 kHz</option>
+        </select>
+      </div>
+      <div class="radio-row">
+        <label>CR</label>
+        <select id="radio-cr" class="form-select">
+          <option value="1" selected>4/5</option>
+          <option value="2">4/6</option>
+          <option value="3">4/7</option>
+          <option value="4">4/8</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Coordinate Origin</h3>
+      <div class="radio-row">
+        <label>Lat</label>
+        <input id="origin-lat" class="form-input" type="number" step="any" value="54.35" style="flex:1;">
+      </div>
+      <div class="radio-row">
+        <label>Lon</label>
+        <input id="origin-lon" class="form-input" type="number" step="any" value="18.65" style="flex:1;">
+      </div>
+    </div>
+
+    <div class="section" style="flex:1;">
+      <h3>Info</h3>
+      <div id="sidebar-info" style="font-size:11px; color:var(--text-muted);">
+        <div>Nodes: <span id="info-nodes">0</span></div>
+        <div>Links: <span id="info-links">0</span></div>
+        <div>Has geo: <span id="info-geo">No</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="te-main">
+    <div class="te-toolbar">
+      <input id="topo-name" class="form-input name-input" type="text" placeholder="Topology name...">
+      <input id="topo-desc" class="form-input desc-input" type="text" placeholder="Description (optional)">
+      <button class="btn btn-success" id="btn-save">Save</button>
+      <div class="toolbar-gap"></div>
+      <button class="btn btn-sm" id="btn-save-copy" title="Save as new topology" disabled>Save Copy</button>
+      <button class="btn btn-sm" id="btn-download" title="Download as JSON">Download</button>
+      <button class="btn btn-sm btn-danger" id="btn-delete" title="Delete topology" style="display:none">Delete</button>
+    </div>
+
+    <div class="te-split">
+      <!-- Left: tables -->
+      <div class="te-tables">
+        <h3>Nodes</h3>
+        <table class="edit-table" id="nodes-table">
+          <thead>
+            <tr>
+              <th class="name-col">Name</th>
+              <th>Role</th>
+              <th>Contact</th>
+              <th>Lat</th>
+              <th>Lon</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="nodes-tbody"></tbody>
+        </table>
+        <button class="add-row-btn" id="btn-add-node">+ Add Node</button>
+
+        <h3>Links</h3>
+        <table class="edit-table" id="links-table">
+          <thead>
+            <tr>
+              <th>From</th>
+              <th>To</th>
+              <th>SNR</th>
+              <th>RSSI</th>
+              <th>Loss</th>
+              <th>SNR StdDev</th>
+              <th>Bidir</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="links-tbody"></tbody>
+        </table>
+        <button class="add-row-btn" id="btn-add-link">+ Add Link</button>
+      </div>
+
+      <!-- Right: map preview (always visible) -->
+      <div class="te-map-panel">
+        <div class="map-header">
+          <h3>Topology Preview</h3>
+          <label><input type="checkbox" id="map-labels"> Labels</label>
+        </div>
+        <div id="map-preview" style="width:100%;height:100%"></div>
+      </div>
+    </div>
+
+    <div id="te-status">Ready</div>
+  </div>
+</div>
+
+<div id="modal-container" style="display:none"></div>
+
+<script src="/static/js/api.js"></script>
+<script>
+(function() {
+  let topoId = new URLSearchParams(window.location.search).get('id');
+  let leafletMap = null;
+  let mapMarkers = [];
+  let mapLines = [];
+
+  // -- Node/Link data ------------------------------------------------
+  let nodes = [];
+  let links = [];
+  let isDirty = false;
+
+  function markDirty() {
+    isDirty = true;
+    const btn = document.getElementById('btn-save');
+    btn.textContent = 'Save *';
+    btn.classList.add('btn-save-dirty');
+  }
+
+  function markClean() {
+    isDirty = false;
+    const btn = document.getElementById('btn-save');
+    btn.textContent = 'Save';
+    btn.classList.remove('btn-save-dirty');
+  }
+
+  // -- Ctrl+S / Cmd+S shortcut --------------------------------------
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      e.preventDefault();
+      document.getElementById('btn-save').click();
+    }
+  });
+
+  // -- Unsaved changes guard ----------------------------------------
+  window.addEventListener('beforeunload', (e) => {
+    if (isDirty) e.preventDefault();
+  });
+
+  function getNodeNames() {
+    return nodes.map(n => n.name).filter(Boolean);
+  }
+
+  // -- Render nodes table --------------------------------------------
+  function renderNodes() {
+    const tbody = document.getElementById('nodes-tbody');
+    tbody.innerHTML = '';
+    nodes.forEach((node, idx) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><input class="name-col" data-idx="${idx}" data-field="name" value="${esc(node.name || '')}"></td>
+        <td><select data-idx="${idx}" data-field="role">
+          <option value="repeater"${node.role === 'repeater' ? ' selected' : ''}>repeater</option>
+          <option value="companion"${node.role === 'companion' ? ' selected' : ''}>companion</option>
+        </select></td>
+        <td><input data-idx="${idx}" data-field="contact" value="${esc(node.contact || '')}"></td>
+        <td><input class="num-input" data-idx="${idx}" data-field="lat" type="number" step="any" value="${node.lat ?? ''}"></td>
+        <td><input class="num-input" data-idx="${idx}" data-field="lon" type="number" step="any" value="${node.lon ?? ''}"></td>
+        <td><button class="del-btn" data-idx="${idx}" title="Remove node">&times;</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    // Bind events
+    tbody.querySelectorAll('input, select').forEach(el => {
+      el.addEventListener('change', () => {
+        const idx = parseInt(el.dataset.idx);
+        const field = el.dataset.field;
+        let val = el.value;
+        if (['lat', 'lon'].includes(field)) {
+          val = val === '' ? undefined : parseFloat(val);
+        }
+        nodes[idx][field] = val;
+        if (field === 'name') { renderLinks(); }
+        markDirty();
+        updateInfo();
+        updateMap();
+      });
+    });
+    tbody.querySelectorAll('.del-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        nodes.splice(parseInt(btn.dataset.idx), 1);
+        markDirty();
+        renderNodes();
+        renderLinks();
+        updateInfo();
+        updateMap();
+      });
+    });
+
+    updateInfo();
+  }
+
+  // -- Render links table --------------------------------------------
+  function renderLinks() {
+    const tbody = document.getElementById('links-tbody');
+    tbody.innerHTML = '';
+    const names = getNodeNames();
+
+    links.forEach((link, idx) => {
+      const tr = document.createElement('tr');
+      const fromOpts = names.map(n => `<option value="${esc(n)}"${link.from === n ? ' selected' : ''}>${esc(n)}</option>`).join('');
+      const toOpts = names.map(n => `<option value="${esc(n)}"${link.to === n ? ' selected' : ''}>${esc(n)}</option>`).join('');
+
+      tr.innerHTML = `
+        <td><select data-idx="${idx}" data-field="from"><option value="">--</option>${fromOpts}</select></td>
+        <td><select data-idx="${idx}" data-field="to"><option value="">--</option>${toOpts}</select></td>
+        <td><input class="num-input" data-idx="${idx}" data-field="snr" type="number" step="any" value="${link.snr ?? 0}"></td>
+        <td><input class="num-input" data-idx="${idx}" data-field="rssi" type="number" step="any" value="${link.rssi ?? -80}"></td>
+        <td><input class="num-input" data-idx="${idx}" data-field="loss" type="number" step="0.01" min="0" max="1" value="${link.loss ?? ''}"></td>
+        <td><input class="num-input" data-idx="${idx}" data-field="snr_std_dev" type="number" step="0.1" value="${link.snr_std_dev ?? ''}"></td>
+        <td><input type="checkbox" data-idx="${idx}" data-field="bidir" ${link.bidir ? 'checked' : ''}></td>
+        <td><button class="del-btn" data-idx="${idx}" title="Remove link">&times;</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    tbody.querySelectorAll('input, select').forEach(el => {
+      el.addEventListener('change', () => {
+        const idx = parseInt(el.dataset.idx);
+        const field = el.dataset.field;
+        if (field === 'bidir') {
+          links[idx].bidir = el.checked;
+        } else if (['snr', 'rssi', 'loss', 'snr_std_dev'].includes(field)) {
+          links[idx][field] = el.value === '' ? undefined : parseFloat(el.value);
+          // SNR change -> auto-update RSSI
+          if (field === 'snr' && links[idx].snr != null) {
+            links[idx].rssi = rssiFromSnr(links[idx].snr);
+            const rssiInput = tbody.querySelector(`input[data-idx="${idx}"][data-field="rssi"]`);
+            if (rssiInput) rssiInput.value = links[idx].rssi;
+          }
+        } else {
+          links[idx][field] = el.value;
+          // from/to change -> re-estimate link params from distance
+          if (field === 'from' || field === 'to') {
+            const fNode = nodes.find(n => n.name === links[idx].from);
+            const tNode = nodes.find(n => n.name === links[idx].to);
+            const est = fNode && tNode ? estimateLinkParams(fNode, tNode) : null;
+            if (est) {
+              links[idx].snr = est.snr;
+              links[idx].rssi = est.rssi;
+              links[idx].loss = est.loss;
+              renderLinks(); // refresh all cells
+              updateMap();
+              markDirty();
+              return;
+            }
+          }
+        }
+        markDirty();
+        updateInfo();
+        updateMap();
+      });
+    });
+    tbody.querySelectorAll('.del-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        links.splice(parseInt(btn.dataset.idx), 1);
+        markDirty();
+        renderLinks();
+        updateInfo();
+        updateMap();
+      });
+    });
+
+    updateInfo();
+  }
+
+  // -- Info update ---------------------------------------------------
+  function updateInfo() {
+    document.getElementById('info-nodes').textContent = nodes.length;
+    document.getElementById('info-links').textContent = links.length;
+    const hasGeo = nodes.some(n => n.lat != null && n.lon != null);
+    document.getElementById('info-geo').textContent = hasGeo ? 'Yes' : 'No';
+  }
+
+  // -- Origin helpers ------------------------------------------------
+  function getOrigin() {
+    return {
+      lat: parseFloat(document.getElementById('origin-lat').value) || 54.35,
+      lon: parseFloat(document.getElementById('origin-lon').value) || 18.65,
+    };
+  }
+
+  function setOriginFromCentroid() {
+    const geo = nodes.filter(n => n.lat != null && n.lon != null);
+    if (!geo.length) return;
+    const lat = geo.reduce((s, n) => s + n.lat, 0) / geo.length;
+    const lon = geo.reduce((s, n) => s + n.lon, 0) / geo.length;
+    document.getElementById('origin-lat').value = parseFloat(lat.toFixed(6));
+    document.getElementById('origin-lon').value = parseFloat(lon.toFixed(6));
+  }
+
+  // -- Map -----------------------------------------------------------
+  function initMap() {
+    leafletMap = L.map('map-preview', { zoomControl: true, attributionControl: false });
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(leafletMap);
+    const o = getOrigin();
+    leafletMap.setView([o.lat, o.lon], 13);
+  }
+
+  function updateMap() {
+    if (!leafletMap) initMap();
+
+    // Clear old markers & lines
+    mapMarkers.forEach(m => leafletMap.removeLayer(m));
+    mapLines.forEach(l => leafletMap.removeLayer(l));
+    mapMarkers = [];
+    mapLines = [];
+
+    const bounds = L.latLngBounds();
+    const nodePos = {};
+
+    nodes.forEach((node, idx) => {
+      if (node.lat == null || node.lon == null) return;
+      const ll = L.latLng(node.lat, node.lon);
+      bounds.extend(ll);
+      nodePos[node.name] = ll;
+      const color = node.role === 'companion' ? '#16a34a' : '#2563eb';
+      const icon = L.divIcon({
+        className: '',
+        html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2px solid #374151;opacity:0.85;"></div>`,
+        iconSize: [14, 14],
+        iconAnchor: [7, 7],
+      });
+      const marker = L.marker(ll, { icon, draggable: true }).addTo(leafletMap);
+      const showLabels = document.getElementById('map-labels').checked;
+      marker.bindTooltip(node.name || '?', { permanent: showLabels, direction: 'top', offset: [0, -10] });
+      marker._nodeIdx = idx;
+      marker.on('dragend', function() {
+        const pos = this.getLatLng();
+        const i = this._nodeIdx;
+        nodes[i].lat = parseFloat(pos.lat.toFixed(6));
+        nodes[i].lon = parseFloat(pos.lng.toFixed(6));
+        // Update table inputs without full re-render
+        const latInput = document.querySelector(`#nodes-tbody input[data-idx="${i}"][data-field="lat"]`);
+        const lonInput = document.querySelector(`#nodes-tbody input[data-idx="${i}"][data-field="lon"]`);
+        if (latInput) latInput.value = nodes[i].lat;
+        if (lonInput) lonInput.value = nodes[i].lon;
+        markDirty();
+        // Redraw links
+        redrawLinks();
+      });
+      mapMarkers.push(marker);
+    });
+
+    // Draw links
+    redrawLinks();
+
+    if (bounds.isValid()) {
+      leafletMap.fitBounds(bounds, { padding: [30, 30] });
+    } else {
+      // No geo nodes -- center on origin
+      const o = getOrigin();
+      leafletMap.setView([o.lat, o.lon], 13);
+    }
+  }
+
+  function redrawLinks() {
+    mapLines.forEach(l => leafletMap.removeLayer(l));
+    mapLines = [];
+    const nodePos = {};
+    nodes.forEach(n => {
+      if (n.lat != null && n.lon != null) nodePos[n.name] = L.latLng(n.lat, n.lon);
+    });
+    const showLabels = document.getElementById('map-labels').checked;
+    for (const link of links) {
+      const from = nodePos[link.from];
+      const to = nodePos[link.to];
+      if (!from || !to) continue;
+      const line = L.polyline([from, to], {
+        color: '#9ca3af', weight: 2, opacity: 0.6,
+      }).addTo(leafletMap);
+      if (showLabels) {
+        const mid = L.latLng((from.lat + to.lat) / 2, (from.lng + to.lng) / 2);
+        const snrText = (link.snr ?? 0) + ' dB';
+        const label = L.marker(mid, {
+          icon: L.divIcon({ className: 'link-label', html: snrText, iconSize: [50, 14], iconAnchor: [25, 7] }),
+          interactive: false,
+        }).addTo(leafletMap);
+        mapLines.push(label);
+      }
+      mapLines.push(line);
+    }
+  }
+
+  // -- Add node/link -------------------------------------------------
+  document.getElementById('btn-add-node').addEventListener('click', () => {
+    const idx = nodes.length + 1;
+    const name = nodes.length === 0 ? 'R1' : 'R' + idx;
+    const o = getOrigin();
+    nodes.push({
+      name, role: 'repeater',
+      lat: parseFloat((o.lat + (Math.random() - 0.5) * 0.01).toFixed(6)),
+      lon: parseFloat((o.lon + (Math.random() - 0.5) * 0.01).toFixed(6)),
+    });
+    markDirty();
+    renderNodes();
+    renderLinks();
+    updateMap();
+  });
+
+  document.getElementById('btn-add-link').addEventListener('click', () => {
+    const names = getNodeNames();
+    const fromName = names[0] || '';
+    const toName = names[1] || names[0] || '';
+    const fromNode = nodes.find(n => n.name === fromName);
+    const toNode = nodes.find(n => n.name === toName);
+    const est = fromNode && toNode ? estimateLinkParams(fromNode, toNode) : null;
+    links.push({
+      from: fromName, to: toName,
+      snr: est ? est.snr : 5,
+      rssi: est ? est.rssi : rssiFromSnr(5),
+      loss: est ? est.loss : undefined,
+      bidir: true,
+    });
+    markDirty();
+    renderLinks();
+    updateMap();
+  });
+
+  // -- Save ----------------------------------------------------------
+  document.getElementById('btn-save').addEventListener('click', async () => {
+    const name = document.getElementById('topo-name').value.trim();
+    if (!name) {
+      setStatus('Name is required', true);
+      return;
+    }
+
+    const payload = buildTopoPayload();
+
+    try {
+      setStatus('Saving...');
+      if (topoId) {
+        await putJSON('/api/topologies/' + topoId, payload);
+        setStatus('Saved (updated)');
+      } else {
+        const result = await postJSON('/api/topologies/', payload);
+        topoId = result.id;
+        history.replaceState(null, '', '?id=' + topoId);
+        setStatus('Saved (ID: ' + topoId + ')');
+      }
+      markClean();
+      updateToolbarButtons();
+    } catch (err) {
+      setStatus('Save failed: ' + err.message, true);
+    }
+  });
+
+  // -- Import real network -------------------------------------------
+  document.getElementById('import-file').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value = '';
+
+    try {
+      const text = await file.text();
+      const topo = JSON.parse(text);
+
+      setStatus('Converting topology...');
+      const result = await postJSON('/api/topo/convert', { topology: topo });
+      const config = result.config;
+
+      nodes = config.nodes || [];
+      links = (config.topology && config.topology.links) || [];
+      setRadioFromConfig(config);
+      setOriginFromCentroid();
+
+      markDirty();
+      renderNodes();
+      renderLinks();
+      updateMap();
+      setStatus('Imported ' + nodes.length + ' nodes, ' + links.length + ' links');
+    } catch (err) {
+      setStatus('Import failed: ' + err.message, true);
+    }
+  });
+
+  // -- Generate grid -------------------------------------------------
+  document.getElementById('btn-gen-grid').addEventListener('click', () => {
+    const modal = document.getElementById('modal-container');
+    modal.style.display = '';
+    modal.innerHTML = `
+      <div class="modal-overlay" onclick="this.parentElement.style.display='none'">
+        <div class="modal-dialog" onclick="event.stopPropagation()">
+          <h3>Generate Grid Topology</h3>
+          <div class="gen-grid">
+            <div><label>Rows</label><input id="gen-rows" class="form-input" type="number" min="1" value="3"></div>
+            <div><label>Cols</label><input id="gen-cols" class="form-input" type="number" min="1" value="3"></div>
+            <div><label>Spacing (km)</label><input id="gen-spacing" class="form-input" type="number" step="0.5" value="5.0"></div>
+            <div><label>SNR (dB)</label><input id="gen-snr" class="form-input" type="number" step="0.5" value="5.0"></div>
+            <div><label>Base Lat</label><input id="gen-lat" class="form-input" type="number" step="any" value="54.35"></div>
+            <div><label>Base Lon</label><input id="gen-lon" class="form-input" type="number" step="any" value="18.65"></div>
+            <div><label>Companions</label><input id="gen-comp" class="form-input" type="number" min="0" value="2"></div>
+          </div>
+          <div class="btn-row">
+            <button class="btn" onclick="this.closest('.modal-overlay').parentElement.style.display='none'">Cancel</button>
+            <button class="btn btn-primary" id="btn-gen-go">Generate</button>
+          </div>
+        </div>
+      </div>`;
+
+    document.getElementById('btn-gen-go').addEventListener('click', async () => {
+      const body = {
+        rows: parseInt(document.getElementById('gen-rows').value) || 3,
+        cols: parseInt(document.getElementById('gen-cols').value) || 3,
+        spacing_km: parseFloat(document.getElementById('gen-spacing').value) || 5,
+        snr: parseFloat(document.getElementById('gen-snr').value) || 5,
+        base_lat: parseFloat(document.getElementById('gen-lat').value) || 54.35,
+        base_lon: parseFloat(document.getElementById('gen-lon').value) || 18.65,
+        num_companions: parseInt(document.getElementById('gen-comp').value) || 2,
+      };
+
+      try {
+        modal.style.display = 'none';
+        setStatus('Generating grid...');
+        const result = await postJSON('/api/topo/generate', body);
+        const config = result.config;
+        nodes = config.nodes || [];
+        links = (config.topology && config.topology.links) || [];
+        setRadioFromConfig(config);
+        setOriginFromCentroid();
+        markDirty();
+        renderNodes();
+        renderLinks();
+        updateMap();
+        setStatus('Generated ' + nodes.length + ' nodes, ' + links.length + ' links');
+      } catch (err) {
+        setStatus('Generation failed: ' + err.message, true);
+      }
+    });
+  });
+
+  // -- From config ---------------------------------------------------
+  document.getElementById('btn-from-config').addEventListener('click', async () => {
+    let configs;
+    try {
+      configs = await fetchJSON('/api/configs/');
+    } catch (e) {
+      setStatus('Failed to load configs: ' + e.message, true);
+      return;
+    }
+    if (!configs.length) {
+      setStatus('No saved configs to import from.', true);
+      return;
+    }
+
+    const options = configs.map(c =>
+      `<option value="${c.id}">${esc(c.name)} (${c.node_count} nodes)</option>`
+    ).join('');
+
+    const modal = document.getElementById('modal-container');
+    modal.style.display = '';
+    modal.innerHTML = `
+      <div class="modal-overlay" onclick="this.parentElement.style.display='none'">
+        <div class="modal-dialog" onclick="event.stopPropagation()">
+          <h3>Import from Config</h3>
+          <label class="form-label">Select config:</label>
+          <select id="cfg-select" class="form-select">${options}</select>
+          <div class="btn-row">
+            <button class="btn" onclick="this.closest('.modal-overlay').parentElement.style.display='none'">Cancel</button>
+            <button class="btn btn-primary" id="btn-cfg-go">Import</button>
+          </div>
+        </div>
+      </div>`;
+
+    document.getElementById('btn-cfg-go').addEventListener('click', async () => {
+      const cfgId = document.getElementById('cfg-select').value;
+      if (!cfgId) return;
+      try {
+        modal.style.display = 'none';
+        setStatus('Loading config...');
+        const entry = await fetchJSON('/api/configs/' + cfgId);
+        const config = entry.config;
+        nodes = config.nodes || [];
+        links = (config.topology && config.topology.links) || [];
+        setRadioFromConfig(config);
+        setOriginFromCentroid();
+        if (!document.getElementById('topo-name').value) {
+          document.getElementById('topo-name').value = 'Topology from ' + (entry.name || cfgId);
+        }
+        markDirty();
+        renderNodes();
+        renderLinks();
+        updateMap();
+        setStatus('Imported from config: ' + nodes.length + ' nodes, ' + links.length + ' links');
+      } catch (err) {
+        setStatus('Import failed: ' + err.message, true);
+      }
+    });
+  });
+
+  // -- Helpers -------------------------------------------------------
+  function esc(s) { return (s || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+  function noiseFloorDbm() {
+    const bw = parseInt(document.getElementById('radio-bw').value) || 125000;
+    return -174 + 10 * Math.log10(bw) + 6; // thermal + NF
+  }
+
+  function rssiFromSnr(snr) {
+    return Math.round(snr + noiseFloorDbm());
+  }
+
+  const FREQ_MHZ = 869.618;
+  const TX_POWER_DBM = 22;
+  const LOSS_SNR_MID = -6.0;
+  const LOSS_STEEPNESS = 0.8;
+
+  function haversineKm(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  function fsplDb(distKm) {
+    if (distKm <= 0) return 0;
+    return 32.44 + 20 * Math.log10(distKm) + 20 * Math.log10(FREQ_MHZ);
+  }
+
+  function snrToLoss(snr) {
+    return Math.round(1 / (1 + Math.exp(LOSS_STEEPNESS * (snr - LOSS_SNR_MID))) * 10000) / 10000;
+  }
+
+  function estimateLinkParams(fromNode, toNode) {
+    if (fromNode.lat == null || fromNode.lon == null ||
+        toNode.lat == null || toNode.lon == null) return null;
+    const dist = haversineKm(fromNode.lat, fromNode.lon, toNode.lat, toNode.lon);
+    if (dist < 0.001) return null;
+    const nf = noiseFloorDbm();
+    const snr = Math.round((TX_POWER_DBM - fsplDb(dist) - nf) * 100) / 100;
+    const rssi = Math.round(nf + snr);
+    const loss = snrToLoss(snr);
+    return { snr, rssi, loss: loss > 0.0001 ? loss : undefined, dist_km: Math.round(dist * 1000) / 1000 };
+  }
+
+  function setStatus(msg, isError) {
+    const el = document.getElementById('te-status');
+    el.textContent = msg;
+    el.style.color = isError ? 'var(--error)' : 'var(--text-muted)';
+  }
+
+  function normalizeCR(cr) {
+    // Convert LoRa-style CR (5-8) to orchestrator-style (1-4) if needed
+    if (cr >= 5 && cr <= 8) return cr - 4;
+    return cr;
+  }
+
+  function setRadioFromConfig(config) {
+    const radio = config.simulation?.radio || config.radio || {};
+    if (radio.sf) document.getElementById('radio-sf').value = radio.sf;
+    if (radio.bw) document.getElementById('radio-bw').value = radio.bw;
+    if (radio.cr) document.getElementById('radio-cr').value = normalizeCR(radio.cr);
+  }
+
+  // -- Map labels toggle ---------------------------------------------
+  document.getElementById('map-labels').addEventListener('change', () => updateMap());
+
+  // -- Origin change -------------------------------------------------
+  document.getElementById('origin-lat').addEventListener('change', () => {
+    markDirty();
+    if (leafletMap && !nodes.some(n => n.lat != null && n.lon != null)) {
+      const o = getOrigin();
+      leafletMap.setView([o.lat, o.lon], 13);
+    }
+  });
+  document.getElementById('origin-lon').addEventListener('change', () => {
+    markDirty();
+    if (leafletMap && !nodes.some(n => n.lat != null && n.lon != null)) {
+      const o = getOrigin();
+      leafletMap.setView([o.lat, o.lon], 13);
+    }
+  });
+
+  // -- Toolbar button visibility ------------------------------------
+  function updateToolbarButtons() {
+    document.getElementById('btn-save-copy').disabled = !topoId;
+    document.getElementById('btn-delete').style.display = topoId ? '' : 'none';
+  }
+
+  // -- Build topology JSON from current editor state ----------------
+  function buildTopoPayload() {
+    const name = document.getElementById('topo-name').value.trim();
+    const desc = document.getElementById('topo-desc').value.trim();
+    const radio = {
+      sf: parseInt(document.getElementById('radio-sf').value),
+      bw: parseInt(document.getElementById('radio-bw').value),
+      cr: parseInt(document.getElementById('radio-cr').value),
+    };
+    const cleanNodes = nodes.map(n => {
+      const clean = { name: n.name, role: n.role || 'repeater' };
+      if (n.contact) clean.contact = n.contact;
+      if (n.lat != null) clean.lat = n.lat;
+      if (n.lon != null) clean.lon = n.lon;
+      return clean;
+    });
+    const cleanLinks = links.map(l => {
+      const clean = { from: l.from, to: l.to, snr: l.snr ?? 0 };
+      if (l.rssi != null) clean.rssi = l.rssi;
+      if (l.loss != null) clean.loss = l.loss;
+      if (l.snr_std_dev != null) clean.snr_std_dev = l.snr_std_dev;
+      if (l.bidir != null) clean.bidir = l.bidir;
+      return clean;
+    });
+    return { name, description: desc, nodes: cleanNodes, links: cleanLinks, radio };
+  }
+
+  // -- Save Copy ----------------------------------------------------
+  document.getElementById('btn-save-copy').addEventListener('click', async () => {
+    if (!topoId) return;
+    const payload = buildTopoPayload();
+    payload.name = (payload.name || 'Topology') + ' (copy)';
+    document.getElementById('topo-name').value = payload.name;
+
+    try {
+      setStatus('Saving copy...');
+      const result = await postJSON('/api/topologies/', payload);
+      topoId = result.id;
+      history.replaceState(null, '', '?id=' + topoId);
+      markClean();
+      updateToolbarButtons();
+      setStatus('Copy saved (ID: ' + topoId + ')');
+    } catch (err) {
+      setStatus('Save copy failed: ' + err.message, true);
+    }
+  });
+
+  // -- Download -----------------------------------------------------
+  document.getElementById('btn-download').addEventListener('click', () => {
+    const payload = buildTopoPayload();
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = (payload.name || 'topology').replace(/[^a-zA-Z0-9_-]/g, '_') + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  // -- Delete -------------------------------------------------------
+  document.getElementById('btn-delete').addEventListener('click', async () => {
+    if (!topoId) return;
+    if (!confirm('Delete this topology? This cannot be undone.')) return;
+    try {
+      setStatus('Deleting...');
+      await deleteJSON('/api/topologies/' + topoId);
+      window.location.href = '/static/topologies.html';
+    } catch (err) {
+      setStatus('Delete failed: ' + err.message, true);
+    }
+  });
+
+  // -- Load existing topology ----------------------------------------
+  async function loadTopology() {
+    if (!topoId) {
+      renderNodes();
+      renderLinks();
+      updateMap();
+      updateToolbarButtons();
+      return;
+    }
+
+    try {
+      setStatus('Loading topology...');
+      const entry = await fetchJSON('/api/topologies/' + topoId);
+      document.getElementById('topo-name').value = entry.name || '';
+      document.getElementById('topo-desc').value = entry.description || '';
+      nodes = entry.nodes || [];
+      links = entry.links || [];
+      const radio = entry.radio || {};
+      if (radio.sf) document.getElementById('radio-sf').value = radio.sf;
+      if (radio.bw) document.getElementById('radio-bw').value = radio.bw;
+      if (radio.cr) document.getElementById('radio-cr').value = normalizeCR(radio.cr);
+      setOriginFromCentroid();
+      renderNodes();
+      renderLinks();
+      updateMap();
+      markClean();
+      updateToolbarButtons();
+      setStatus('Loaded: ' + entry.name);
+    } catch (err) {
+      setStatus('Failed to load topology: ' + err.message, true);
+    }
+  }
+
+  loadTopology();
+})();
+</script>
+</body>
+</html>

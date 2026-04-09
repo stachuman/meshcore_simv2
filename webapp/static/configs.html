@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Configs - MeshCore Simulator</title>
+<link rel="stylesheet" href="/static/css/common.css">
+<style>
+  .config-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .config-card:hover { border-color: var(--border-light); }
+  .config-info h3 { margin: 0 0 4px 0; font-size: 14px; }
+  .config-info .meta { color: var(--text-muted); font-size: 11px; }
+  .config-actions { display: flex; gap: 6px; }
+
+  .upload-area {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    text-align: center;
+    color: var(--text-muted);
+    cursor: pointer;
+    margin-bottom: 16px;
+    transition: border-color 0.2s;
+  }
+  .upload-area:hover { border-color: var(--accent); }
+  .upload-area.dragover { border-color: var(--accent); background: rgba(37,99,235,0.05); }
+
+  .confirm-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.4);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000;
+  }
+  .confirm-dialog {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    padding: 24px; max-width: 400px; width: 90%;
+  }
+  .confirm-dialog h3 { margin-bottom: 12px; }
+  .confirm-dialog p { color: var(--text-muted); font-size: 12px; margin-bottom: 16px; }
+  .confirm-dialog .btn-row { display: flex; gap: 8px; justify-content: flex-end; }
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <span class="brand">MeshCore Sim</span>
+  <ul class="nav-links">
+    <li><a href="/static/index.html">Dashboard</a></li>
+    <li><a href="/static/simulations.html">Simulations</a></li>
+    <li><a href="/static/topologies.html">Topologies</a></li>
+    <li><a href="/static/scenarios.html">Scenarios</a></li>
+    <li><a href="/static/configs.html" class="active">Configs</a></li>
+    <li><a href="/static/sweep.html">Sweeps</a></li>
+  </ul>
+  <span class="spacer"></span>
+</nav>
+
+<div class="page-wide">
+  <div class="flex items-center justify-between mb-16">
+    <h1 style="margin-bottom:0">Saved Configs</h1>
+    <div class="flex gap-8">
+      <button class="btn" onclick="loadConfigs()">Refresh</button>
+      <label class="btn btn-primary" for="file-upload" style="cursor:pointer">Upload Config</label>
+      <input type="file" id="file-upload" accept=".json" style="display:none" onchange="handleUpload(event)">
+    </div>
+  </div>
+
+  <div id="upload-area" class="upload-area" onclick="document.getElementById('file-upload').click()">
+    Drop a JSON config file here or click to upload
+  </div>
+
+  <div id="configs-loading" class="empty-state">
+    <div class="spinner"></div>
+    <p>Loading configs...</p>
+  </div>
+
+  <div id="configs-empty" class="empty-state" style="display:none">
+    <p>No saved configs yet.</p>
+    <p style="color:var(--text-muted);font-size:12px;">Upload a config file or save one from the editor.</p>
+  </div>
+
+  <div id="configs-list" style="display:none"></div>
+</div>
+
+<div id="confirm-dialog" style="display:none"></div>
+
+<script src="/static/js/api.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+
+// Drag & drop
+const uploadArea = $('#upload-area');
+uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('dragover'); });
+uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+uploadArea.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadArea.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) uploadFile(file);
+});
+
+function handleUpload(e) {
+  const file = e.target.files[0];
+  if (file) uploadFile(file);
+  e.target.value = '';
+}
+
+async function uploadFile(file) {
+  try {
+    const text = await file.text();
+    const config = JSON.parse(text);
+    const name = file.name.replace(/\.json$/i, '');
+    await postJSON('/api/configs/', { config, name });
+    loadConfigs();
+  } catch (err) {
+    alert('Failed to upload config: ' + err.message);
+  }
+}
+
+function formatDate(ts) {
+  if (!ts) return '-';
+  return new Date(ts * 1000).toLocaleString();
+}
+
+async function loadConfigs() {
+  $('#configs-loading').style.display = '';
+  $('#configs-empty').style.display = 'none';
+  $('#configs-list').style.display = 'none';
+
+  try {
+    const configs = await fetchJSON('/api/configs/');
+    $('#configs-loading').style.display = 'none';
+
+    if (!configs.length) {
+      $('#configs-empty').style.display = '';
+      return;
+    }
+
+    let html = '';
+    for (const cfg of configs) {
+      const geo = cfg.has_geo ? '<span class="badge badge-success" style="font-size:10px;margin-left:6px;">GEO</span>' : '';
+      const topoRef = cfg.topology_id ? '<span class="badge badge-info" style="font-size:10px;margin-left:6px;">TOPO</span>' : '';
+      html += `
+        <div class="config-card">
+          <div class="config-info">
+            <h3>${escapeHtml(cfg.name)}${geo}${topoRef}</h3>
+            <div class="meta">${cfg.node_count} nodes &middot; Updated ${formatDate(cfg.updated_at)} &middot; ID: ${cfg.id}${cfg.topology_id ? ' &middot; Topology: ' + cfg.topology_id : ''}</div>
+          </div>
+          <div class="config-actions">
+            <a href="/static/scenario_editor.html?config=${encodeURIComponent(cfg.id)}" class="btn btn-sm">Edit</a>
+            <button class="btn btn-sm" onclick="runConfig('${cfg.id}')">Run</button>
+            <button class="btn btn-sm" onclick="downloadConfig('${cfg.id}', '${escapeHtml(cfg.name)}')">Download</button>
+            <button class="btn btn-sm btn-danger" onclick="confirmDelete('${cfg.id}', '${escapeHtml(cfg.name)}')">Delete</button>
+          </div>
+        </div>`;
+    }
+    $('#configs-list').innerHTML = html;
+    $('#configs-list').style.display = '';
+  } catch (err) {
+    $('#configs-loading').innerHTML = '<p style="color:var(--error)">Failed to load configs: ' + escapeHtml(err.message) + '</p>';
+  }
+}
+
+async function downloadConfig(id, name) {
+  try {
+    const data = await fetchJSON('/api/configs/' + id);
+    const blob = new Blob([JSON.stringify(data.config, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = (name || id) + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    alert('Download failed: ' + err.message);
+  }
+}
+
+async function runConfig(id) {
+  try {
+    const data = await fetchJSON('/api/configs/' + id);
+    const body = { config_json: data.config };
+    if (data.topology_id) body.topology_id = data.topology_id;
+    const result = await postJSON('/api/sims', body);
+    window.location.href = '/static/simulation.html?id=' + encodeURIComponent(result.id);
+  } catch (err) {
+    alert('Failed to start simulation: ' + err.message);
+  }
+}
+
+function confirmDelete(id, name) {
+  $('#confirm-dialog').style.display = '';
+  $('#confirm-dialog').innerHTML = `
+    <div class="confirm-overlay" onclick="closeConfirm(event)">
+      <div class="confirm-dialog" onclick="event.stopPropagation()">
+        <h3>Delete Config</h3>
+        <p>Delete "${escapeHtml(name)}"? This cannot be undone.</p>
+        <div class="btn-row">
+          <button class="btn" onclick="closeConfirm()">Cancel</button>
+          <button class="btn btn-danger" onclick="doDelete('${id}')">Delete</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function closeConfirm(e) {
+  if (e && e.target !== e.currentTarget) return;
+  $('#confirm-dialog').style.display = 'none';
+}
+
+async function doDelete(id) {
+  try {
+    await deleteJSON('/api/configs/' + id);
+    closeConfirm();
+    loadConfigs();
+  } catch (err) {
+    alert('Delete failed: ' + err.message);
+  }
+}
+
+loadConfigs();
+</script>
+</body>
+</html>

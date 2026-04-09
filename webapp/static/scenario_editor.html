@@ -1,0 +1,1806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scenario Editor - MeshCore Simulator</title>
+<link rel="stylesheet" href="/static/css/common.css">
+
+<!-- CodeMirror 5 -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/fold/foldgutter.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/lint/lint.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/hint/show-hint.min.css">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/edit/closebrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/fold/foldcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/fold/foldgutter.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/fold/brace-fold.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/lint/lint.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/lint/json-lint.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/hint/show-hint.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsonlint/1.6.0/jsonlint.min.js"></script>
+
+<!-- Leaflet for topology map -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+  .se-layout {
+    display: flex;
+    height: calc(100vh - 44px);
+    overflow: hidden;
+  }
+
+  .se-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .se-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+  .se-toolbar label { font-size: 11px; color: var(--text-muted); }
+  .se-toolbar select, .se-toolbar input[type="text"] {
+    background: var(--bg-input); color: var(--text);
+    border: 1px solid var(--border);
+    padding: 4px 8px; font-size: 11px; font-family: var(--font-mono);
+    border-radius: var(--radius); max-width: 260px;
+  }
+  .se-toolbar .sep { width: 1px; height: 20px; background: var(--border); }
+  .se-toolbar .name-input { width: 160px; }
+  .se-toolbar .btn-save-dirty {
+    border-color: var(--accent);
+    box-shadow: 0 0 6px rgba(37,99,235,0.25);
+  }
+  .se-toolbar .btn-danger { color: var(--error); border-color: var(--error); }
+  .se-toolbar .btn-danger:hover { background: #fee2e2; }
+
+  /* Mode tabs */
+  .mode-tabs {
+    display: inline-flex; gap: 0; margin-right: 4px;
+  }
+  .mode-tab {
+    padding: 3px 12px; font-size: 11px; font-family: var(--font-mono);
+    background: var(--bg-input); color: var(--text-muted);
+    border: 1px solid var(--border); cursor: pointer;
+  }
+  .mode-tab:first-child { border-radius: var(--radius) 0 0 var(--radius); }
+  .mode-tab:last-child { border-radius: 0 var(--radius) var(--radius) 0; border-left: none; }
+  .mode-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  /* Split: editor left, map right */
+  .se-split {
+    flex: 1; display: flex; overflow: hidden;
+  }
+  .se-editor-area {
+    flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden;
+  }
+  .se-cm-wrap { flex: 1; overflow: hidden; }
+  .se-cm-wrap .CodeMirror {
+    height: 100%; font-size: 13px; font-family: var(--font-mono);
+  }
+
+  /* Visual mode */
+  .se-visual-wrap {
+    flex: 1; overflow-y: auto; padding: 16px;
+  }
+  .se-visual-wrap h3 {
+    font-size: 12px; color: var(--text-muted); text-transform: uppercase;
+    letter-spacing: 0.5px; margin: 16px 0 8px 0;
+  }
+  .se-visual-wrap h3:first-child { margin-top: 0; }
+
+  .vis-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 8px; }
+  .vis-table th {
+    text-align: left; padding: 5px 6px; color: var(--text-muted);
+    border-bottom: 1px solid var(--border); font-weight: 600; font-size: 10px;
+  }
+  .vis-table td { padding: 3px 4px; border-bottom: 1px solid var(--border-light); }
+  .vis-table input, .vis-table select {
+    background: var(--bg-input); color: var(--text); border: 1px solid var(--border);
+    padding: 2px 5px; font-size: 11px; font-family: var(--font-mono);
+    border-radius: var(--radius); width: 100%;
+  }
+  .vis-table input:focus, .vis-table select:focus {
+    outline: none; border-color: var(--accent);
+  }
+  .vis-table .num-input { width: 75px; }
+  .vis-table .raw-col { color: var(--text-dim); font-size: 10px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .vis-table .del-btn {
+    background: none; border: none; color: var(--error); cursor: pointer;
+    font-size: 14px; padding: 2px 6px;
+  }
+  .vis-table .del-btn:hover { color: #ef4444; }
+  .vis-table tr:hover td { background: rgba(37,99,235,0.06); }
+
+  .add-row-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: none; border: 1px dashed var(--border); color: var(--text-muted);
+    padding: 3px 10px; font-size: 10px; font-family: var(--font-mono);
+    border-radius: var(--radius); cursor: pointer; margin-bottom: 12px;
+  }
+  .add-row-btn:hover { border-color: var(--accent); color: var(--text); }
+
+  /* Map panel */
+  .se-map-panel {
+    width: 380px; flex-shrink: 0;
+    border-left: 1px solid var(--border);
+    display: none; flex-direction: column;
+    background: var(--bg-primary);
+  }
+  .se-map-panel.visible { display: flex; }
+  .se-map-panel .map-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px;
+    background: var(--bg-secondary); border-bottom: 1px solid var(--border);
+  }
+  .se-map-panel .map-header h3 {
+    font-size: 11px; color: var(--text-muted); text-transform: uppercase;
+    letter-spacing: 0.5px; margin: 0; flex: 1;
+  }
+  .se-map-panel .map-header label {
+    font-size: 10px; color: var(--text-muted); display: flex; align-items: center; gap: 4px; cursor: pointer;
+  }
+  .link-label { background: none !important; border: none !important; box-shadow: none !important; font-size: 10px; color: #4b5563; font-family: var(--font-mono); white-space: nowrap; }
+  #se-map { flex: 1; min-height: 0; }
+  .leaflet-container { background: #f5f5f8 !important; }
+  .se-map-panel .node-selected { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 50%; }
+
+  /* Side panel */
+  .se-side {
+    width: 300px;
+    background: var(--bg-secondary);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow-y: auto;
+  }
+
+  .side-section {
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .side-section h3 {
+    font-size: 11px; color: var(--text-muted); text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 8px;
+  }
+  .side-section .btn { width: 100%; justify-content: center; margin-bottom: 6px; }
+  .side-section .btn:last-child { margin-bottom: 0; }
+
+  .param-row {
+    display: flex; align-items: center; gap: 6px; margin-bottom: 6px;
+  }
+  .param-row label { font-size: 10px; color: var(--text-dim); min-width: 70px; }
+  .param-row input { flex: 1; }
+
+  #status-area {
+    padding: 12px; flex: 1; overflow-y: auto; font-size: 12px;
+  }
+  #status-area .status-item {
+    padding: 6px 8px; border-radius: var(--radius); margin-bottom: 6px; font-size: 11px;
+  }
+  #status-area .status-item.ok      { background: #dcfce7; color: #15803d; }
+  #status-area .status-item.error   { background: #fee2e2; color: var(--error); }
+  #status-area .status-item.warning { background: #fef3c7; color: #92400e; }
+  #status-area .status-item.info    { background: #dbeafe; color: #1d4ed8; }
+
+  .topo-badge {
+    font-size: 10px; color: var(--text-dim);
+    margin-left: 6px;
+  }
+
+  /* Confirm dialog */
+  .confirm-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.3);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000;
+  }
+  .confirm-dialog {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 24px; max-width: 400px; width: 90%;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+  }
+  .confirm-dialog h3 { margin-bottom: 12px; }
+  .confirm-dialog p { color: var(--text-muted); font-size: 12px; margin-bottom: 16px; }
+  .confirm-dialog .btn-row { display: flex; gap: 8px; justify-content: flex-end; }
+
+  /* CodeMirror hint overrides for light theme */
+  .CodeMirror-hints {
+    background: var(--bg-secondary) !important;
+    border: 1px solid var(--border) !important;
+    font-family: var(--font-mono) !important;
+    font-size: 12px !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+  }
+  .CodeMirror-hint {
+    color: var(--text) !important;
+  }
+  .CodeMirror-hint-active {
+    background: var(--accent) !important;
+    color: #fff !important;
+  }
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <span class="brand">MeshCore Sim</span>
+  <ul class="nav-links">
+    <li><a href="/static/index.html">Dashboard</a></li>
+    <li><a href="/static/simulations.html">Simulations</a></li>
+    <li><a href="/static/topologies.html">Topologies</a></li>
+    <li><a href="/static/scenarios.html" class="active">Scenarios</a></li>
+    <li><a href="/static/sweep.html">Sweeps</a></li>
+  </ul>
+  <span class="spacer"></span>
+</nav>
+
+<div class="se-layout">
+  <!-- Main editor area -->
+  <div class="se-main">
+    <div class="se-toolbar">
+      <input id="config-name" type="text" class="name-input" placeholder="Config name...">
+      <div class="sep"></div>
+      <label>Topology:</label>
+      <select id="topo-select">
+        <option value="">-- no topology (full config mode) --</option>
+      </select>
+      <span class="topo-badge" id="topo-info"></span>
+      <div class="sep"></div>
+      <label>Load:</label>
+      <select id="config-select">
+        <option value="">-- saved configs --</option>
+      </select>
+      <div class="sep"></div>
+      <div class="mode-tabs">
+        <button class="mode-tab active" data-mode="json">JSON</button>
+        <button class="mode-tab" data-mode="visual">Visual</button>
+      </div>
+      <button class="btn btn-sm" id="btn-format">Format</button>
+      <button class="btn btn-sm" id="btn-map-toggle">Map</button>
+      <div class="sep"></div>
+      <button class="btn btn-sm btn-success" id="btn-save">Save</button>
+      <button class="btn btn-sm" id="btn-save-copy" disabled>Save Copy</button>
+      <button class="btn btn-sm" id="btn-download">Download</button>
+      <button class="btn btn-sm btn-danger" id="btn-delete" style="display:none">Delete</button>
+    </div>
+
+    <div class="se-split">
+      <div class="se-editor-area">
+        <div class="se-cm-wrap">
+          <textarea id="cm-editor"></textarea>
+        </div>
+        <div class="se-visual-wrap" id="visual-wrap" style="display:none">
+          <h3>Commands</h3>
+          <table class="vis-table" id="cmd-table">
+            <thead><tr>
+              <th>Time (ms)</th><th>Node</th><th>Type</th><th>Details</th><th>Raw</th><th></th>
+            </tr></thead>
+            <tbody id="cmd-tbody"></tbody>
+          </table>
+          <button class="add-row-btn" id="btn-add-cmd">+ Add Command</button>
+
+          <h3>Message Schedule</h3>
+          <table class="vis-table" id="msgsched-table">
+            <thead><tr>
+              <th>From</th><th>To</th><th>Start (ms)</th><th>Interval (ms)</th><th>Count</th><th>Message</th><th>Ack</th><th></th>
+            </tr></thead>
+            <tbody id="msgsched-tbody"></tbody>
+          </table>
+          <button class="add-row-btn" id="btn-add-msgsched">+ Add Schedule</button>
+
+          <h3>Channel Schedule</h3>
+          <table class="vis-table" id="chansched-table">
+            <thead><tr>
+              <th>From</th><th>Channel</th><th>Start (ms)</th><th>Interval (ms)</th><th>Count</th><th>Message</th><th></th>
+            </tr></thead>
+            <tbody id="chansched-tbody"></tbody>
+          </table>
+          <button class="add-row-btn" id="btn-add-chansched">+ Add Schedule</button>
+
+          <h3>Assertions</h3>
+          <table class="vis-table" id="expect-table">
+            <thead><tr>
+              <th>Type</th><th colspan="4">Fields</th><th></th>
+            </tr></thead>
+            <tbody id="expect-tbody"></tbody>
+          </table>
+          <button class="add-row-btn" id="btn-add-expect">+ Add Assertion</button>
+        </div>
+      </div>
+
+      <!-- Map panel (hidden by default) -->
+      <div class="se-map-panel" id="map-panel">
+        <div class="map-header">
+          <h3>Topology Preview</h3>
+          <label><input type="checkbox" id="map-labels"> Labels</label>
+        </div>
+        <div id="se-map" style="width:100%;height:100%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Side panel -->
+  <div class="se-side">
+    <div class="side-section">
+      <h3>Simulation Params</h3>
+      <div class="param-row">
+        <label>Duration (ms)</label>
+        <input id="p-duration" class="form-input" type="number" value="60000">
+      </div>
+      <div class="param-row">
+        <label>Step (ms)</label>
+        <input id="p-step" class="form-input" type="number" value="5">
+      </div>
+      <div class="param-row">
+        <label>Warmup (ms)</label>
+        <input id="p-warmup" class="form-input" type="number" value="5000">
+      </div>
+      <div class="param-row">
+        <label>Hot start</label>
+        <input id="p-hotstart" type="checkbox" checked>
+      </div>
+      <div class="param-row">
+        <label>Seed</label>
+        <input id="p-seed" class="form-input" type="number" value="">
+      </div>
+    </div>
+
+    <div class="side-section">
+      <h3>Insert Template</h3>
+      <button class="btn btn-sm" data-tpl="msg">msg command</button>
+      <button class="btn btn-sm" data-tpl="msga">msga command</button>
+      <button class="btn btn-sm" data-tpl="neighbors">neighbors cmd</button>
+      <button class="btn btn-sm" data-tpl="stats">stats cmd</button>
+      <button class="btn btn-sm" data-tpl="rxdelay">set rxdelay</button>
+      <button class="btn btn-sm" data-tpl="msg_schedule">msg schedule</button>
+      <button class="btn btn-sm" data-tpl="chan_schedule">channel schedule</button>
+      <button class="btn btn-sm" data-tpl="assert_reply">assert reply</button>
+      <button class="btn btn-sm" data-tpl="assert_event">assert event count</button>
+    </div>
+
+    <div class="side-section">
+      <h3>Actions</h3>
+      <button class="btn" id="btn-validate">Validate</button>
+      <button class="btn btn-primary" id="btn-run">Run Simulation</button>
+    </div>
+
+    <div id="status-area">
+      <div class="status-item info">Select a topology and write your scenario.</div>
+    </div>
+  </div>
+</div>
+
+<div id="confirm-container" style="display:none"></div>
+
+<script src="/static/js/api.js"></script>
+<script>
+(function() {
+  // -- State --------------------------------------------------------
+  let configId = null;
+  let configName = '';
+  let selectedTopoId = null;
+  let topoNodeNames = [];
+  let topoData = null;        // full topology object for map
+  let isDirty = false;
+  let currentMode = 'json';   // 'json' or 'visual'
+  let selectedNodeName = null; // from map click
+  let leafletMap = null;
+  let mapMarkers = [];
+  let mapLines = [];
+
+  // Visual mode data
+  let visualData = {
+    commands: [],
+    message_schedule: [],
+    channel_schedule: [],
+    expect: [],
+  };
+  let _restOfConfig = {};
+
+  // -- Templates ----------------------------------------------------
+  const TEMPLATES = {
+    msg:           '{ "at_ms": 10000, "node": "NODE", "command": "msg DEST hello" }',
+    msga:          '{ "at_ms": 10000, "node": "NODE", "command": "msga DEST hello" }',
+    neighbors:     '{ "at_ms": 15000, "node": "NODE", "command": "neighbors" }',
+    stats:         '{ "at_ms": 20000, "node": "NODE", "command": "stats" }',
+    rxdelay:       '{ "at_ms": 1000, "node": "NODE", "command": "set rxdelay 2.0" }',
+    msg_schedule:  '{\n  "from": "NODE_A",\n  "to": "NODE_B",\n  "start_ms": 30000,\n  "interval_ms": 20000,\n  "count": 5,\n  "command_prefix": "msg"\n}',
+    chan_schedule:  '{\n  "from": "NODE_A",\n  "channel": 0,\n  "start_ms": 30000,\n  "interval_ms": 20000,\n  "count": 5\n}',
+    assert_reply:  '{ "type": "cmd_reply_contains", "node": "NODE", "after_ms": 10000, "contains": "expected text" }',
+    assert_event:  '{ "type": "event_count", "event_type": "rx", "node": "NODE", "min": 1 }',
+  };
+
+  const DEFAULT_SCENARIO = {
+    simulation: {
+      duration_ms: 60000,
+      warmup_ms: 5000,
+      step_ms: 5,
+      hot_start: true
+    },
+    commands: [
+      { at_ms: 10000, node: "NODE", command: "msg DEST hello" }
+    ],
+    expect: []
+  };
+
+  // Command types per node role
+  const COMPANION_CMD_TYPES = [
+    'msg', 'msga', 'msgc', 'neighbors', 'stats', 'reset_path', 'advert', 'advert.zerohop', 'custom'
+  ];
+  const REPEATER_CMD_TYPES = [
+    'neighbors', 'advert', 'advert.zerohop', 'discover.neighbors',
+    'stats-core', 'stats-radio', 'stats-packets', 'clear stats',
+    'set rxdelay', 'set txdelay', 'set direct.txdelay', 'set af', 'set flood.max',
+    'set repeat', 'set name', 'set lat', 'set lon', 'set freq',
+    'set loop.detect', 'set path.hash.mode',
+    'set flood.advert.interval', 'set advert.interval',
+    'set multi.acks', 'set allow.read.only',
+    'set int.thresh', 'set agc.reset.interval',
+    'set radio', 'custom'
+  ];
+  // Flat union for parsing existing configs / unknown roles
+  const ALL_CMD_TYPES = [...new Set([...COMPANION_CMD_TYPES, ...REPEATER_CMD_TYPES])];
+
+  const ASSERT_TYPES = ['cmd_reply_contains', 'cmd_reply_not_contains', 'event_count', 'event_count_min', 'tx_airtime_between'];
+  const EVENT_TYPES = ['tx', 'rx', 'collision', 'drop_weak', 'drop_halfduplex', 'drop_loss', 'tx_fail'];
+  const GROUP_TARGETS = ['@all', '@repeaters', '@companions'];
+
+  // -- Initialize CodeMirror ----------------------------------------
+  const editor = CodeMirror.fromTextArea(document.getElementById('cm-editor'), {
+    mode: { name: 'javascript', json: true },
+    theme: 'default',
+    lineNumbers: true,
+    matchBrackets: true,
+    autoCloseBrackets: true,
+    foldGutter: true,
+    gutters: ['CodeMirror-linenumbers', 'CodeMirror-foldgutter', 'CodeMirror-lint-markers'],
+    lint: true,
+    tabSize: 2,
+    indentWithTabs: false,
+    lineWrapping: false,
+    extraKeys: {
+      'Ctrl-Space': function(cm) { triggerNodeHint(cm); },
+    },
+  });
+
+  editor.setValue(JSON.stringify(DEFAULT_SCENARIO, null, 2));
+
+  // -- Dirty state --------------------------------------------------
+  let programmaticChange = false;
+
+  function markDirty() {
+    if (isDirty) return;
+    isDirty = true;
+    updateSaveButton();
+  }
+
+  function markClean() {
+    isDirty = false;
+    updateSaveButton();
+  }
+
+  function updateSaveButton() {
+    const btn = document.getElementById('btn-save');
+    btn.textContent = isDirty ? 'Save *' : 'Save';
+    if (isDirty) btn.classList.add('btn-save-dirty');
+    else btn.classList.remove('btn-save-dirty');
+  }
+
+  editor.on('change', () => {
+    if (programmaticChange) return;
+    markDirty();
+    syncParamsFromEditor();
+  });
+
+  // -- Ctrl+S / Cmd+S ----------------------------------------------
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      e.preventDefault();
+      document.getElementById('btn-save').click();
+    }
+  });
+
+  // -- beforeunload guard -------------------------------------------
+  window.addEventListener('beforeunload', (e) => {
+    if (isDirty) e.preventDefault();
+  });
+
+  // -- Sync sim params FROM editor ----------------------------------
+  function syncParamsFromEditor() {
+    try {
+      const obj = JSON.parse(editor.getValue());
+      const sim = obj.simulation || {};
+      if (sim.duration_ms != null) document.getElementById('p-duration').value = sim.duration_ms;
+      if (sim.step_ms != null) document.getElementById('p-step').value = sim.step_ms;
+      if (sim.warmup_ms != null) document.getElementById('p-warmup').value = sim.warmup_ms;
+      document.getElementById('p-hotstart').checked = !!sim.hot_start;
+      document.getElementById('p-seed').value = sim.seed ?? '';
+    } catch (_) {}
+  }
+
+  // -- Sync sim params TO editor ------------------------------------
+  function syncParamsToEditor() {
+    try {
+      const obj = JSON.parse(editor.getValue());
+      if (!obj.simulation) obj.simulation = {};
+      obj.simulation.duration_ms = parseInt(document.getElementById('p-duration').value) || 60000;
+      obj.simulation.step_ms = parseInt(document.getElementById('p-step').value) || 5;
+      obj.simulation.warmup_ms = parseInt(document.getElementById('p-warmup').value) || 5000;
+      obj.simulation.hot_start = document.getElementById('p-hotstart').checked;
+      const seed = document.getElementById('p-seed').value;
+      if (seed) obj.simulation.seed = parseInt(seed);
+      else delete obj.simulation.seed;
+
+      programmaticChange = true;
+      const cursor = editor.getCursor();
+      editor.setValue(JSON.stringify(obj, null, 2));
+      editor.setCursor(cursor);
+      programmaticChange = false;
+      markDirty();
+    } catch (_) {}
+  }
+
+  document.querySelectorAll('#p-duration, #p-step, #p-warmup, #p-seed').forEach(el => {
+    el.addEventListener('change', syncParamsToEditor);
+  });
+  document.getElementById('p-hotstart').addEventListener('change', syncParamsToEditor);
+
+  // Side params also mark dirty
+  document.querySelectorAll('#p-duration, #p-step, #p-warmup, #p-seed, #p-hotstart').forEach(el => {
+    el.addEventListener('input', markDirty);
+  });
+
+  // -- Load topologies dropdown -------------------------------------
+  async function loadTopologyList() {
+    try {
+      const topos = await fetchJSON('/api/topologies/');
+      const sel = document.getElementById('topo-select');
+      sel.innerHTML = '<option value="">-- no topology (full config mode) --</option>';
+      for (const t of topos) {
+        const opt = document.createElement('option');
+        opt.value = t.id;
+        opt.textContent = t.name + ' (' + t.node_count + ' nodes, ' + t.link_count + ' links)';
+        sel.appendChild(opt);
+      }
+    } catch (_) {}
+  }
+
+  loadTopologyList();
+
+  // -- Load saved configs dropdown ----------------------------------
+  async function loadConfigList() {
+    try {
+      const configs = await fetchJSON('/api/configs');
+      const sel = document.getElementById('config-select');
+      sel.innerHTML = '<option value="">-- saved configs --</option>';
+      if (Array.isArray(configs)) {
+        for (const c of configs) {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = c.name || truncate(c.id, 20);
+          sel.appendChild(opt);
+        }
+      }
+    } catch (_) {}
+  }
+
+  loadConfigList();
+
+  // -- Topology selection -------------------------------------------
+  document.getElementById('topo-select').addEventListener('change', async function() {
+    selectedTopoId = this.value || null;
+    topoNodeNames = [];
+    topoData = null;
+    document.getElementById('topo-info').textContent = '';
+
+    if (selectedTopoId) {
+      try {
+        const topo = await fetchJSON('/api/topologies/' + selectedTopoId);
+        topoData = topo;
+        topoNodeNames = (topo.nodes || []).map(n => n.name).filter(Boolean);
+        document.getElementById('topo-info').textContent =
+          topoNodeNames.length + ' nodes: ' + topoNodeNames.slice(0, 5).join(', ') +
+          (topoNodeNames.length > 5 ? '...' : '');
+        addStatus('info', 'Topology loaded: ' + topo.name + ' (' + topoNodeNames.length + ' nodes)');
+        updateMap();
+      } catch (e) {
+        addStatus('error', 'Failed to load topology: ' + e.message);
+      }
+    } else {
+      updateMap();
+    }
+  });
+
+  // -- Load config --------------------------------------------------
+  document.getElementById('config-select').addEventListener('change', async function() {
+    const id = this.value;
+    if (!id) return;
+    try {
+      addStatus('info', 'Loading config...');
+      const entry = await fetchJSON('/api/configs/' + encodeURIComponent(id));
+      const config = entry.config || entry;
+      loadConfigIntoEditor(config, id, entry.name || '');
+      addStatus('ok', 'Config loaded.');
+    } catch (e) {
+      addStatus('error', 'Failed to load config: ' + e.message);
+    }
+  });
+
+  function loadConfigIntoEditor(config, id, name) {
+    programmaticChange = true;
+    editor.setValue(typeof config === 'string' ? config : JSON.stringify(config, null, 2));
+    programmaticChange = false;
+    configId = id || null;
+    configName = name || '';
+    document.getElementById('config-name').value = configName;
+    if (configId) {
+      history.replaceState(null, '', '?config=' + encodeURIComponent(configId));
+    }
+    syncParamsFromEditor();
+    markClean();
+    updateToolbarButtons();
+
+    // If config references a topology, try to select it
+    if (typeof config === 'object' && config.topology_id) {
+      const topoSel = document.getElementById('topo-select');
+      if (topoSel.querySelector('option[value="' + config.topology_id + '"]')) {
+        topoSel.value = config.topology_id;
+        topoSel.dispatchEvent(new Event('change'));
+      }
+    }
+  }
+
+  // -- Auto-load from URL params ------------------------------------
+  const params = new URLSearchParams(window.location.search);
+  const urlConfigId = params.get('config') || params.get('id');
+  const urlTopoId = params.get('topology');
+
+  if (urlTopoId) {
+    setTimeout(() => {
+      document.getElementById('topo-select').value = urlTopoId;
+      document.getElementById('topo-select').dispatchEvent(new Event('change'));
+    }, 500);
+  }
+
+  if (urlConfigId) {
+    (async () => {
+      try {
+        addStatus('info', 'Loading config from URL...');
+        const entry = await fetchJSON('/api/configs/' + encodeURIComponent(urlConfigId));
+        const config = entry.config || entry;
+        loadConfigIntoEditor(config, urlConfigId, entry.name || '');
+        addStatus('ok', 'Config loaded from URL.');
+      } catch (e) {
+        addStatus('error', 'Failed to load config: ' + e.message);
+      }
+    })();
+  }
+
+  // -- Toolbar button state -----------------------------------------
+  function updateToolbarButtons() {
+    document.getElementById('btn-save-copy').disabled = !configId;
+    document.getElementById('btn-delete').style.display = configId ? '' : 'none';
+  }
+  updateToolbarButtons();
+
+  // -- Format JSON --------------------------------------------------
+  document.getElementById('btn-format').addEventListener('click', () => {
+    try {
+      const obj = JSON.parse(editor.getValue());
+      programmaticChange = true;
+      editor.setValue(JSON.stringify(obj, null, 2));
+      programmaticChange = false;
+      addStatus('ok', 'JSON formatted.');
+    } catch (e) {
+      addStatus('error', 'Invalid JSON: ' + e.message);
+    }
+  });
+
+  // -- Insert templates ---------------------------------------------
+  document.querySelectorAll('[data-tpl]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tpl = TEMPLATES[btn.dataset.tpl];
+      if (!tpl) return;
+      // Ensure we're in JSON mode
+      if (currentMode !== 'json') switchMode('json');
+
+      let text = tpl;
+      const defaultNode = selectedNodeName || topoNodeNames[0];
+      if (defaultNode || topoNodeNames.length > 0) {
+        text = text.replace(/NODE_A/g, defaultNode || topoNodeNames[0]);
+        text = text.replace(/NODE_B/g, topoNodeNames[1] || defaultNode || topoNodeNames[0]);
+        text = text.replace(/NODE/g, defaultNode || topoNodeNames[0]);
+        text = text.replace(/DEST/g, topoNodeNames[1] || defaultNode || topoNodeNames[0]);
+      }
+
+      const cursor = editor.getCursor();
+      editor.replaceRange(text + '\n', cursor);
+      addStatus('info', 'Template inserted: ' + btn.dataset.tpl);
+    });
+  });
+
+  // -- Get merged config --------------------------------------------
+  function getEditorJSON() {
+    return JSON.parse(editor.getValue());
+  }
+
+  // -- Validate -----------------------------------------------------
+  document.getElementById('btn-validate').addEventListener('click', async () => {
+    clearStatus();
+    let parsed;
+    try {
+      if (currentMode === 'visual') syncJSONFromVisual();
+      parsed = getEditorJSON();
+    } catch (e) {
+      addStatus('error', 'Invalid JSON: ' + e.message);
+      return;
+    }
+
+    // Node name validation
+    if (topoNodeNames.length > 0) {
+      const nodeWarnings = validateNodeNames(parsed);
+      for (const w of nodeWarnings) addStatus('warning', w);
+    }
+
+    try {
+      addStatus('info', 'Validating...');
+
+      let configToValidate = parsed;
+      if (selectedTopoId) {
+        const topo = await fetchJSON('/api/topologies/' + selectedTopoId);
+        configToValidate = mergeForValidation(topo, parsed);
+      }
+
+      const result = await postJSON('/api/configs/validate', { config: configToValidate });
+      if (result.valid) {
+        addStatus('ok', 'Config is valid.');
+        if (result.warnings) {
+          for (const w of result.warnings) addStatus('warning', w);
+        }
+      } else {
+        addStatus('error', 'Validation failed: ' + (result.errors || []).join('; '));
+      }
+    } catch (e) {
+      addStatus('error', 'Validation error: ' + e.message);
+    }
+  });
+
+  function mergeForValidation(topo, scenario) {
+    const merged = {};
+    const sim = { ...(scenario.simulation || {}) };
+    const topoRadio = topo.radio || {};
+    if (Object.keys(topoRadio).length) {
+      sim.radio = { ...topoRadio, ...(sim.radio || {}) };
+      // Normalize CR: topology may store 5-8 (LoRa convention), orchestrator expects 1-4
+      if (sim.radio.cr >= 5 && sim.radio.cr <= 8) sim.radio.cr -= 4;
+    }
+    merged.simulation = sim;
+    merged.nodes = topo.nodes || [];
+    merged.topology = { links: topo.links || [] };
+    for (const key of ['commands', 'expect', 'message_schedule', 'channel_schedule']) {
+      if (scenario[key]) merged[key] = scenario[key];
+    }
+    return merged;
+  }
+
+  // -- Node name validation -----------------------------------------
+  function validateNodeNames(parsed) {
+    const warnings = [];
+    const validNames = new Set(topoNodeNames);
+    GROUP_TARGETS.forEach(g => validNames.add(g));
+
+    function checkName(val, ctx) {
+      if (val && typeof val === 'string' && !validNames.has(val)) {
+        warnings.push('Unknown node name "' + val + '" in ' + ctx);
+      }
+    }
+
+    (parsed.commands || []).forEach((cmd, i) => {
+      checkName(cmd.node, 'commands[' + i + '].node');
+    });
+    (parsed.message_schedule || []).forEach((s, i) => {
+      checkName(s.from, 'message_schedule[' + i + '].from');
+      checkName(s.to, 'message_schedule[' + i + '].to');
+    });
+    (parsed.channel_schedule || []).forEach((s, i) => {
+      checkName(s.from, 'channel_schedule[' + i + '].from');
+    });
+    (parsed.expect || []).forEach((e, i) => {
+      checkName(e.node, 'expect[' + i + '].node');
+    });
+    return warnings;
+  }
+
+  // -- Save Config --------------------------------------------------
+  document.getElementById('btn-save').addEventListener('click', async () => {
+    clearStatus();
+    let parsed;
+    try {
+      if (currentMode === 'visual') syncJSONFromVisual();
+      parsed = getEditorJSON();
+    } catch (e) {
+      addStatus('error', 'Invalid JSON: ' + e.message);
+      return;
+    }
+
+    let configToSave = parsed;
+    if (selectedTopoId) {
+      configToSave = { ...parsed, topology_id: selectedTopoId };
+    }
+
+    const name = document.getElementById('config-name').value.trim() || configName || undefined;
+
+    try {
+      addStatus('info', 'Saving config...');
+      let result;
+      if (configId) {
+        result = await putJSON('/api/configs/' + encodeURIComponent(configId), { config: configToSave, name });
+        addStatus('ok', 'Config updated.');
+      } else {
+        result = await postJSON('/api/configs/', { config: configToSave, name });
+        configId = result.id;
+        addStatus('ok', 'Config saved. ID: ' + (result.id || 'unknown'));
+      }
+      if (configId) {
+        history.replaceState(null, '', '?config=' + encodeURIComponent(configId));
+      }
+      markClean();
+      updateToolbarButtons();
+      loadConfigList();
+    } catch (e) {
+      addStatus('error', 'Save failed: ' + e.message);
+    }
+  });
+
+  // -- Save Copy ----------------------------------------------------
+  document.getElementById('btn-save-copy').addEventListener('click', async () => {
+    if (!configId) return;
+    clearStatus();
+    let parsed;
+    try {
+      if (currentMode === 'visual') syncJSONFromVisual();
+      parsed = getEditorJSON();
+    } catch (e) {
+      addStatus('error', 'Invalid JSON: ' + e.message);
+      return;
+    }
+
+    let configToSave = parsed;
+    if (selectedTopoId) {
+      configToSave = { ...parsed, topology_id: selectedTopoId };
+    }
+
+    const baseName = document.getElementById('config-name').value.trim() || configName || 'Config';
+    const copyName = baseName + ' (copy)';
+
+    try {
+      addStatus('info', 'Saving copy...');
+      const result = await postJSON('/api/configs/', { config: configToSave, name: copyName });
+      configId = result.id;
+      configName = copyName;
+      document.getElementById('config-name').value = copyName;
+      history.replaceState(null, '', '?config=' + encodeURIComponent(configId));
+      markClean();
+      updateToolbarButtons();
+      loadConfigList();
+      addStatus('ok', 'Copy saved. ID: ' + (result.id || 'unknown'));
+    } catch (e) {
+      addStatus('error', 'Save copy failed: ' + e.message);
+    }
+  });
+
+  // -- Download -----------------------------------------------------
+  document.getElementById('btn-download').addEventListener('click', () => {
+    try {
+      if (currentMode === 'visual') syncJSONFromVisual();
+      const text = editor.getValue();
+      JSON.parse(text); // validate
+      const blob = new Blob([text], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const name = document.getElementById('config-name').value.trim() || configName || 'scenario';
+      a.download = name.replace(/[^a-zA-Z0-9_-]/g, '_') + '.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      addStatus('error', 'Invalid JSON: ' + e.message);
+    }
+  });
+
+  // -- Delete -------------------------------------------------------
+  document.getElementById('btn-delete').addEventListener('click', () => {
+    if (!configId) return;
+    const container = document.getElementById('confirm-container');
+    const name = document.getElementById('config-name').value.trim() || configId;
+    container.style.display = '';
+    container.innerHTML =
+      '<div class="confirm-overlay">' +
+        '<div class="confirm-dialog">' +
+          '<h3>Delete Config</h3>' +
+          '<p>Delete "' + escapeHtml(name) + '"? This cannot be undone.</p>' +
+          '<div class="btn-row">' +
+            '<button class="btn" id="confirm-cancel">Cancel</button>' +
+            '<button class="btn btn-danger" id="confirm-delete">Delete</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    document.getElementById('confirm-cancel').addEventListener('click', () => {
+      container.style.display = 'none';
+    });
+    document.getElementById('confirm-delete').addEventListener('click', async () => {
+      container.style.display = 'none';
+      try {
+        await deleteJSON('/api/configs/' + encodeURIComponent(configId));
+        window.location.href = '/static/scenarios.html';
+      } catch (e) {
+        addStatus('error', 'Delete failed: ' + e.message);
+      }
+    });
+  });
+
+  // Config name input marks dirty
+  document.getElementById('config-name').addEventListener('input', markDirty);
+
+  // -- Run Simulation -----------------------------------------------
+  document.getElementById('btn-run').addEventListener('click', async function() {
+    clearStatus();
+    let parsed;
+    try {
+      if (currentMode === 'visual') syncJSONFromVisual();
+      parsed = getEditorJSON();
+    } catch (e) {
+      addStatus('error', 'Invalid JSON: ' + e.message);
+      return;
+    }
+
+    try {
+      addStatus('info', 'Starting simulation...');
+      this.disabled = true;
+
+      const body = { config_json: parsed };
+      if (selectedTopoId) {
+        body.topology_id = selectedTopoId;
+      }
+
+      const result = await postJSON('/api/sims', body);
+      const simId = result.id || result.sim_id;
+      // Redirect to dedicated simulation view
+      window.location.href = '/static/simulation.html?id=' + encodeURIComponent(simId);
+    } catch (e) {
+      addStatus('error', 'Failed to start simulation: ' + e.message);
+      this.disabled = false;
+    }
+  });
+
+  // ================================================================
+  // -- PHASE 2: TOPOLOGY MAP --------------------------------------
+  // ================================================================
+
+  // -- Map toggle ---------------------------------------------------
+  document.getElementById('btn-map-toggle').addEventListener('click', () => {
+    const panel = document.getElementById('map-panel');
+    const visible = panel.classList.toggle('visible');
+    if (visible && !leafletMap) {
+      initMap();
+    }
+    if (visible) {
+      setTimeout(() => {
+        if (leafletMap) leafletMap.invalidateSize();
+        updateMap();
+      }, 100);
+    }
+  });
+
+  function initMap() {
+    leafletMap = L.map('se-map', { zoomControl: true, attributionControl: false });
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(leafletMap);
+    leafletMap.setView([54.35, 18.65], 13);
+  }
+
+  function updateMap() {
+    if (!leafletMap) return;
+
+    // Clear old
+    mapMarkers.forEach(m => leafletMap.removeLayer(m));
+    mapLines.forEach(l => leafletMap.removeLayer(l));
+    mapMarkers = [];
+    mapLines = [];
+
+    if (!topoData) return;
+
+    const nodes = topoData.nodes || [];
+    const links = topoData.links || [];
+    const bounds = L.latLngBounds();
+    const nodePos = {};
+    const showLabels = document.getElementById('map-labels').checked;
+
+    nodes.forEach(node => {
+      if (node.lat == null || node.lon == null) return;
+      const ll = L.latLng(node.lat, node.lon);
+      bounds.extend(ll);
+      nodePos[node.name] = ll;
+      const isSelected = node.name === selectedNodeName;
+      const color = node.role === 'companion' ? '#16a34a' : '#2563eb';
+      const size = isSelected ? 18 : 14;
+      const border = isSelected ? '3px solid #374151' : '2px solid #374151';
+      const icon = L.divIcon({
+        className: '',
+        html: '<div style="width:' + size + 'px;height:' + size + 'px;border-radius:50%;background:' + color + ';border:' + border + ';opacity:0.9;' + (isSelected ? 'box-shadow:0 0 8px ' + color + ';' : '') + '"></div>',
+        iconSize: [size, size],
+        iconAnchor: [size/2, size/2],
+      });
+      const marker = L.marker(ll, { icon }).addTo(leafletMap);
+      marker.bindTooltip(node.name || '?', { permanent: showLabels, direction: 'top', offset: [0, -10] });
+      marker._nodeName = node.name;
+      marker.on('click', function() {
+        selectedNodeName = this._nodeName;
+        addStatus('info', 'Selected node: ' + selectedNodeName);
+        updateMap();
+      });
+      mapMarkers.push(marker);
+    });
+
+    // Draw links
+    for (const link of links) {
+      const from = nodePos[link.from];
+      const to = nodePos[link.to];
+      if (!from || !to) continue;
+      const line = L.polyline([from, to], {
+        color: '#9ca3af', weight: 2, opacity: 0.6,
+      }).addTo(leafletMap);
+      if (showLabels) {
+        const mid = L.latLng((from.lat + to.lat) / 2, (from.lng + to.lng) / 2);
+        const snrText = (link.snr ?? 0) + ' dB';
+        const lbl = L.marker(mid, {
+          icon: L.divIcon({ className: 'link-label', html: snrText, iconSize: [50, 14], iconAnchor: [25, 7] }),
+          interactive: false,
+        }).addTo(leafletMap);
+        mapLines.push(lbl);
+      }
+      mapLines.push(line);
+    }
+
+    if (bounds.isValid()) {
+      leafletMap.fitBounds(bounds, { padding: [30, 30] });
+    }
+  }
+
+  document.getElementById('map-labels').addEventListener('change', () => updateMap());
+
+  // ================================================================
+  // -- PHASE 2: NODE NAME AUTOCOMPLETE ----------------------------
+  // ================================================================
+
+  function triggerNodeHint(cm) {
+    if (topoNodeNames.length === 0) return;
+    cm.showHint({
+      hint: function(cm) {
+        const cur = cm.getCursor();
+        const line = cm.getLine(cur.line);
+        // Find start of current string value
+        let start = cur.ch;
+        while (start > 0 && line[start - 1] !== '"') start--;
+        const prefix = line.substring(start, cur.ch).toLowerCase();
+
+        // Check if we're in a node/from/to field context
+        const lineText = line.substring(0, start);
+        const isNodeField = /("node"|"from"|"to")\s*:\s*"$/i.test(lineText);
+
+        const candidates = [...topoNodeNames, ...GROUP_TARGETS];
+        const list = candidates
+          .filter(n => n.toLowerCase().startsWith(prefix))
+          .map(n => ({ text: n, displayText: n }));
+
+        if (list.length === 0) return;
+        return {
+          list: list,
+          from: CodeMirror.Pos(cur.line, start),
+          to: CodeMirror.Pos(cur.line, cur.ch),
+        };
+      },
+      completeSingle: false,
+    });
+  }
+
+  // ================================================================
+  // -- PHASE 3: VISUAL COMMAND BUILDER ----------------------------
+  // ================================================================
+
+  // -- Mode switching -----------------------------------------------
+  document.querySelectorAll('.mode-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      switchMode(tab.dataset.mode);
+    });
+  });
+
+  function switchMode(mode) {
+    if (mode === currentMode) return;
+
+    if (mode === 'visual') {
+      // Parse JSON into visual data
+      let parsed;
+      try {
+        parsed = getEditorJSON();
+      } catch (e) {
+        addStatus('error', 'Cannot switch to Visual: invalid JSON - ' + e.message);
+        return;
+      }
+      syncVisualFromJSON(parsed);
+      renderAllVisualTables();
+    } else {
+      // Visual -> JSON
+      syncJSONFromVisual();
+    }
+
+    currentMode = mode;
+    document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
+    document.querySelector('.se-cm-wrap').style.display = mode === 'json' ? '' : 'none';
+    document.getElementById('visual-wrap').style.display = mode === 'visual' ? 'block' : 'none';
+
+    if (mode === 'json') {
+      editor.refresh();
+    }
+  }
+
+  // -- Visual <-> JSON sync -----------------------------------------
+  function syncVisualFromJSON(parsed) {
+    visualData.commands = (parsed.commands || []).map(cmd => parseCommandEntry(cmd));
+    visualData.message_schedule = (parsed.message_schedule || []).map(s => ({ ...s }));
+    visualData.channel_schedule = (parsed.channel_schedule || []).map(s => ({ ...s }));
+    visualData.expect = (parsed.expect || []).map(e => ({ ...e }));
+
+    // Preserve everything else
+    _restOfConfig = {};
+    for (const key of Object.keys(parsed)) {
+      if (!['commands', 'message_schedule', 'channel_schedule', 'expect'].includes(key)) {
+        _restOfConfig[key] = parsed[key];
+      }
+    }
+  }
+
+  function syncJSONFromVisual() {
+    const obj = { ..._restOfConfig };
+    obj.commands = visualData.commands.map(cmd => buildCommandEntry(cmd));
+    if (visualData.message_schedule.length > 0) {
+      obj.message_schedule = visualData.message_schedule.map(s => {
+        const entry = { from: s.from, to: s.to, start_ms: s.start_ms, interval_ms: s.interval_ms, count: s.count };
+        if (s.message) entry.message = s.message;
+        if (s.command_prefix) entry.command_prefix = s.command_prefix;
+        if (s.ack) entry.command_prefix = 'msga';
+        return entry;
+      });
+    }
+    if (visualData.channel_schedule.length > 0) {
+      obj.channel_schedule = visualData.channel_schedule.map(s => {
+        const entry = { from: s.from, channel: s.channel ?? 0, start_ms: s.start_ms, interval_ms: s.interval_ms, count: s.count };
+        if (s.message) entry.message = s.message;
+        return entry;
+      });
+    }
+    obj.expect = visualData.expect.map(e => {
+      const entry = { type: e.type };
+      if (e.type === 'cmd_reply_contains' || e.type === 'cmd_reply_not_contains') {
+        if (e.node) entry.node = e.node;
+        if (e.after_ms != null) entry.after_ms = e.after_ms;
+        if (e.command) entry.command = e.command;
+        entry.contains = e.contains || '';
+      } else if (e.type === 'event_count') {
+        entry.event_type = e.event_type || 'rx';
+        if (e.node) entry.node = e.node;
+        if (e.min != null) entry.min = e.min;
+        if (e.max != null) entry.max = e.max;
+      } else if (e.type === 'event_count_min') {
+        entry.event_type = e.event_type || 'rx';
+        entry.count = e.count ?? 0;
+      } else if (e.type === 'tx_airtime_between') {
+        if (e.node) entry.node = e.node;
+        if (e.min != null) entry.min = e.min;
+        if (e.max != null) entry.max = e.max;
+      } else {
+        // Unknown type: preserve all fields
+        Object.assign(entry, e);
+      }
+      return entry;
+    });
+
+    programmaticChange = true;
+    editor.setValue(JSON.stringify(obj, null, 2));
+    programmaticChange = false;
+  }
+
+  // -- Command parsing ----------------------------------------------
+  // No-argument commands recognized by the parser
+  const NO_ARG_COMMANDS = [
+    'neighbors', 'stats', 'advert', 'advert.zerohop', 'discover.neighbors',
+    'stats-core', 'stats-radio', 'stats-packets',
+  ];
+  // Two-word no-arg commands
+  const TWO_WORD_NO_ARG = ['clear stats'];
+
+  function parseCommandEntry(entry) {
+    const cmd = {
+      at_ms: entry.at_ms || 0,
+      node: entry.node || '',
+      type: 'custom',
+      dest: '',
+      message: '',
+      param_value: '',
+      raw_command: entry.command || '',
+    };
+
+    const raw = (entry.command || '').trim();
+    const parts = raw.split(' ');
+    const verb = parts[0];
+
+    // Check two-word no-arg commands first (e.g. "clear stats")
+    const twoWord = parts.slice(0, 2).join(' ');
+    if (TWO_WORD_NO_ARG.includes(twoWord) && parts.length === 2) {
+      cmd.type = twoWord;
+      return cmd;
+    }
+
+    if (verb === 'msg' || verb === 'msga') {
+      cmd.type = verb;
+      cmd.dest = parts[1] || '';
+      cmd.message = parts.slice(2).join(' ');
+    } else if (verb === 'msgc') {
+      cmd.type = 'msgc';
+      cmd.message = parts.slice(1).join(' ');
+    } else if (verb === 'set') {
+      const paramName = parts[1] || '';
+      const fullSet = 'set ' + paramName;
+      if (ALL_CMD_TYPES.includes(fullSet)) {
+        cmd.type = fullSet;
+        // For "set radio", value is everything after "set radio "
+        if (fullSet === 'set radio') {
+          cmd.param_value = parts.slice(2).join(' ');
+        } else {
+          cmd.param_value = parts[2] || '';
+        }
+      } else {
+        cmd.type = 'custom';
+      }
+    } else if (verb === 'reset_path') {
+      cmd.type = 'reset_path';
+      cmd.dest = parts[1] || '';
+    } else if (NO_ARG_COMMANDS.includes(verb)) {
+      cmd.type = verb;
+    }
+    // else: stays 'custom'
+
+    return cmd;
+  }
+
+  function buildCommandEntry(cmd) {
+    const entry = { at_ms: cmd.at_ms, node: cmd.node };
+    entry.command = buildCommandString(cmd);
+    return entry;
+  }
+
+  function buildCommandString(cmd) {
+    switch (cmd.type) {
+      // Companion messaging
+      case 'msg':
+      case 'msga':
+        return cmd.type + ' ' + (cmd.dest || 'NODE') + (cmd.message ? ' ' + cmd.message : '');
+      case 'msgc':
+        return 'msgc' + (cmd.message ? ' ' + cmd.message : '');
+      case 'reset_path':
+        return 'reset_path ' + (cmd.dest || 'NODE');
+      // Set commands with numeric/float value
+      case 'set rxdelay':
+      case 'set txdelay':
+      case 'set direct.txdelay':
+      case 'set af':
+      case 'set flood.max':
+      case 'set lat':
+      case 'set lon':
+      case 'set freq':
+      case 'set flood.advert.interval':
+      case 'set advert.interval':
+      case 'set int.thresh':
+      case 'set agc.reset.interval':
+        return cmd.type + ' ' + (cmd.param_value || '0');
+      // Set commands with on/off value
+      case 'set repeat':
+      case 'set multi.acks':
+      case 'set allow.read.only':
+        return cmd.type + ' ' + (cmd.param_value || 'on');
+      // Set commands with string value
+      case 'set name':
+        return 'set name ' + (cmd.param_value || '');
+      case 'set loop.detect':
+        return 'set loop.detect ' + (cmd.param_value || 'off');
+      case 'set path.hash.mode':
+        return 'set path.hash.mode ' + (cmd.param_value || '0');
+      // Set radio: freq bw sf cr
+      case 'set radio':
+        return 'set radio ' + (cmd.param_value || '869.525 125 12 5');
+      // No-argument commands
+      case 'neighbors':
+      case 'stats':
+      case 'stats-core':
+      case 'stats-radio':
+      case 'stats-packets':
+      case 'clear stats':
+      case 'advert':
+      case 'advert.zerohop':
+      case 'discover.neighbors':
+        return cmd.type;
+      case 'custom':
+      default:
+        return cmd.raw_command || '';
+    }
+  }
+
+  // -- Node select helper -------------------------------------------
+  function nodeSelectHtml(selected, includeGroups) {
+    const names = topoNodeNames.length > 0 ? topoNodeNames : [];
+    let opts = '<option value="">--</option>';
+    for (const n of names) {
+      opts += '<option value="' + esc(n) + '"' + (n === selected ? ' selected' : '') + '>' + esc(n) + '</option>';
+    }
+    if (includeGroups) {
+      for (const g of GROUP_TARGETS) {
+        opts += '<option value="' + g + '"' + (g === selected ? ' selected' : '') + '>' + g + '</option>';
+      }
+    }
+    // If selected value not in list, add it
+    if (selected && !names.includes(selected) && !GROUP_TARGETS.includes(selected)) {
+      opts += '<option value="' + esc(selected) + '" selected>' + esc(selected) + '</option>';
+    }
+    return opts;
+  }
+
+  function esc(s) { return (s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+  // Get node role from topology data
+  function getNodeRole(nodeName) {
+    if (!topoData || !topoData.nodes) return null;
+    const node = topoData.nodes.find(n => n.name === nodeName);
+    return node ? (node.role || 'repeater') : null;
+  }
+
+  // Get command types appropriate for a node (by role)
+  function getCmdTypesForNode(nodeName) {
+    const role = getNodeRole(nodeName);
+    if (role === 'companion') return COMPANION_CMD_TYPES;
+    if (role === 'repeater') return REPEATER_CMD_TYPES;
+    return ALL_CMD_TYPES; // unknown / no topology
+  }
+
+  // -- Render all visual tables -------------------------------------
+  function renderAllVisualTables() {
+    renderCommandsTable();
+    renderMsgSchedTable();
+    renderChanSchedTable();
+    renderExpectTable();
+  }
+
+  // -- Commands table -----------------------------------------------
+  function renderCommandsTable() {
+    const tbody = document.getElementById('cmd-tbody');
+    tbody.innerHTML = '';
+
+    // Sort by at_ms
+    visualData.commands.sort((a, b) => a.at_ms - b.at_ms);
+
+    visualData.commands.forEach((cmd, idx) => {
+      const tr = document.createElement('tr');
+
+      // Time
+      let html = '<td><input class="num-input" data-idx="' + idx + '" data-field="at_ms" type="number" value="' + (cmd.at_ms || 0) + '"></td>';
+
+      // Node
+      html += '<td><select data-idx="' + idx + '" data-field="node">' + nodeSelectHtml(cmd.node, true) + '</select></td>';
+
+      // Type (role-aware)
+      const cmdTypes = getCmdTypesForNode(cmd.node);
+      html += '<td><select data-idx="' + idx + '" data-field="type">';
+      for (const t of cmdTypes) {
+        html += '<option value="' + t + '"' + (t === cmd.type ? ' selected' : '') + '>' + t + '</option>';
+      }
+      // If current type not in role list (e.g. loaded from config), still show it
+      if (cmd.type && !cmdTypes.includes(cmd.type)) {
+        html += '<option value="' + esc(cmd.type) + '" selected>' + esc(cmd.type) + '</option>';
+      }
+      html += '</select></td>';
+
+      // Details (context-dependent)
+      html += '<td>' + renderCmdDetails(cmd, idx) + '</td>';
+
+      // Raw (computed)
+      html += '<td class="raw-col" title="' + esc(buildCommandString(cmd)) + '">' + esc(buildCommandString(cmd)) + '</td>';
+
+      // Delete
+      html += '<td><button class="del-btn" data-idx="' + idx + '">&times;</button></td>';
+
+      tr.innerHTML = html;
+      tbody.appendChild(tr);
+    });
+
+    // Bind events
+    bindTableEvents(tbody, 'commands', function(idx, field, value) {
+      if (field === 'at_ms') visualData.commands[idx].at_ms = parseInt(value) || 0;
+      else if (field === 'node') {
+        visualData.commands[idx].node = value;
+        // Re-render to update type dropdown for new node's role
+        const newTypes = getCmdTypesForNode(value);
+        if (!newTypes.includes(visualData.commands[idx].type)) {
+          visualData.commands[idx].type = newTypes[0] || 'custom';
+          visualData.commands[idx].dest = '';
+          visualData.commands[idx].message = '';
+          visualData.commands[idx].param_value = '';
+          visualData.commands[idx].raw_command = '';
+        }
+        markDirty();
+        renderCommandsTable();
+        return;
+      }
+      else if (field === 'type') {
+        visualData.commands[idx].type = value;
+        visualData.commands[idx].dest = '';
+        visualData.commands[idx].message = '';
+        visualData.commands[idx].param_value = '';
+        visualData.commands[idx].raw_command = '';
+        renderCommandsTable();
+        return;
+      }
+      else if (field === 'dest') visualData.commands[idx].dest = value;
+      else if (field === 'message') visualData.commands[idx].message = value;
+      else if (field === 'param_value') visualData.commands[idx].param_value = value;
+      else if (field === 'raw_command') visualData.commands[idx].raw_command = value;
+
+      // Update raw column
+      const rawCell = tbody.querySelectorAll('tr')[idx]?.querySelector('.raw-col');
+      if (rawCell) {
+        const str = buildCommandString(visualData.commands[idx]);
+        rawCell.textContent = str;
+        rawCell.title = str;
+      }
+      markDirty();
+    }, function(idx) {
+      visualData.commands.splice(idx, 1);
+      markDirty();
+      renderCommandsTable();
+    });
+  }
+
+  function renderCmdDetails(cmd, idx) {
+    switch (cmd.type) {
+      // Companion: message + destination
+      case 'msg':
+      case 'msga':
+        return '<select data-idx="' + idx + '" data-field="dest" style="width:45%;display:inline-block;margin-right:4px;">' +
+          nodeSelectHtml(cmd.dest, false) + '</select>' +
+          '<input data-idx="' + idx + '" data-field="message" value="' + esc(cmd.message) + '" placeholder="message" style="width:50%;display:inline-block;">';
+      case 'msgc':
+        return '<input data-idx="' + idx + '" data-field="message" value="' + esc(cmd.message) + '" placeholder="channel message">';
+      case 'reset_path':
+        return '<select data-idx="' + idx + '" data-field="dest">' + nodeSelectHtml(cmd.dest, false) + '</select>';
+      // Numeric value
+      case 'set rxdelay':
+      case 'set txdelay':
+      case 'set direct.txdelay':
+      case 'set af':
+      case 'set lat':
+      case 'set lon':
+      case 'set freq':
+        return '<input data-idx="' + idx + '" data-field="param_value" type="number" step="0.1" value="' + esc(cmd.param_value) + '" placeholder="value">';
+      // Integer value
+      case 'set flood.max':
+      case 'set flood.advert.interval':
+      case 'set advert.interval':
+      case 'set int.thresh':
+      case 'set agc.reset.interval':
+        return '<input data-idx="' + idx + '" data-field="param_value" type="number" step="1" value="' + esc(cmd.param_value) + '" placeholder="value">';
+      // On/off toggle
+      case 'set repeat':
+      case 'set allow.read.only':
+        return '<select data-idx="' + idx + '" data-field="param_value">' +
+          '<option value="on"' + (cmd.param_value === 'on' ? ' selected' : '') + '>on</option>' +
+          '<option value="off"' + (cmd.param_value === 'off' ? ' selected' : '') + '>off</option></select>';
+      case 'set multi.acks':
+        return '<select data-idx="' + idx + '" data-field="param_value">' +
+          '<option value="1"' + (cmd.param_value === '1' ? ' selected' : '') + '>1 (on)</option>' +
+          '<option value="0"' + (cmd.param_value === '0' || !cmd.param_value ? ' selected' : '') + '>0 (off)</option></select>';
+      // Enum select
+      case 'set loop.detect':
+        return '<select data-idx="' + idx + '" data-field="param_value">' +
+          ['off', 'minimal', 'moderate', 'strict'].map(v =>
+            '<option value="' + v + '"' + (cmd.param_value === v ? ' selected' : '') + '>' + v + '</option>'
+          ).join('') + '</select>';
+      case 'set path.hash.mode':
+        return '<select data-idx="' + idx + '" data-field="param_value">' +
+          ['0', '1', '2'].map(v =>
+            '<option value="' + v + '"' + (cmd.param_value === v ? ' selected' : '') + '>' + v + '</option>'
+          ).join('') + '</select>';
+      // String value
+      case 'set name':
+        return '<input data-idx="' + idx + '" data-field="param_value" value="' + esc(cmd.param_value) + '" placeholder="node name">';
+      // Multi-param: freq bw sf cr
+      case 'set radio':
+        return '<input data-idx="' + idx + '" data-field="param_value" value="' + esc(cmd.param_value || '869.525 125 12 5') + '" placeholder="freq bw sf cr">';
+      // Raw command
+      case 'custom':
+        return '<input data-idx="' + idx + '" data-field="raw_command" value="' + esc(cmd.raw_command) + '" placeholder="raw command string">';
+      // No parameters
+      default:
+        return '<span style="color:var(--text-dim);font-size:10px;">no parameters</span>';
+    }
+  }
+
+  // -- Message schedule table ---------------------------------------
+  function renderMsgSchedTable() {
+    const tbody = document.getElementById('msgsched-tbody');
+    tbody.innerHTML = '';
+
+    visualData.message_schedule.forEach((s, idx) => {
+      const tr = document.createElement('tr');
+      const isAck = s.ack || s.command_prefix === 'msga';
+      tr.innerHTML =
+        '<td><select data-idx="' + idx + '" data-field="from">' + nodeSelectHtml(s.from, true) + '</select></td>' +
+        '<td><select data-idx="' + idx + '" data-field="to">' + nodeSelectHtml(s.to, false) + '</select></td>' +
+        '<td><input class="num-input" data-idx="' + idx + '" data-field="start_ms" type="number" value="' + (s.start_ms || 0) + '"></td>' +
+        '<td><input class="num-input" data-idx="' + idx + '" data-field="interval_ms" type="number" value="' + (s.interval_ms || 0) + '"></td>' +
+        '<td><input class="num-input" data-idx="' + idx + '" data-field="count" type="number" value="' + (s.count || 1) + '"></td>' +
+        '<td><input data-idx="' + idx + '" data-field="message" value="' + esc(s.message || '') + '" placeholder="message"></td>' +
+        '<td><input type="checkbox" data-idx="' + idx + '" data-field="ack"' + (isAck ? ' checked' : '') + '></td>' +
+        '<td><button class="del-btn" data-idx="' + idx + '">&times;</button></td>';
+      tbody.appendChild(tr);
+    });
+
+    bindTableEvents(tbody, 'message_schedule', function(idx, field, value) {
+      if (field === 'start_ms' || field === 'interval_ms' || field === 'count') {
+        visualData.message_schedule[idx][field] = parseInt(value) || 0;
+      } else if (field === 'ack') {
+        visualData.message_schedule[idx].ack = value;
+        visualData.message_schedule[idx].command_prefix = value ? 'msga' : 'msg';
+      } else {
+        visualData.message_schedule[idx][field] = value;
+      }
+      markDirty();
+    }, function(idx) {
+      visualData.message_schedule.splice(idx, 1);
+      markDirty();
+      renderMsgSchedTable();
+    });
+  }
+
+  // -- Channel schedule table ---------------------------------------
+  function renderChanSchedTable() {
+    const tbody = document.getElementById('chansched-tbody');
+    tbody.innerHTML = '';
+
+    visualData.channel_schedule.forEach((s, idx) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td><select data-idx="' + idx + '" data-field="from">' + nodeSelectHtml(s.from, true) + '</select></td>' +
+        '<td><input class="num-input" data-idx="' + idx + '" data-field="channel" type="number" value="' + (s.channel ?? 0) + '"></td>' +
+        '<td><input class="num-input" data-idx="' + idx + '" data-field="start_ms" type="number" value="' + (s.start_ms || 0) + '"></td>' +
+        '<td><input class="num-input" data-idx="' + idx + '" data-field="interval_ms" type="number" value="' + (s.interval_ms || 0) + '"></td>' +
+        '<td><input class="num-input" data-idx="' + idx + '" data-field="count" type="number" value="' + (s.count || 1) + '"></td>' +
+        '<td><input data-idx="' + idx + '" data-field="message" value="' + esc(s.message || '') + '" placeholder="message"></td>' +
+        '<td><button class="del-btn" data-idx="' + idx + '">&times;</button></td>';
+      tbody.appendChild(tr);
+    });
+
+    bindTableEvents(tbody, 'channel_schedule', function(idx, field, value) {
+      if (['channel', 'start_ms', 'interval_ms', 'count'].includes(field)) {
+        visualData.channel_schedule[idx][field] = parseInt(value) || 0;
+      } else {
+        visualData.channel_schedule[idx][field] = value;
+      }
+      markDirty();
+    }, function(idx) {
+      visualData.channel_schedule.splice(idx, 1);
+      markDirty();
+      renderChanSchedTable();
+    });
+  }
+
+  // -- Assertions table ---------------------------------------------
+  function renderExpectTable() {
+    const tbody = document.getElementById('expect-tbody');
+    tbody.innerHTML = '';
+
+    visualData.expect.forEach((e, idx) => {
+      const tr = document.createElement('tr');
+
+      // Type select
+      let html = '<td><select data-idx="' + idx + '" data-field="type">';
+      for (const t of ASSERT_TYPES) {
+        html += '<option value="' + t + '"' + (t === e.type ? ' selected' : '') + '>' + t + '</option>';
+      }
+      html += '</select></td>';
+
+      // Type-specific fields
+      html += renderAssertFields(e, idx);
+
+      // Delete
+      html += '<td><button class="del-btn" data-idx="' + idx + '">&times;</button></td>';
+
+      tr.innerHTML = html;
+      tbody.appendChild(tr);
+    });
+
+    bindTableEvents(tbody, 'expect', function(idx, field, value) {
+      if (field === 'type') {
+        const oldType = visualData.expect[idx].type;
+        visualData.expect[idx] = { type: value };
+        // Preserve node if applicable
+        renderExpectTable();
+        return;
+      }
+      if (['min', 'max', 'count', 'after_ms'].includes(field)) {
+        visualData.expect[idx][field] = value === '' ? undefined : parseInt(value);
+      } else {
+        visualData.expect[idx][field] = value;
+      }
+      markDirty();
+    }, function(idx) {
+      visualData.expect.splice(idx, 1);
+      markDirty();
+      renderExpectTable();
+    });
+  }
+
+  function renderAssertFields(e, idx) {
+    switch (e.type) {
+      case 'cmd_reply_contains':
+      case 'cmd_reply_not_contains':
+        return '<td><select data-idx="' + idx + '" data-field="node">' + nodeSelectHtml(e.node, true) + '</select></td>' +
+          '<td><input data-idx="' + idx + '" data-field="command" value="' + esc(e.command || '') + '" placeholder="cmd prefix"></td>' +
+          '<td><input data-idx="' + idx + '" data-field="contains" value="' + esc(e.contains || '') + '" placeholder="expected text"></td>' +
+          '<td><input class="num-input" data-idx="' + idx + '" data-field="after_ms" type="number" value="' + (e.after_ms ?? '') + '" placeholder="after_ms"></td>';
+      case 'event_count':
+        return '<td><select data-idx="' + idx + '" data-field="event_type">' + eventTypeOptions(e.event_type) + '</select></td>' +
+          '<td><select data-idx="' + idx + '" data-field="node"><option value="">any</option>' + nodeSelectHtml(e.node, false).replace('<option value="">--</option>', '') + '</select></td>' +
+          '<td><input class="num-input" data-idx="' + idx + '" data-field="min" type="number" value="' + (e.min ?? '') + '" placeholder="min"></td>' +
+          '<td><input class="num-input" data-idx="' + idx + '" data-field="max" type="number" value="' + (e.max ?? '') + '" placeholder="max"></td>';
+      case 'event_count_min':
+        return '<td><select data-idx="' + idx + '" data-field="event_type">' + eventTypeOptions(e.event_type) + '</select></td>' +
+          '<td><input class="num-input" data-idx="' + idx + '" data-field="count" type="number" value="' + (e.count ?? 0) + '" placeholder="count"></td>' +
+          '<td></td><td></td>';
+      case 'tx_airtime_between':
+        return '<td><select data-idx="' + idx + '" data-field="node">' + nodeSelectHtml(e.node, true) + '</select></td>' +
+          '<td><input class="num-input" data-idx="' + idx + '" data-field="min" type="number" value="' + (e.min ?? '') + '" placeholder="min ms"></td>' +
+          '<td><input class="num-input" data-idx="' + idx + '" data-field="max" type="number" value="' + (e.max ?? '') + '" placeholder="max ms"></td>' +
+          '<td></td>';
+      default:
+        return '<td colspan="4" style="color:var(--text-dim);font-size:10px;">Unknown type</td>';
+    }
+  }
+
+  function eventTypeOptions(selected) {
+    return EVENT_TYPES.map(t =>
+      '<option value="' + t + '"' + (t === selected ? ' selected' : '') + '>' + t + '</option>'
+    ).join('');
+  }
+
+  // -- Generic table event binding ----------------------------------
+  function bindTableEvents(tbody, arrayName, onChange, onDelete) {
+    tbody.querySelectorAll('input, select').forEach(el => {
+      const evName = el.type === 'checkbox' ? 'change' : 'change';
+      el.addEventListener(evName, () => {
+        const idx = parseInt(el.dataset.idx);
+        const field = el.dataset.field;
+        const value = el.type === 'checkbox' ? el.checked : el.value;
+        onChange(idx, field, value);
+      });
+      // Also listen to input for text fields for real-time raw column updates
+      if (el.type !== 'checkbox' && el.tagName !== 'SELECT') {
+        el.addEventListener('input', () => {
+          const idx = parseInt(el.dataset.idx);
+          const field = el.dataset.field;
+          onChange(idx, field, el.value);
+        });
+      }
+    });
+    tbody.querySelectorAll('.del-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        onDelete(parseInt(btn.dataset.idx));
+      });
+    });
+  }
+
+  // -- Add row buttons ----------------------------------------------
+  document.getElementById('btn-add-cmd').addEventListener('click', () => {
+    const defaultNode = selectedNodeName || topoNodeNames[0] || '';
+    const role = getNodeRole(defaultNode);
+    const isCompanion = role === 'companion';
+    const defaultType = isCompanion ? 'msg' : (role === 'repeater' ? 'neighbors' : 'msg');
+    const newCmd = {
+      at_ms: 10000,
+      node: defaultNode,
+      type: defaultType,
+      dest: '',
+      message: '',
+      param_value: '',
+      raw_command: '',
+    };
+    // Pre-fill details for companion msg
+    if (isCompanion) {
+      newCmd.dest = topoNodeNames.find(n => n !== defaultNode && getNodeRole(n) === 'companion') || topoNodeNames[1] || topoNodeNames[0] || '';
+      newCmd.message = 'hello';
+    }
+    visualData.commands.push(newCmd);
+    markDirty();
+    renderCommandsTable();
+  });
+
+  document.getElementById('btn-add-msgsched').addEventListener('click', () => {
+    visualData.message_schedule.push({
+      from: topoNodeNames[0] || '',
+      to: topoNodeNames[1] || topoNodeNames[0] || '',
+      start_ms: 30000,
+      interval_ms: 20000,
+      count: 5,
+      message: '',
+      command_prefix: 'msg',
+    });
+    markDirty();
+    renderMsgSchedTable();
+  });
+
+  document.getElementById('btn-add-chansched').addEventListener('click', () => {
+    visualData.channel_schedule.push({
+      from: topoNodeNames[0] || '',
+      channel: 0,
+      start_ms: 30000,
+      interval_ms: 20000,
+      count: 5,
+      message: '',
+    });
+    markDirty();
+    renderChanSchedTable();
+  });
+
+  document.getElementById('btn-add-expect').addEventListener('click', () => {
+    visualData.expect.push({
+      type: 'event_count',
+      event_type: 'rx',
+      node: topoNodeNames[0] || '',
+      min: 1,
+    });
+    markDirty();
+    renderExpectTable();
+  });
+
+  // -- Status area helpers ------------------------------------------
+  function addStatus(type, message) {
+    const area = document.getElementById('status-area');
+    const div = document.createElement('div');
+    div.className = 'status-item ' + type;
+    div.textContent = message;
+    area.appendChild(div);
+    area.scrollTop = area.scrollHeight;
+  }
+
+  function clearStatus() {
+    document.getElementById('status-area').innerHTML = '';
+  }
+
+})();
+</script>
+</body>
+</html>

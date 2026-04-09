@@ -193,6 +193,11 @@ void dropLoss(unsigned long time_ms, const char* from, const char* to, float los
             time_ms, from, to, loss_prob, pkt, pt, rt);
 }
 
+void nodeStats(unsigned long time_ms, const char* node, const char* stats_type, const char* json_data) {
+    fprintf(stdout, "{\"type\":\"node_stats\",\"time_ms\":%lu,\"node\":\"%s\",\"stats_type\":\"%s\",\"data\":%s}\n",
+            time_ms, node, stats_type, json_data);
+}
+
 void txFail(unsigned long time_ms, const char* node, uint32_t count) {
     fprintf(stdout, "{\"type\":\"tx_fail\",\"time_ms\":%lu,\"node\":\"%s\",\"count\":%u}\n",
             time_ms, node, (unsigned)count);

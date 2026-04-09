@@ -243,14 +243,14 @@ where `n` is the neighbor count (0-12). Three (base, slope) pairs — one for ea
 
 | Parameter | Meaning | Sweep range (density scripts) |
 |---|---|---|
-| `tx_base` | tx_delay at 0 neighbors | 0.0 - 1.5 (step 0.5) |
+| `tx_base` | tx_delay at 0 neighbors | 0.0 - 2.0 (step 0.2) |
 | `tx_slope` | tx_delay increment per neighbor | 0.3 - 0.6 (step 0.3) |
-| `dtx_base` | direct_tx_delay at 0 neighbors | 0.0 - 1.5 (step 0.5) |
+| `dtx_base` | direct_tx_delay at 0 neighbors | 0.0 - 1.0 (step 0.2) |
 | `dtx_slope` | direct_tx_delay increment per neighbor | 0.3 - 0.6 (step 0.3) |
-| `rx_base` | rx_delay_base at 0 neighbors | 0.0 - 1.5 (step 0.5) |
+| `rx_base` | rx_delay_base at 0 neighbors | 0.0 - 6.0 (step 2.0) |
 | `rx_slope` | rx_delay_base increment per neighbor | 0.3 - 0.6 (step 0.3) |
 
-This gives 4 x 2 x 4 x 2 x 4 x 2 = **512 variants** per density level.
+This gives 11 x 2 x 6 x 2 x 4 x 2 = **2,112 variants** per density level.
 
 ### Method (`tools/optimize_tuning.py`)
 
@@ -272,9 +272,10 @@ The config is sanitized before each run: any manual `set rxdelay`/`set txdelay`/
 
 ```bash
 python3 tools/optimize_tuning.py config.json \
-  --tx-base 0.0:1.5:0.5 --tx-slope 0.3:0.6:0.3 \
-  --dtx-base 0.0:1.5:0.5 --dtx-slope 0.3:0.6:0.3 \
-  --rx-base 0.0:1.5:0.5 --rx-slope 0.3:0.6:0.3 \
+  --tx-base 0.0:2.0:0.2 --tx-slope 0.3:0.6:0.3 \
+  --dtx-base 0.0:1.0:0.2 --dtx-slope 0.3:0.6:0.3 \
+  --rx-base 0.0:6.0:2.0 --rx-slope 0.3:0.6:0.3 \
+  --clamp-max 6.0 \
   --seeds 6 --build-dir build-fork \
   --meshcore-dir ../MeshCore-stachuman \
   -j 6 -o results.csv
@@ -320,6 +321,7 @@ Each variant requires a rebuild (~15-25s) plus seed runs. For a 15-minute simula
 | 1 | 6 | ~50s | ~1 min |
 | 64 (4x2x4x1x1x1) | 6 | ~50s | ~1 hour |
 | 512 (4x2x4x2x4x2) | 6 | ~50s | ~7 hours |
+| 2112 (11x2x6x2x4x2) | 6 | ~50s | ~29 hours |
 
 ### Output
 
@@ -434,7 +436,7 @@ Each script runs a 4-step pipeline:
 1. **Generate topology** — runs `topology_generator` with the Gdansk region, density-specific link survival and edge caps
 2. **Inject test cases** — runs `inject_test.py` to place 4 companions (alice, bob, carol, dave) and generate auto-schedules (70s direct interval, 80s channel interval, 5 direct + 4 channel messages per entry)
 3. **Print topology statistics** — runs `topology_stats.py` to summarize the generated network
-4. **Run optimization sweep** — runs `optimize_tuning.py` with 512 variants (4x2x4x2x4x2), 6 seeds, 6 parallel jobs
+4. **Run optimization sweep** — runs `optimize_tuning.py` with 2,112 variants (11x2x6x2x4x2), 6 seeds, 6 parallel jobs
 
 ### Density configurations
 
@@ -448,11 +450,11 @@ Each script runs a 4-step pipeline:
 
 | Parameter | Range | Values |
 |-----------|-------|--------|
-| `tx_base` | 0.0:1.5:0.5 | 0.0, 0.5, 1.0, 1.5 |
+| `tx_base` | 0.0:2.0:0.2 | 0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0 |
 | `tx_slope` | 0.3:0.6:0.3 | 0.3, 0.6 |
-| `dtx_base` | 0.0:1.5:0.5 | 0.0, 0.5, 1.0, 1.5 |
+| `dtx_base` | 0.0:1.0:0.2 | 0.0, 0.2, 0.4, 0.6, 0.8, 1.0 |
 | `dtx_slope` | 0.3:0.6:0.3 | 0.3, 0.6 |
-| `rx_base` | 0.0:1.5:0.5 | 0.0, 0.5, 1.0, 1.5 |
+| `rx_base` | 0.0:6.0:2.0 | 0.0, 2.0, 4.0, 6.0 |
 | `rx_slope` | 0.3:0.6:0.3 | 0.3, 0.6 |
 
 ### Output files
@@ -522,9 +524,10 @@ build/orchestrator/orchestrator test_config.json > events.ndjson
 
 # Step 5: Auto-tune table sweep (requires MeshCore fork build)
 python3 tools/optimize_tuning.py test_config.json \
-    --tx-base 0.0:1.5:0.5 --tx-slope 0.3:0.6:0.3 \
-    --dtx-base 0.0:1.5:0.5 --dtx-slope 0.3:0.6:0.3 \
-    --rx-base 0.0:1.5:0.5 --rx-slope 0.3:0.6:0.3 \
+    --tx-base 0.0:2.0:0.2 --tx-slope 0.3:0.6:0.3 \
+    --dtx-base 0.0:1.0:0.2 --dtx-slope 0.3:0.6:0.3 \
+    --rx-base 0.0:6.0:2.0 --rx-slope 0.3:0.6:0.3 \
+    --clamp-max 6.0 \
     --seeds 6 --build-dir build-fork \
     --meshcore-dir ../MeshCore-stachuman \
     -j 6 -o results.csv

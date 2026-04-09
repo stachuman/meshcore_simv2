@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulation - MeshCore Simulator</title>
+<link rel="stylesheet" href="/static/css/common.css">
+<style>
+  .sim-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .sim-header h1 { margin-bottom: 0; }
+  .sim-header .header-actions { display: flex; gap: 8px; }
+
+  .sim-grid {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 16px;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .sim-grid { grid-template-columns: 1fr; }
+  }
+
+  /* Progress card */
+  .progress-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .progress-card h2 { margin-bottom: 12px; }
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+  .progress-details {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 8px;
+  }
+
+  /* Results area */
+  .results-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .results-card h2 { margin-bottom: 12px; }
+  .result-links { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* Log / messages area */
+  .log-area {
+    background: #f0f0f4;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 12px;
+    font-size: 11px;
+    color: var(--text-muted);
+    max-height: 300px;
+    overflow-y: auto;
+    line-height: 1.6;
+  }
+  .log-area .log-line { padding: 2px 0; }
+  .log-area .log-line.summary { color: var(--accent); }
+  .log-area .log-line.error { color: var(--error); }
+  .log-area .log-line.pass { color: var(--success); }
+  .log-area .log-line.fail { color: var(--error); font-weight: 700; }
+
+  /* Info card */
+  .info-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .info-card h3 { margin-bottom: 8px; }
+  .info-grid {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 4px 12px;
+    font-size: 12px;
+  }
+  .info-grid .key { color: var(--text-muted); }
+  .info-grid .val { color: var(--text); }
+
+  /* Config JSON toggle */
+  .config-toggle {
+    margin-top: 12px;
+  }
+  .config-toggle summary {
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 11px;
+  }
+  .config-toggle pre {
+    background: #f0f0f4;
+    padding: 8px;
+    border-radius: var(--radius);
+    overflow-x: auto;
+    max-height: 300px;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 6px;
+  }
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <span class="brand">MeshCore Sim</span>
+  <ul class="nav-links">
+    <li><a href="/static/index.html">Dashboard</a></li>
+    <li><a href="/static/simulations.html" class="active">Simulations</a></li>
+    <li><a href="/static/topologies.html">Topologies</a></li>
+    <li><a href="/static/scenarios.html">Scenarios</a></li>
+    <li><a href="/static/sweep.html">Sweeps</a></li>
+  </ul>
+  <span class="spacer"></span>
+</nav>
+
+<div class="page" style="max-width:1100px">
+  <div class="sim-header">
+    <h1>Simulation <code id="sim-id-display" style="font-size:14px;color:var(--text-muted)"></code></h1>
+    <div class="header-actions">
+      <a href="/static/simulations.html" class="btn btn-sm">All Simulations</a>
+      <button class="btn btn-sm btn-danger" id="btn-cancel" style="display:none">Cancel</button>
+      <button class="btn btn-sm btn-danger" id="btn-delete" style="display:none">Delete</button>
+    </div>
+  </div>
+
+  <div id="loading-state" class="empty-state">
+    <div class="spinner"></div>
+    <p>Loading simulation...</p>
+  </div>
+
+  <div id="error-state" class="empty-state" style="display:none">
+    <p style="color:var(--error)" id="error-msg"></p>
+    <a href="/static/simulations.html" class="btn mt-8">Back to Simulations</a>
+  </div>
+
+  <div id="main-content" style="display:none">
+    <div class="sim-grid">
+      <div class="sim-main">
+        <!-- Progress -->
+        <div class="progress-card" id="progress-card">
+          <h2>Progress</h2>
+          <div class="progress-label">
+            <span id="progress-status">Connecting...</span>
+            <span id="progress-pct"></span>
+          </div>
+          <div class="progress-bar">
+            <div class="fill" id="progress-fill" style="width:0%"></div>
+          </div>
+          <div class="progress-details" id="progress-details"></div>
+        </div>
+
+        <!-- Result links (shown on completion) -->
+        <div class="results-card" id="results-card" style="display:none">
+          <h2>Results</h2>
+          <div class="result-links" id="result-links"></div>
+        </div>
+
+        <!-- Log output -->
+        <div class="results-card">
+          <h2>Output</h2>
+          <div class="log-area" id="log-area">
+            <div class="log-line" style="color:var(--text-dim)">Waiting for output...</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sim-sidebar">
+        <!-- Info -->
+        <div class="info-card">
+          <h3>Simulation Info</h3>
+          <div class="info-grid" id="info-grid">
+            <span class="key">Status:</span><span class="val" id="info-status">--</span>
+            <span class="key">Nodes:</span><span class="val" id="info-nodes">--</span>
+            <span class="key">Duration:</span><span class="val" id="info-duration">--</span>
+            <span class="key">Created:</span><span class="val" id="info-created">--</span>
+            <span class="key">Completed:</span><span class="val" id="info-completed">--</span>
+          </div>
+          <div class="config-toggle">
+            <details>
+              <summary>Config JSON</summary>
+              <pre id="config-json"></pre>
+            </details>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm dialog -->
+<div id="confirm-dialog" style="display:none"></div>
+
+<script src="/static/js/api.js"></script>
+<script>
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const simId = params.get('id') || params.get('sim');
+  if (!simId) {
+    showError('No simulation ID specified.');
+    return;
+  }
+
+  document.getElementById('sim-id-display').textContent = simId;
+  document.title = 'Simulation ' + truncate(simId, 12) + ' - MeshCore Simulator';
+
+  let sseSource = null;
+  let simData = null;
+  let logLines = [];
+
+  // Load initial sim data
+  loadSim();
+
+  async function loadSim() {
+    try {
+      simData = await fetchJSON('/api/sims/' + encodeURIComponent(simId));
+      document.getElementById('loading-state').style.display = 'none';
+      document.getElementById('main-content').style.display = '';
+      updateInfo(simData);
+
+      if (simData.status === 'running' || simData.status === 'pending') {
+        startSSE();
+        document.getElementById('btn-cancel').style.display = '';
+      } else {
+        showFinalState(simData);
+      }
+    } catch (e) {
+      showError('Failed to load simulation: ' + e.message);
+    }
+  }
+
+  function updateInfo(data) {
+    const summary = data.config_summary || {};
+    document.getElementById('info-status').innerHTML = '<span class="badge badge-' + (data.status || 'pending') + '">' + (data.status || 'pending') + '</span>';
+    document.getElementById('info-nodes').textContent = summary.node_count || '--';
+    document.getElementById('info-duration').textContent = formatDuration(summary.duration_ms);
+    document.getElementById('info-created').textContent = formatTime(data.created_at);
+    document.getElementById('info-completed').textContent = data.completed_at ? formatTime(data.completed_at) : '--';
+
+    // Show delete button for non-running sims
+    if (data.status !== 'running' && data.status !== 'pending') {
+      document.getElementById('btn-delete').style.display = '';
+    }
+  }
+
+  // Load full config for the details panel
+  loadFullConfig();
+
+  async function loadFullConfig() {
+    try {
+      // The GET /{sim_id} doesn't return full config, try to load events meta or config file
+      // Actually the list endpoint had config, let's just get events path
+      // Use the topology endpoint to infer nodes, or just show summary
+      const topo = await fetchJSON('/api/sims/' + encodeURIComponent(simId) + '/topology');
+      if (topo && topo.nodes) {
+        const nodeNames = topo.nodes.map(n => n.name || '?').join(', ');
+        document.getElementById('info-nodes').textContent = topo.nodes.length + ' (' + nodeNames + ')';
+        document.getElementById('config-json').textContent = JSON.stringify(topo, null, 2);
+      }
+    } catch (_) {
+      document.getElementById('config-json').textContent = '(not available yet)';
+    }
+  }
+
+  function showFinalState(data) {
+    const fill = document.getElementById('progress-fill');
+    const status = document.getElementById('progress-status');
+    const pct = document.getElementById('progress-pct');
+
+    if (data.status === 'completed') {
+      fill.style.width = '100%';
+      fill.style.background = 'var(--success)';
+      status.textContent = 'Completed';
+      pct.textContent = '100%';
+      showResultLinks();
+      addLogLine('Simulation completed.', 'pass');
+    } else if (data.status === 'failed') {
+      fill.style.width = (data.progress || 0) + '%';
+      fill.style.background = 'var(--error)';
+      status.textContent = 'Failed';
+      pct.textContent = '';
+      addLogLine('Simulation failed: ' + (data.error || 'unknown error'), 'error');
+    } else if (data.status === 'cancelled') {
+      fill.style.width = (data.progress || 0) + '%';
+      fill.style.background = 'var(--warning)';
+      status.textContent = 'Cancelled';
+      pct.textContent = '';
+      addLogLine('Simulation was cancelled.', 'error');
+    }
+  }
+
+  function startSSE() {
+    const fill = document.getElementById('progress-fill');
+    const status = document.getElementById('progress-status');
+    const pct = document.getElementById('progress-pct');
+    const details = document.getElementById('progress-details');
+
+    clearLog();
+    addLogLine('Connecting to simulation...', '');
+
+    sseSource = connectSSE(
+      '/api/sims/' + encodeURIComponent(simId) + '/progress',
+      function onMessage(data) {
+        if (typeof data !== 'object') return;
+
+        if (data.progress != null) {
+          const p = Math.round(data.progress * 100);
+          fill.style.width = p + '%';
+          pct.textContent = p + '%';
+          status.textContent = 'Running';
+        }
+
+        if (data.step_ms != null && data.total_ms != null) {
+          details.textContent = formatDuration(data.step_ms) + ' / ' + formatDuration(data.total_ms);
+        }
+
+        if (data.detail) {
+          const cls = classifyLine(data.detail);
+          addLogLine(data.detail, cls);
+        }
+
+        if (data.message) {
+          details.textContent = data.message;
+        }
+
+        if (data.status === 'completed') {
+          fill.style.width = '100%';
+          fill.style.background = 'var(--success)';
+          status.textContent = 'Completed';
+          pct.textContent = '100%';
+          addLogLine('Simulation completed.', 'pass');
+          showResultLinks();
+          updateInfoStatus('completed');
+          cleanup();
+        }
+
+        if (data.status === 'failed') {
+          fill.style.background = 'var(--error)';
+          status.textContent = 'Failed';
+          addLogLine('Simulation failed: ' + (data.error || 'unknown error'), 'error');
+          updateInfoStatus('failed');
+          cleanup();
+        }
+
+        if (data.status === 'cancelled') {
+          fill.style.background = 'var(--warning)';
+          status.textContent = 'Cancelled';
+          addLogLine('Simulation was cancelled.', 'error');
+          updateInfoStatus('cancelled');
+          cleanup();
+        }
+      },
+      function onError() {
+        status.textContent = 'Connection lost. Checking...';
+        pollFinal();
+        cleanup();
+      }
+    );
+  }
+
+  async function pollFinal() {
+    try {
+      const data = await fetchJSON('/api/sims/' + encodeURIComponent(simId));
+      updateInfo(data);
+      showFinalState(data);
+    } catch (e) {
+      addLogLine('Could not check final status: ' + e.message, 'error');
+    }
+  }
+
+  function cleanup() {
+    if (sseSource) {
+      sseSource.close();
+      sseSource = null;
+    }
+    document.getElementById('btn-cancel').style.display = 'none';
+    document.getElementById('btn-delete').style.display = '';
+  }
+
+  function updateInfoStatus(st) {
+    document.getElementById('info-status').innerHTML = '<span class="badge badge-' + st + '">' + st + '</span>';
+    document.getElementById('info-completed').textContent = formatTime(new Date());
+  }
+
+  function showResultLinks() {
+    const card = document.getElementById('results-card');
+    const links = document.getElementById('result-links');
+    card.style.display = '';
+    links.innerHTML =
+      '<a href="/static/visualize.html?sim=' + encodeURIComponent(simId) + '" class="btn btn-primary">View Timeline</a>' +
+      '<a href="/static/map_view.html?sim=' + encodeURIComponent(simId) + '" class="btn">View Map</a>';
+  }
+
+  // Log helpers
+  function classifyLine(text) {
+    if (/=== Simulation Summary/i.test(text)) return 'summary';
+    if (/Delivery:/i.test(text)) return 'summary';
+    if (/PASS/i.test(text)) return 'pass';
+    if (/FAIL/i.test(text)) return 'fail';
+    if (/error/i.test(text)) return 'error';
+    return '';
+  }
+
+  function addLogLine(text, cls) {
+    const area = document.getElementById('log-area');
+    // Remove "waiting" placeholder
+    if (logLines.length === 0) area.innerHTML = '';
+    const div = document.createElement('div');
+    div.className = 'log-line' + (cls ? ' ' + cls : '');
+    div.textContent = text;
+    area.appendChild(div);
+    area.scrollTop = area.scrollHeight;
+    logLines.push(text);
+  }
+
+  function clearLog() {
+    document.getElementById('log-area').innerHTML = '';
+    logLines = [];
+  }
+
+  // ── Confirm dialog flow ──────────────────────────────
+  let confirmAction = null;
+
+  function showConfirm(title, msg, action) {
+    const el = document.getElementById('confirm-dialog');
+    confirmAction = action;
+    el.style.display = '';
+    el.innerHTML = `
+      <div class="confirm-overlay" onclick="if(event.target===event.currentTarget){hideConfirm()}">
+        <div class="confirm-dialog">
+          <h3>${escapeHtml(title)}</h3>
+          <p>${escapeHtml(msg)}</p>
+          <div class="btn-row">
+            <button class="btn" onclick="hideConfirm()">Cancel</button>
+            <button class="btn btn-danger" onclick="doConfirm()">Confirm</button>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function hideConfirm() {
+    document.getElementById('confirm-dialog').style.display = 'none';
+    confirmAction = null;
+  }
+
+  async function doConfirm() {
+    const action = confirmAction;
+    hideConfirm();
+    if (action) await action();
+  }
+
+  // Expose for inline handlers
+  window.hideConfirm = hideConfirm;
+  window.doConfirm = doConfirm;
+
+  // Cancel button
+  document.getElementById('btn-cancel').addEventListener('click', () => {
+    showConfirm('Cancel Simulation', 'Cancel this running simulation?', async () => {
+      try {
+        await deleteJSON('/api/sims/' + encodeURIComponent(simId));
+        addLogLine('Simulation cancelled.', 'error');
+        cleanup();
+        updateInfoStatus('cancelled');
+      } catch (e) {
+        alert('Cancel failed: ' + e.message);
+      }
+    });
+  });
+
+  // Delete button
+  document.getElementById('btn-delete').addEventListener('click', () => {
+    showConfirm('Delete Simulation', 'Delete this simulation and all its data?', async () => {
+      try {
+        await deleteJSON('/api/sims/' + encodeURIComponent(simId));
+        window.location.href = '/static/simulations.html';
+      } catch (e) {
+        alert('Delete failed: ' + e.message);
+      }
+    });
+  });
+
+  function showError(msg) {
+    document.getElementById('loading-state').style.display = 'none';
+    document.getElementById('error-state').style.display = '';
+    document.getElementById('error-msg').textContent = msg;
+  }
+})();
+</script>
+</body>
+</html>

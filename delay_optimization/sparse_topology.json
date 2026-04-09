@@ -19,12 +19,6 @@
       "lon": 18.7814
     },
     {
-      "name": "GD_RPT_DIODAK",
-      "role": "repeater",
-      "lat": 54.2118,
-      "lon": 18.7229
-    },
-    {
       "name": "GDA2R",
       "role": "repeater",
       "lat": 54.3226,
@@ -43,34 +37,10 @@
       "lon": 18.4776
     },
     {
-      "name": "ELBz_N_ATK10_RPT",
-      "role": "repeater",
-      "lat": 54.1472,
-      "lon": 19.4039
-    },
-    {
-      "name": "Dobrzewino_RPT",
-      "role": "repeater",
-      "lat": 54.4556,
-      "lon": 18.3944
-    },
-    {
-      "name": "GD_Hallera_Xiao_Test",
-      "role": "repeater",
-      "lat": 54.3888,
-      "lon": 18.6225
-    },
-    {
       "name": "meshgopl_GDA_Oliwa",
       "role": "repeater",
       "lat": 54.4115,
       "lon": 18.5509
-    },
-    {
-      "name": "ELBz_E_ATK10_RPT",
-      "role": "repeater",
-      "lat": 54.1472,
-      "lon": 19.4039
     },
     {
       "name": "ChwaszczynoP0lnaRPT",
@@ -83,12 +53,6 @@
       "role": "repeater",
       "lat": 54.294,
       "lon": 18.5694
-    },
-    {
-      "name": "RPT_PL_GDN_Mobile",
-      "role": "repeater",
-      "lat": 54.3539,
-      "lon": 18.5955
     },
     {
       "name": "GKW_TEST_RPT",
@@ -109,28 +73,10 @@
       "lon": 18.4961
     },
     {
-      "name": "SQ2PPJ_Repeater",
-      "role": "repeater",
-      "lat": 54.5398,
-      "lon": 18.4779
-    },
-    {
       "name": "Bojano_Lesoki_RPT",
       "role": "repeater",
       "lat": 54.4662,
       "lon": 18.4042
-    },
-    {
-      "name": "ProMicro_Repeater",
-      "role": "repeater",
-      "lat": 54.373,
-      "lon": 18.4474
-    },
-    {
-      "name": "SP2ZIE_Repeater_Xiao",
-      "role": "repeater",
-      "lat": 54.5234,
-      "lon": 18.5139
     },
     {
       "name": "GDASK_Olivia_RPT",
@@ -157,40 +103,10 @@
       "lon": 18.4895
     },
     {
-      "name": "RPT_ZLA_WIES",
-      "role": "repeater",
-      "lat": 54.1919,
-      "lon": 18.6017
-    },
-    {
-      "name": "Ga_Gac_testowy_rpt",
-      "role": "repeater",
-      "lat": 54.5155,
-      "lon": 18.5249
-    },
-    {
-      "name": "GDYNIA_Zielenisz_RPT",
-      "role": "repeater",
-      "lat": 54.4934,
-      "lon": 18.4467
-    },
-    {
-      "name": "Chylonia_Solar_RPT",
-      "role": "repeater",
-      "lat": 54.5422,
-      "lon": 18.4641
-    },
-    {
       "name": "GDA_Trabki_Wielkie_0",
       "role": "repeater",
       "lat": 54.1728,
       "lon": 18.5308
-    },
-    {
-      "name": "GA_WICZ_RPT_01",
-      "role": "repeater",
-      "lat": 54.4854,
-      "lon": 18.4048
     },
     {
       "name": "BAN06M_V3",
@@ -199,22 +115,10 @@
       "lon": 18.3841
     },
     {
-      "name": "node",
+      "name": "GD_MQTT_GW_DS",
       "role": "repeater",
-      "lat": 54.3323,
-      "lon": 18.9396
-    },
-    {
-      "name": "GKW_HLT_RPT",
-      "role": "repeater",
-      "lat": 54.05,
-      "lon": 19
-    },
-    {
-      "name": "GDAJasien",
-      "role": "repeater",
-      "lat": 54.3421,
-      "lon": 18.5671
+      "lat": 54.4253,
+      "lon": 18.4888
     },
     {
       "name": "Chwaszczyno_RS",
@@ -223,34 +127,22 @@
       "lon": 18.4374
     },
     {
+      "name": "WEDOLINKAWwa_RPT",
+      "role": "repeater",
+      "lat": 54.437,
+      "lon": 18.5785
+    },
+    {
       "name": "RPT_GD_Wrze_Komorows",
       "role": "repeater",
       "lat": 54.383,
       "lon": 18.615
     },
     {
-      "name": "XiaoS3_Room_testowy",
+      "name": "GDA_Cedry_Roomtest",
       "role": "repeater",
       "lat": 54.268,
       "lon": 18.8485
-    },
-    {
-      "name": "GD_Cedrowa_RPT_0",
-      "role": "repeater",
-      "lat": 54.3375,
-      "lon": 18.5835
-    },
-    {
-      "name": "Amber_CHW_Room",
-      "role": "repeater",
-      "lat": 54.4442,
-      "lon": 18.4455
-    },
-    {
-      "name": "RPT_SKOWARCZ",
-      "role": "repeater",
-      "lat": 54.177,
-      "lon": 18.6687
     },
     {
       "name": "GDAMichalin",
@@ -259,40 +151,16 @@
       "lon": 18.2913
     },
     {
-      "name": "SOP_DW_RPT",
-      "role": "repeater",
-      "lat": 54.4523,
-      "lon": 18.5515
-    },
-    {
-      "name": "GDYZATOKARPT",
-      "role": "repeater",
-      "lat": 54.5506,
-      "lon": 18.5378
-    },
-    {
       "name": "GDYNIA_Wielkokacka_R",
       "role": "repeater",
       "lat": 54.4944,
       "lon": 18.5072
     },
     {
-      "name": "AE_Repeater",
+      "name": "GDYNIA_Dbrowa_RPT",
       "role": "repeater",
-      "lat": 54.3845,
-      "lon": 18.6236
-    },
-    {
-      "name": "GD_wieniec",
-      "role": "repeater",
-      "lat": 54.3386,
-      "lon": 18.8942
-    },
-    {
-      "name": "GD_Matemblewo_rpt",
-      "role": "repeater",
-      "lat": 54.3632,
-      "lon": 18.5515
+      "lat": 54.4676,
+      "lon": 18.4643
     },
     {
       "name": "Ga_GAC_Rak",
@@ -307,10 +175,16 @@
       "lon": 18.9335
     },
     {
-      "name": "GDA_Bretowo",
+      "name": "RPT_KIELPINO_KARTUZY",
       "role": "repeater",
-      "lat": 54.377,
-      "lon": 18.567
+      "lat": 54.2904,
+      "lon": 18.2198
+    },
+    {
+      "name": "RUMJ01",
+      "role": "repeater",
+      "lat": 54.5591,
+      "lon": 18.4124
     },
     {
       "name": "GKW_BAJKOWE_NW_RPT",
@@ -343,18 +217,6 @@
       "lon": 18.9645
     },
     {
-      "name": "Nowe_Tokary_RPT",
-      "role": "repeater",
-      "lat": 54.4103,
-      "lon": 18.3507
-    },
-    {
-      "name": "GKW_RAKOWIEC_RPT_DH",
-      "role": "repeater",
-      "lat": 53.7376,
-      "lon": 19.0271
-    },
-    {
       "name": "RPT_LOST_01",
       "role": "repeater",
       "lat": 54.3382,
@@ -379,52 +241,22 @@
       "lon": 18.5301
     },
     {
-      "name": "GDYNIA_Kukawka_RPT",
-      "role": "repeater",
-      "lat": 54.4463,
-      "lon": 18.462
-    },
-    {
       "name": "GKA_ulewo",
       "role": "repeater",
       "lat": 54.363,
       "lon": 18.3393
     },
     {
-      "name": "GA_WICZ_RPT_02",
+      "name": "ELBz_N_ATK10_RPT_2",
       "role": "repeater",
-      "lat": 54.4839,
-      "lon": 18.4078
-    },
-    {
-      "name": "GDA_trjmiasto_room",
-      "role": "repeater",
-      "lat": 54.351,
-      "lon": 18.5875
+      "lat": 54.1475,
+      "lon": 19.4037
     },
     {
       "name": "GDY_Fikakowo_RPT",
       "role": "repeater",
       "lat": 54.469,
       "lon": 18.4849
-    },
-    {
-      "name": "GKW_BAJKOWE_RPT",
-      "role": "repeater",
-      "lat": 53.7474,
-      "lon": 18.948
-    },
-    {
-      "name": "GKW_BAJKOWE_RPT_2",
-      "role": "repeater",
-      "lat": 53.7441,
-      "lon": 18.9449
-    },
-    {
-      "name": "GDY_Spokojna",
-      "role": "repeater",
-      "lat": 54.4742,
-      "lon": 18.5194
     },
     {
       "name": "GKA_PRZ_KCZ_RPT",
@@ -439,18 +271,6 @@
       "lon": 18.4778
     },
     {
-      "name": "GDOsiekRPT",
-      "role": "repeater",
-      "lat": 54.3554,
-      "lon": 18.654
-    },
-    {
-      "name": "GA_Orlowo01_RPT_2",
-      "role": "repeater",
-      "lat": 54.4829,
-      "lon": 18.5362
-    },
-    {
       "name": "GWE_Bojano_RPT",
       "role": "repeater",
       "lat": 54.4647,
@@ -461,12 +281,6 @@
       "role": "repeater",
       "lat": 54.5124,
       "lon": 18.5344
-    },
-    {
-      "name": "RPT_BORKOWO",
-      "role": "repeater",
-      "lat": 54.2956,
-      "lon": 18.5898
     },
     {
       "name": "GPUpolchowovlrussola",
@@ -487,18 +301,6 @@
       "lon": 18.6114
     },
     {
-      "name": "GDA_Airport_RPT",
-      "role": "repeater",
-      "lat": 54.373,
-      "lon": 18.4473
-    },
-    {
-      "name": "GDA_Przymorze",
-      "role": "repeater",
-      "lat": 54.4065,
-      "lon": 18.5805
-    },
-    {
       "name": "ELBp_Omni_RPT",
       "role": "repeater",
       "lat": 54.1496,
@@ -517,24 +319,6 @@
       "lon": 18.5864
     },
     {
-      "name": "GDA_DW_RPT",
-      "role": "repeater",
-      "lat": 54.3173,
-      "lon": 18.5793
-    },
-    {
-      "name": "GKW_SP_RPT",
-      "role": "repeater",
-      "lat": 53.7368,
-      "lon": 18.9344
-    },
-    {
-      "name": "SP2ZIE_Repeater",
-      "role": "repeater",
-      "lat": 54.5238,
-      "lon": 18.5134
-    },
-    {
       "name": "GDAPRGDANTYSZKA2b",
       "role": "repeater",
       "lat": 54.2671,
@@ -545,12 +329,6 @@
       "role": "repeater",
       "lat": 54.3685,
       "lon": 18.6262
-    },
-    {
-      "name": "MIK_DW_RPT_2",
-      "role": "repeater",
-      "lat": 54.3359,
-      "lon": 18.9645
     },
     {
       "name": "GDA_Przymorze_2",
@@ -571,16 +349,22 @@
       "lon": 18.5338
     },
     {
+      "name": "Eagles_Nest",
+      "role": "repeater",
+      "lat": 54.2235,
+      "lon": 18.1235
+    },
+    {
+      "name": "RPT_PL_GDN_Mobile_2",
+      "role": "repeater",
+      "lat": 54.3539,
+      "lon": 18.5955
+    },
+    {
       "name": "Suchy_Dwor",
       "role": "repeater",
       "lat": 54.5718,
       "lon": 18.4713
-    },
-    {
-      "name": "GDASK_Osowa_RPT",
-      "role": "repeater",
-      "lat": 54.432,
-      "lon": 18.4673
     },
     {
       "name": "TUCHOM_RPT",
@@ -619,22 +403,10 @@
       "lon": 18.6502
     },
     {
-      "name": "RPT_PRG_02",
-      "role": "repeater",
-      "lat": 54.2623,
-      "lon": 18.6131
-    },
-    {
       "name": "ELBz_GDA_ATK20_RPT",
       "role": "repeater",
       "lat": 54.1473,
       "lon": 19.4035
-    },
-    {
-      "name": "GKW_KOPERNIKA_RPT",
-      "role": "repeater",
-      "lat": 53.7295,
-      "lon": 18.931
     },
     {
       "name": "BAN06MTestXiaoRPT",
@@ -649,18 +421,6 @@
       "lon": 18.6128
     },
     {
-      "name": "RPT_WM_1",
-      "role": "repeater",
-      "lat": 54.4671,
-      "lon": 18.4597
-    },
-    {
-      "name": "GDA_MORENA_Mat_RPT1",
-      "role": "repeater",
-      "lat": 54.351,
-      "lon": 18.5874
-    },
-    {
       "name": "RPT_hV4_tx27_b4000_",
       "role": "repeater",
       "lat": 54.276,
@@ -673,34 +433,16 @@
       "lon": 18.6235
     },
     {
-      "name": "RPT_GDORUNIA",
-      "role": "repeater",
-      "lat": 54.3271,
-      "lon": 18.6398
-    },
-    {
       "name": "GDANSKSUCHANINO_SM",
       "role": "repeater",
       "lat": 54.3539,
       "lon": 18.6068
     },
     {
-      "name": "GKW_RAK_01_RPT_2",
-      "role": "repeater",
-      "lat": 53.726,
-      "lon": 19.005
-    },
-    {
       "name": "GDA_Przerobka",
       "role": "repeater",
       "lat": 54.3545,
       "lon": 18.6919
-    },
-    {
-      "name": "Ga_Dziaki_l_rpt",
-      "role": "repeater",
-      "lat": 54.5159,
-      "lon": 18.5247
     },
     {
       "name": "GKW_TORUNSKA_RPT_DH",
@@ -715,12 +457,6 @@
       "lon": 18.6005
     },
     {
-      "name": "RPT_WSL_01",
-      "role": "repeater",
-      "lat": 54.2947,
-      "lon": 18.7204
-    },
-    {
       "name": "GKABANINOREP",
       "role": "repeater",
       "lat": 54.3881,
@@ -731,18 +467,6 @@
       "role": "repeater",
       "lat": 54.2704,
       "lon": 18.6265
-    },
-    {
-      "name": "GDYNIA_Witomino_RPT",
-      "role": "repeater",
-      "lat": 54.498,
-      "lon": 18.498
-    },
-    {
-      "name": "GDY_Fikakowo_RPT_2",
-      "role": "repeater",
-      "lat": 54.469,
-      "lon": 18.4849
     },
     {
       "name": "Dobrzewino2_DIAM_RPT",
@@ -769,22 +493,10 @@
       "lon": 18.6233
     },
     {
-      "name": "GDY_MKackKarwiny",
-      "role": "repeater",
-      "lat": 54.4752,
-      "lon": 18.5061
-    },
-    {
       "name": "GA_GAC_ROOM",
       "role": "repeater",
       "lat": 54.5155,
       "lon": 18.5248
-    },
-    {
-      "name": "Malbork_RPT_SP2ZFT",
-      "role": "repeater",
-      "lat": 54.0396,
-      "lon": 19.0325
     },
     {
       "name": "GD_OSOWA_RDS_RPT",
@@ -805,10 +517,16 @@
       "lon": 18.3743
     },
     {
-      "name": "GKA_PRZYJAZN_RPT",
+      "name": "GDA_Airport_RPT_2",
       "role": "repeater",
-      "lat": 54.3145,
-      "lon": 18.3769
+      "lat": 54.373,
+      "lon": 18.4473
+    },
+    {
+      "name": "Xiao_nrf52_Repeater_",
+      "role": "repeater",
+      "lat": 54.495,
+      "lon": 18.5145
     },
     {
       "name": "GDA_SW_WOJCIECH",
@@ -823,22 +541,10 @@
       "lon": 18.6645
     },
     {
-      "name": "GKW_ZACISZE_RPT",
-      "role": "repeater",
-      "lat": 53.7192,
-      "lon": 18.9378
-    },
-    {
       "name": "GD_Jab_01",
       "role": "repeater",
       "lat": 54.331,
       "lon": 18.5644
-    },
-    {
-      "name": "GDA_Karczemki",
-      "role": "repeater",
-      "lat": 54.352,
-      "lon": 18.5076
     },
     {
       "name": "GDYNIA_Izerska_RPT",
@@ -847,16 +553,10 @@
       "lon": 18.4615
     },
     {
-      "name": "GKA_PEPOWO_RPT",
+      "name": "GWroom",
       "role": "repeater",
-      "lat": 54.3743,
-      "lon": 18.3793
-    },
-    {
-      "name": "GWE_Koleczkowo_RPT",
-      "role": "repeater",
-      "lat": 54.4833,
-      "lon": 18.3498
+      "lat": 54.4989,
+      "lon": 18.5107
     },
     {
       "name": "GKW_REYMONTA_RPT",
@@ -877,22 +577,10 @@
       "lon": 18.42
     },
     {
-      "name": "ELBz_GDA_ATK20_RPT_2",
+      "name": "GWE_Dobrzewino_3_tes",
       "role": "repeater",
-      "lat": 54.1475,
-      "lon": 19.4037
-    },
-    {
-      "name": "GDA_MORENA_",
-      "role": "repeater",
-      "lat": 54.3513,
-      "lon": 18.5875
-    },
-    {
-      "name": "E22p868",
-      "role": "repeater",
-      "lat": 54.4529,
-      "lon": 18.3722
+      "lat": 54.4558,
+      "lon": 18.3742
     },
     {
       "name": "GDY_CENTRUM_RPT",
@@ -901,28 +589,10 @@
       "lon": 18.5384
     },
     {
-      "name": "GDYNIA_obwodnica_RPT",
-      "role": "repeater",
-      "lat": 54.4991,
-      "lon": 18.4838
-    },
-    {
       "name": "RPT_REKCIN",
       "role": "repeater",
       "lat": 54.2375,
       "lon": 18.5553
-    },
-    {
-      "name": "GKW_RAK_RPT_KOWAL",
-      "role": "repeater",
-      "lat": 53.7252,
-      "lon": 19.0253
-    },
-    {
-      "name": "GDY_Oksywie_RPT",
-      "role": "repeater",
-      "lat": 54.5506,
-      "lon": 18.5377
     },
     {
       "name": "ELBp_ELBz_ATK10_BRID",
@@ -943,78 +613,14 @@
       "lon": 18.6302
     },
     {
-      "name": "GDYNIA_Chwarzno_RPT_2",
+      "name": "PORD_Repeater_Test",
       "role": "repeater",
-      "lat": 54.5035,
-      "lon": 18.4589
+      "lat": 54.5352,
+      "lon": 18.4914
     }
   ],
   "topology": {
     "links": [
-      {
-        "from": "GDAROKITNICARPT2b",
-        "to": "RPT_hV4_tx27_b4000_",
-        "snr": 80.55,
-        "rssi": -39.5,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
-      {
-        "from": "ELBp_Omni_RPT",
-        "to": "ELBp_ELBz_ATK10_BRID",
-        "snr": 74.5,
-        "rssi": -45.54,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
-      {
-        "from": "ELBz_GDA_ATK20_RPT",
-        "to": "ELBz_GDA_ATK20_RPT_2",
-        "snr": 74.59,
-        "rssi": -45.45,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
-      {
-        "from": "AE_Repeater",
-        "to": "GD_Wrz_D_Soch_REP_V4",
-        "snr": 72.19,
-        "rssi": -47.85,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
-      {
-        "from": "GDA_MORENA_Mat_RPT1",
-        "to": "GDA_MORENA_",
-        "snr": 72.19,
-        "rssi": -47.85,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
-      {
-        "from": "ELBz_N_ATK10_RPT",
-        "to": "ELBz_GDA_ATK20_RPT_2",
-        "snr": 71.73,
-        "rssi": -48.31,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
-      {
-        "from": "Ga_GAC_Rak",
-        "to": "Ga_Dziaki_l_rpt",
-        "snr": 69.76,
-        "rssi": -50.28,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
-      {
-        "from": "Ga_Gac_testowy_rpt",
-        "to": "Ga_Dziaki_l_rpt",
-        "snr": 69.5,
-        "rssi": -50.54,
-        "snr_std_dev": 1.0,
-        "bidir": true
-      },
       {
         "from": "GDA_Trabki_Wielkie_0",
         "to": "RPT_GDA_Trabki_Wlk01",
@@ -1024,18 +630,18 @@
         "bidir": true
       },
       {
-        "from": "GDYNIA_Kukawka_RPT",
-        "to": "GDYNIA_Izerska_RPT",
-        "snr": 55.78,
-        "rssi": -64.26,
+        "from": "GKW_ZAT2_RPT",
+        "to": "GKW_REYMONTA_RPT",
+        "snr": 67.4,
+        "rssi": -52.64,
         "snr_std_dev": 1.0,
         "bidir": true
       },
       {
-        "from": "GDOsiekRPT",
-        "to": "GDA_Heweliusza",
-        "snr": 54.18,
-        "rssi": -65.86,
+        "from": "GDYNIA_Dziaki_Lene",
+        "to": "GDYNIA_Chwarzno_RPT",
+        "snr": 65.07,
+        "rssi": -54.97,
         "snr_std_dev": 1.0,
         "bidir": true
       },
@@ -1048,18 +654,26 @@
         "bidir": true
       },
       {
-        "from": "RPT_SKOWARCZ",
-        "to": "RPT_Skowarcz_V4X",
-        "snr": 51.7,
-        "rssi": -68.34,
+        "from": "GDYNIA_Dziaki_Lene",
+        "to": "GDY_CENTRUM_RPT",
+        "snr": 49.43,
+        "rssi": -70.61,
         "snr_std_dev": 1.0,
         "bidir": true
       },
       {
-        "from": "Ryzy_RPT",
-        "to": "GD_Wrz_D_Soch_REP_V4",
-        "snr": 47.03,
-        "rssi": -73.01,
+        "from": "Xiao_nrf52_Repeater_",
+        "to": "GWroom",
+        "snr": 48.87,
+        "rssi": -71.18,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "GDYNIA_Wielkokacka_R",
+        "to": "GWroom",
+        "snr": 43.57,
+        "rssi": -76.47,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -1072,106 +686,34 @@
         "bidir": true
       },
       {
-        "from": "Ga_Gac_testowy_rpt",
-        "to": "GDYNIA_Chwarzno_RPT",
-        "snr": 31.49,
-        "rssi": -88.55,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GKW_TEST_RPT",
-        "to": "GKW_KOPERNIKA_II_RPT",
-        "snr": 38.09,
-        "rssi": -81.95,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Ga_GAC_Rak",
-        "to": "GDYNIA_Chwarzno_RPT",
-        "snr": 31.4,
-        "rssi": -88.64,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDYNIA_Chwarzno_RPT",
-        "to": "GA_GAC_ROOM",
-        "snr": 31.4,
-        "rssi": -88.64,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDA2R",
-        "to": "GDA_DW_RPT",
-        "snr": 22.01,
-        "rssi": -98.03,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDASK_Osowa_RPT",
-        "to": "GD_OSOWA_RDS_RPT",
-        "snr": 41.45,
-        "rssi": -78.59,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "RPT_BORKOWO",
-        "to": "GDA_BORKOWO_2_RPT",
-        "snr": 18.35,
-        "rssi": -101.69,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDYNIA_Dziaki_Lene",
-        "to": "GA_GAC_ROOM",
-        "snr": 38.04,
-        "rssi": -82.0,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "Eg_Osiek_RPT",
-        "to": "ELBz_GDA_ATK20_RPT_2",
+        "to": "ELBz_N_ATK10_RPT_2",
         "snr": 39.78,
         "rssi": -80.26,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "Eg_Osiek_RPT",
-        "to": "ELBz_GDA_ATK20_RPT",
-        "snr": 39.79,
-        "rssi": -80.26,
+        "from": "Osowa_Repeater",
+        "to": "GD_OSOWA_RDS_RPT",
+        "snr": 38.2,
+        "rssi": -81.84,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "GD_Hallera_Xiao_Test",
-        "to": "RPT_GD_Wrze_Komorows",
-        "snr": 38.41,
-        "rssi": -81.63,
+        "from": "SQ2PPJ_Repeater_2",
+        "to": "PORD_Repeater_Test",
+        "snr": 39.77,
+        "rssi": -80.27,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "GKW_SP_RPT",
-        "to": "GKW_KOPERNIKA_RPT",
-        "snr": 43.03,
-        "rssi": -77.01,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Chylonia_Solar_RPT",
-        "to": "SQ2PPJ_Repeater_2",
-        "snr": 37.9,
-        "rssi": -82.14,
+        "from": "GKW_KOPERNIKA_II_RPT",
+        "to": "GKW_TORUNSKA_RPT_DH",
+        "snr": 36.15,
+        "rssi": -83.89,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -1184,130 +726,26 @@
         "bidir": true
       },
       {
-        "from": "GD_Cedrowa_RPT_0",
-        "to": "RPT_LOST_01",
-        "snr": 30.29,
-        "rssi": -89.75,
+        "from": "GD_MQTT_GW_DS",
+        "to": "Osowa_Repeater",
+        "snr": 26.4,
+        "rssi": -93.64,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "SQ2PPJ_Repeater",
-        "to": "GDY_Leszczynki_RPT",
-        "snr": 36.83,
-        "rssi": -83.21,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "RPT_GRABOWEK_HUGO",
-        "to": "SP2ZIE_Repeater_Xiao",
-        "snr": 19.6,
-        "rssi": -100.44,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDAJasien",
-        "to": "GD_Jab_01",
-        "snr": 22.09,
-        "rssi": -97.95,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Dobrzewino_RPT",
-        "to": "GWE_Bojano_RPT",
-        "snr": 36.76,
-        "rssi": -83.28,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDA_trjmiasto_room",
-        "to": "GDANSKSUCHANINO_SM",
-        "snr": 34.04,
-        "rssi": -86.0,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GKW_RAK_01_RPT",
-        "to": "GKW_RAK_RPT_KOWAL",
-        "snr": 30.8,
-        "rssi": -89.24,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "RPT_PRG_04",
-        "to": "RPT_PRG_02",
-        "snr": 25.18,
-        "rssi": -94.86,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GD_Cedrowa_RPT_0",
-        "to": "GDA_MORENA_",
-        "snr": 32.17,
-        "rssi": -87.87,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDA_trjmiasto_room",
-        "to": "RPT_GD_Suchanino",
-        "snr": 31.28,
-        "rssi": -88.76,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDYNIA_Kukawka_RPT",
-        "to": "GDASK_Osowa_RPT",
-        "snr": 27.87,
-        "rssi": -92.17,
+        "from": "RPT_GD_Suchanino",
+        "to": "SP2XDD_WETI_Repeater",
+        "snr": 32.65,
+        "rssi": -87.39,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
         "from": "RPT_LOST_01",
-        "to": "GDA_MORENA_",
-        "snr": 13.45,
-        "rssi": -106.59,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDA2R",
-        "to": "GD_Cedrowa_RPT_0",
-        "snr": 15.86,
-        "rssi": -104.18,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "RTP_GDN_Traugutta_",
-        "to": "GD_Wrz_D_Soch_REP_V4",
-        "snr": 34.93,
-        "rssi": -85.11,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GD_Wrz_D_Soch_REP_V4",
-        "to": "SP4EVARPT",
-        "snr": 25.68,
-        "rssi": -94.36,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Ryzy_RPT",
-        "to": "SP2XDD_WETI_Repeater",
-        "snr": 28.67,
-        "rssi": -91.37,
+        "to": "GDANSKSUCHANINO_SM",
+        "snr": 33.37,
+        "rssi": -86.67,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -1320,14 +758,6 @@
         "bidir": true
       },
       {
-        "from": "RPT_GRABOWEK_HUGO",
-        "to": "SQ2PPJ_Repeater",
-        "snr": 37.29,
-        "rssi": -82.75,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
         "from": "GTC_JednosciNarodu_R",
         "to": "GTC_Rokicka_RPT",
         "snr": 18.24,
@@ -1336,242 +766,58 @@
         "bidir": true
       },
       {
-        "from": "GKW_TEST_RPT",
-        "to": "GKW_BAJKOWE_RPT_2",
-        "snr": 29.85,
-        "rssi": -90.19,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "ELBz_E_ATK10_RPT",
+        "from": "ELBz_GDA_ATK20_RPT",
         "to": "ELBp_ELBz_ATK10_BRID",
-        "snr": 30.48,
-        "rssi": -89.56,
+        "snr": 29.22,
+        "rssi": -90.83,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "Chwaszczyno_RS",
-        "to": "Osowa_Repeater",
-        "snr": 17.13,
-        "rssi": -102.91,
+        "from": "Eg_Osiek_RPT",
+        "to": "ELBp_Omni_RPT",
+        "snr": 24.82,
+        "rssi": -95.22,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "GKW_ZIARNPOL_RPT",
-        "to": "GKW_BAJKOWE_RPT_2",
-        "snr": 32.11,
-        "rssi": -87.93,
+        "from": "GKW_TEST_RPT",
+        "to": "GKW_BAJKOWE_NW_RPT",
+        "snr": 31.34,
+        "rssi": -88.7,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "GKW_SP_RPT",
-        "to": "GKW_ZACISZE_RPT",
-        "snr": 9.58,
-        "rssi": -110.47,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GKW_ZIARNPOL_RPT",
-        "to": "GKW_SP_RPT",
-        "snr": 24.22,
-        "rssi": -95.82,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "meshgopl_GDA_Oliwa",
-        "to": "GDA_Przymorze",
-        "snr": 36.82,
-        "rssi": -83.22,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GKW_ZIARNPOL_RPT",
-        "to": "GKW_ZACISZE_RPT",
-        "snr": 17.67,
-        "rssi": -102.37,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "RPT_JANK_01",
-        "to": "GDA_BORKOWO_2_RPT",
-        "snr": 17.35,
-        "rssi": -102.69,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Chwaszczyno_RS",
-        "to": "GDYNIA_Izerska_RPT",
-        "snr": 29.81,
-        "rssi": -90.23,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "SP2XDD_WETI_Repeater",
-        "to": "RTP_GD_K_Uroda_HLS_S",
-        "snr": 23.63,
-        "rssi": -96.41,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDYNIA_Wielkokacka_R",
-        "to": "GDY_MKackKarwiny",
-        "snr": 27.3,
-        "rssi": -92.74,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDA_BORKOWO_2_RPT",
-        "to": "GDA_SW_WOJCIECH",
-        "snr": 15.35,
-        "rssi": -104.69,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GA_WICZ_RPT_01",
-        "to": "GDYNIA_Wiczlino_RPT",
-        "snr": 32.6,
-        "rssi": -87.44,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "RTP_GDN_Traugutta_",
-        "to": "Ryzy_RPT",
-        "snr": 33.47,
-        "rssi": -86.57,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GA_WICZ_RPT_02",
-        "to": "GDYNIA_Wiczlino_RPT",
-        "snr": 33.03,
-        "rssi": -87.01,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Bojano_Lesoki_RPT",
-        "to": "Dobrzewino2_DIAM_RPT",
-        "snr": 27.62,
-        "rssi": -92.43,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "RPT_PL_GDN_Mobile",
-        "to": "GDAJasien",
-        "snr": 29.42,
-        "rssi": -90.62,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "meshgopl_GDA_Oliwa",
-        "to": "GDA_Przymorze_2",
-        "snr": 35.65,
-        "rssi": -84.4,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDY_Fikakowo_RPT",
-        "to": "GDY_Spokojna",
-        "snr": 16.5,
-        "rssi": -103.54,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDY_Spokojna",
-        "to": "GDY_Fikakowo_RPT_2",
-        "snr": 16.5,
-        "rssi": -103.54,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GD_Cedrowa_RPT_0",
-        "to": "GDANSKSUCHANINO_SM",
-        "snr": 34.38,
-        "rssi": -85.66,
+        "from": "GDYNIA_Dbrowa_RPT",
+        "to": "Chwaszczyno_P01na_RP",
+        "snr": 11.05,
+        "rssi": -108.99,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
         "from": "ChwaszczynoP0lnaRPT",
-        "to": "GDYNIA_Kukawka_RPT",
-        "snr": 10.88,
-        "rssi": -109.16,
+        "to": "GDYNIA_Izerska_RPT",
+        "snr": 9.03,
+        "rssi": -111.01,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "Medusa_repeater",
-        "to": "Chylonia_Solar_RPT",
-        "snr": 35.03,
-        "rssi": -85.01,
+        "from": "RTP_GDN_Traugutta_",
+        "to": "SP4EVARPT",
+        "snr": 20.49,
+        "rssi": -99.55,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "GDOsiekRPT",
-        "to": "GDA_Przerobka",
-        "snr": 26.49,
-        "rssi": -93.55,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDYNIA_Zielenisz_RPT",
-        "to": "GDYNIA_obwodnica_RPT",
-        "snr": 9.58,
-        "rssi": -110.46,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDA_W_WOJCIECH_testy",
+        "from": "GDA_SW_WOJCIECH",
         "to": "RPT_PRG_03",
-        "snr": 16.07,
-        "rssi": -103.97,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Bojano_Lesoki_RPT",
-        "to": "E22p868",
-        "snr": 29.18,
-        "rssi": -90.86,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "TUCHOM_RPT",
-        "to": "E22p868",
-        "snr": 13.4,
-        "rssi": -106.64,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDA_MORENA_Mat_RPT1",
-        "to": "GD_Jab_01",
-        "snr": 12.51,
-        "rssi": -107.53,
+        "snr": 17.7,
+        "rssi": -102.34,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -1584,283 +830,107 @@
         "bidir": true
       },
       {
-        "from": "GD_wieniec",
-        "to": "GD_Swibno_rpt",
-        "snr": 28.68,
-        "rssi": -91.36,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDAPRGDANTYSZKA2b",
-        "to": "RPT_PRG_01",
-        "snr": 29.85,
-        "rssi": -90.19,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "SQ2PPJ_Repeater_2",
-        "to": "SP2ZIE_Repeater",
-        "snr": 33.55,
-        "rssi": -86.49,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "BAN06MTestXiaoRPT",
-        "to": "RPT_BOROWIEC",
-        "snr": 24.64,
-        "rssi": -95.4,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "BAN06M_V3",
-        "to": "RPT_BOROWIEC",
-        "snr": 24.47,
-        "rssi": -95.57,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDY_Spokojna",
-        "to": "GDYNIA_Witomino_RPT",
-        "snr": 15.66,
-        "rssi": -104.38,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "node",
-        "to": "GD_wieniec",
-        "snr": 19.88,
-        "rssi": -100.16,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GD_Hallera_Xiao_Test",
-        "to": "GDA_Przymorze_2",
-        "snr": 22.0,
-        "rssi": -98.04,
+        "from": "GKW_ZIARNPOL_RPT",
+        "to": "GKW_RAK_01_RPT",
+        "snr": 21.48,
+        "rssi": -98.56,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
         "from": "GDA_Przymorze_2",
-        "to": "RTP_GD_K_Uroda_HLS_S",
-        "snr": 21.15,
-        "rssi": -98.89,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Amber_CHW_Room",
-        "to": "TUCHOM_RPT",
-        "snr": 12.53,
-        "rssi": -107.51,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "RPT_WM_1",
-        "to": "GDY_MKackKarwiny",
-        "snr": 13.78,
-        "rssi": -106.26,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDYNIA_Wielkokacka_R",
-        "to": "GDY_Fikakowo_RPT_2",
-        "snr": 12.68,
-        "rssi": -107.36,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "RPT_GD_Wrze_Komorows",
-        "to": "GDA_Bretowo",
-        "snr": 25.66,
-        "rssi": -94.39,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDA_Przymorze",
         "to": "Ryzy_RPT",
-        "snr": 26.28,
-        "rssi": -93.76,
+        "snr": 26.17,
+        "rssi": -93.87,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "TUCHOM_RPT",
-        "to": "Chwaszczyno_P01na_RP",
-        "snr": 13.34,
-        "rssi": -106.7,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Nowe_Tokary_RPT",
-        "to": "GKABANINOREP",
-        "snr": 23.26,
-        "rssi": -96.78,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GKW_BAJKOWE_NW_RPT",
-        "to": "GKW_TORUNSKA_RPT_DH",
-        "snr": 24.43,
-        "rssi": -95.61,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDY_Fikakowo_RPT",
-        "to": "GDYNIA_obwodnica_RPT",
-        "snr": 11.24,
-        "rssi": -108.8,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GKW_BAJKOWE_RPT",
-        "to": "GKW_TORUNSKA_RPT_DH",
-        "snr": 26.7,
-        "rssi": -93.34,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Dobrzewino2_DIAM_RPT",
-        "to": "GWE_Koleczkowo_RPT",
-        "snr": 2.71,
-        "rssi": -117.33,
-        "snr_std_dev": 0.5,
-        "loss": 0.0009,
-        "bidir": true
-      },
-      {
-        "from": "GD_Cedrowa_RPT_0",
-        "to": "GD_Matemblewo_rpt",
-        "snr": 8.39,
-        "rssi": -111.66,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "RPT_GD_Suchanino",
-        "to": "Ryzy_RPT",
-        "snr": 31.74,
-        "rssi": -88.3,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GD_Matemblewo_rpt",
-        "to": "SP4EVARPT",
-        "snr": 9.49,
-        "rssi": -110.55,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDASK_Olivia_RPT",
-        "to": "RPT_GD_Wrze_Komorows",
-        "snr": 16.27,
-        "rssi": -103.77,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "RPT_GD_Wrze_Komorows",
-        "to": "GDA_Heweliusza",
-        "snr": 12.61,
-        "rssi": -107.43,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDAROKITNICARPT2b",
+        "from": "GDA_BORKOWO_2_RPT",
         "to": "RPT_PRG_01",
-        "snr": 27.03,
-        "rssi": -93.01,
+        "snr": 25.75,
+        "rssi": -94.29,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "GD_Hallera_Xiao_Test",
-        "to": "GDASK_Olivia_RPT",
-        "snr": 18.53,
-        "rssi": -101.51,
+        "from": "GDAPRGDANTYSZKA2b",
+        "to": "GDA_W_WOJCIECH_testy",
+        "snr": 30.71,
+        "rssi": -89.33,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "GA_WICZ_RPT_02",
-        "to": "Dobrzewino2_DIAM_RPT",
-        "snr": 26.6,
-        "rssi": -93.45,
+        "from": "GWE_Bojano_RPT",
+        "to": "TUCHOM_RPT",
+        "snr": 22.65,
+        "rssi": -97.39,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "RPT_KLODAWA",
-        "to": "RPT_REKCIN",
-        "snr": 19.05,
-        "rssi": -100.99,
+        "from": "Chwaszczyno_RS",
+        "to": "RPT_BOROWIEC",
+        "snr": 23.32,
+        "rssi": -96.72,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Medusa_repeater",
+        "to": "GDY_Leszczynki_RPT",
+        "snr": 31.91,
+        "rssi": -88.13,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
         "from": "GDY_CENTRUM_RPT",
-        "to": "GDY_Oksywie_RPT",
-        "snr": 27.83,
-        "rssi": -92.21,
+        "to": "PORD_Repeater_Test",
+        "snr": 8.52,
+        "rssi": -111.53,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "GDYZATOKARPT",
-        "to": "Ga_Dziaki_l_rpt",
-        "snr": 30.88,
-        "rssi": -89.16,
+        "from": "GDY_Fikakowo_RPT",
+        "to": "GWroom",
+        "snr": 12.98,
+        "rssi": -107.06,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "RPT_LOST_01",
-        "to": "GDOsiekRPT",
-        "snr": 9.99,
-        "rssi": -110.05,
+        "from": "GDA2R",
+        "to": "RPT_PL_GDN_Mobile_2",
+        "snr": 2.77,
+        "rssi": -117.27,
+        "snr_std_dev": 0.5,
+        "loss": 0.0009,
+        "bidir": true
+      },
+      {
+        "from": "GDAROKITNICARPT2b",
+        "to": "RPT_PRG_03",
+        "snr": 26.63,
+        "rssi": -93.41,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "RPT_GD_Wrze_Komorows",
-        "to": "GDOsiekRPT",
-        "snr": 23.17,
-        "rssi": -96.87,
+        "from": "GDASK_Olivia_RPT",
+        "to": "RTP_GD_K_Uroda_HLS_S",
+        "snr": 18.86,
+        "rssi": -101.18,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "GDAJasien",
-        "to": "GDA_Karczemki",
-        "snr": 9.05,
-        "rssi": -110.99,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDAOlszynka",
-        "to": "GDA_Przerobka",
-        "snr": 16.55,
-        "rssi": -103.49,
+        "from": "GKA_ulewo",
+        "to": "GKABANINOREP",
+        "snr": 12.75,
+        "rssi": -107.29,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -1873,42 +943,10 @@
         "bidir": true
       },
       {
-        "from": "Chwaszczyno_RS",
-        "to": "GWE_Bojano_RPT",
-        "snr": 13.29,
-        "rssi": -106.76,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Bojano_Lesoki_RPT",
-        "to": "GDYNIA_Wiczlino_RPT",
-        "snr": 27.62,
-        "rssi": -92.42,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GA_WICZ_RPT_01",
-        "to": "E22p868",
-        "snr": 22.63,
-        "rssi": -97.42,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDYNIA_Chwarzno_RPT",
-        "to": "GDY_Oksywie_RPT",
-        "snr": 28.74,
-        "rssi": -91.3,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "meshgopl_GDA_Oliwa",
-        "to": "SP4EVARPT",
-        "snr": 30.24,
-        "rssi": -89.8,
+        "from": "Medusa_repeater",
+        "to": "RPT_GRABOWEK_HUGO",
+        "snr": 30.33,
+        "rssi": -89.71,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -1921,74 +959,18 @@
         "bidir": true
       },
       {
-        "from": "ProMicro_Repeater",
-        "to": "BAN06MTestXiaoRPT",
-        "snr": 22.18,
-        "rssi": -97.86,
+        "from": "Bojano_Lesoki_RPT",
+        "to": "GDYNIA_Izerska_RPT",
+        "snr": 8.33,
+        "rssi": -111.71,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "BAN06M_V3",
-        "to": "GDA_Airport_RPT",
-        "snr": 22.12,
-        "rssi": -97.92,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "ProMicro_Repeater",
-        "to": "BAN06M_V3",
-        "snr": 22.01,
-        "rssi": -98.04,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GKW_ZAT2_RPT",
-        "to": "GKW_RAK_01_RPT_2",
-        "snr": 23.9,
-        "rssi": -96.14,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "TUCHOM_RPT",
-        "to": "Osowa_Repeater",
-        "snr": 7.63,
-        "rssi": -112.41,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Amber_CHW_Room",
-        "to": "GWE_Dobrzewino2_RPT",
-        "snr": 22.92,
-        "rssi": -97.12,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Chwaszczyno_RS",
-        "to": "E22p868",
-        "snr": 21.95,
-        "rssi": -98.09,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Amber_CHW_Room",
-        "to": "E22p868",
-        "snr": 22.7,
-        "rssi": -97.34,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Chwaszczyno_RS",
-        "to": "Dobrzewino2_DIAM_RPT",
-        "snr": 23.88,
-        "rssi": -96.16,
+        "from": "GDA_Karczemki_2",
+        "to": "GDA_Airport_RPT_2",
+        "snr": 10.28,
+        "rssi": -109.76,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -2001,132 +983,18 @@
         "bidir": true
       },
       {
-        "from": "GDOsiekRPT",
-        "to": "SP4EVARPT",
-        "snr": 10.23,
-        "rssi": -109.81,
+        "from": "GDA_Przerobka",
+        "to": "RTP_GD_K_Uroda_HLS_S",
+        "snr": 14.02,
+        "rssi": -106.02,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "GDASK_Osowa_RPT",
-        "to": "RPT_BOROWIEC",
-        "snr": 13.06,
-        "rssi": -106.98,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDARubinowa",
-        "to": "GDA_Przerobka",
-        "snr": 24.43,
-        "rssi": -95.61,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GD_RPT_DIODAK",
-        "to": "RPT_Skowarcz_V4X",
-        "snr": 23.77,
-        "rssi": -96.27,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "RPT_JANK_01",
-        "to": "RPT_LOST_01",
-        "snr": 21.24,
-        "rssi": -98.8,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Nowe_Tokary_RPT",
-        "to": "GKA_ulewo",
-        "snr": 18.72,
-        "rssi": -101.32,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDASK_Olivia_RPT",
-        "to": "RTP_GDN_Traugutta_",
-        "snr": 20.18,
-        "rssi": -99.86,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "SOP_DW_RPT",
-        "to": "GDA_Przymorze",
-        "snr": 27.41,
-        "rssi": -92.63,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDYNIA_Kukawka_RPT",
-        "to": "GA_WICZ_RPT_02",
-        "snr": 3.87,
-        "rssi": -116.17,
-        "snr_std_dev": 0.5,
-        "loss": 0.0004,
-        "bidir": true
-      },
-      {
-        "from": "GKW_TEST_RPT",
-        "to": "GKW_RAK_RPT_KOWAL",
-        "snr": 14.41,
-        "rssi": -105.63,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GKW_REYMONTA_RPT",
-        "to": "GKW_RAK_RPT_KOWAL",
-        "snr": 14.39,
-        "rssi": -105.65,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDYNIA_Kukawka_RPT",
-        "to": "RPT_BOROWIEC",
-        "snr": 25.81,
-        "rssi": -94.23,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDYNIA_Kukawka_RPT",
-        "to": "Dobrzewino2_DIAM_RPT",
-        "snr": 25.33,
-        "rssi": -94.72,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GD_Hallera_Xiao_Test",
-        "to": "RPT_LOST_01",
-        "snr": -0.35,
-        "rssi": -120.39,
-        "snr_std_dev": 0.5,
-        "loss": 0.0107,
-        "bidir": true
-      },
-      {
-        "from": "RPT_ZLA_WIES",
-        "to": "RPT_REKCIN",
-        "snr": 20.59,
-        "rssi": -99.45,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GKW_RAKOWIEC_RPT_DH",
-        "to": "GKW_ZAT2_RPT",
-        "snr": 17.98,
-        "rssi": -102.06,
+        "from": "Dobrzewino2_DIAM_RPT",
+        "to": "GDYNIA_Wiczlino_RPT",
+        "snr": 20.83,
+        "rssi": -99.21,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -2139,370 +1007,122 @@
         "bidir": true
       },
       {
-        "from": "Medusa_repeater",
-        "to": "GA_GAC_ROOM",
-        "snr": 27.14,
-        "rssi": -92.9,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GWE_Bojano_RPT",
-        "to": "RPT_BOROWIEC",
-        "snr": 19.11,
-        "rssi": -100.93,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Bojano_Lesoki_RPT",
-        "to": "RPT_BOROWIEC",
-        "snr": 21.45,
-        "rssi": -98.59,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDA_SW_WOJCIECH",
-        "to": "GD_Jab_01",
-        "snr": 24.76,
-        "rssi": -95.29,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GKA_PRZYJAZN_RPT",
-        "to": "GKA_PEPOWO_RPT",
-        "snr": 18.36,
-        "rssi": -101.68,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDAPRGDANTYSZKA2b",
-        "to": "RPT_GDORUNIA",
-        "snr": 12.39,
-        "rssi": -107.65,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDA_BORKOWO_2_RPT",
-        "to": "RPT_REKCIN",
-        "snr": 5.61,
-        "rssi": -114.44,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Bojano_Lesoki_RPT",
-        "to": "Nowe_Tokary_RPT",
-        "snr": 11.41,
-        "rssi": -108.63,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDA2R",
-        "to": "RPT_PRG_02",
-        "snr": -4.64,
-        "rssi": -124.68,
-        "snr_std_dev": 0.5,
-        "loss": 0.2518,
-        "bidir": true
-      },
-      {
         "from": "meshgopl_GDA_Oliwa",
-        "to": "GDANSKSUCHANINO_SM",
-        "snr": 1.03,
-        "rssi": -119.01,
-        "snr_std_dev": 0.5,
-        "loss": 0.0036,
-        "bidir": true
-      },
-      {
-        "from": "BAN06M_V3",
-        "to": "GDASK_Osowa_RPT",
-        "snr": 21.72,
-        "rssi": -98.32,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GA_Orlowo01_RPT_2",
-        "to": "GDY_Oksywie_RPT",
-        "snr": 11.48,
-        "rssi": -108.56,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Dobrzewino2_DIAM_RPT",
-        "to": "GDYNIA_Chwarzno_RPT_2",
-        "snr": 2.99,
-        "rssi": -117.05,
-        "snr_std_dev": 0.5,
-        "loss": 0.0008,
-        "bidir": true
-      },
-      {
-        "from": "Osowa_Repeater",
-        "to": "BAN06MTestXiaoRPT",
-        "snr": 22.94,
-        "rssi": -97.11,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "RPT_GD_Suchanino",
-        "to": "GDA_SW_WOJCIECH",
-        "snr": 23.28,
-        "rssi": -96.76,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "BAN06M_V3",
-        "to": "GD_OSOWA_RDS_RPT",
-        "snr": 23.35,
-        "rssi": -96.69,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDOsiekRPT",
-        "to": "GDA_SW_WOJCIECH",
-        "snr": 25.01,
-        "rssi": -95.03,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "RPT_PRG_02",
-        "to": "RPT_WSL_01",
-        "snr": 18.47,
-        "rssi": -101.57,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Nowe_Tokary_RPT",
-        "to": "GDYNIA_Izerska_RPT",
-        "snr": 19.49,
-        "rssi": -100.56,
+        "to": "RTP_GDN_Traugutta_",
+        "snr": 26.13,
+        "rssi": -93.91,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
         "from": "Suchy_Dwor",
-        "to": "GDYNIA_obwodnica_RPT",
-        "snr": -0.48,
-        "rssi": -120.52,
-        "snr_std_dev": 0.5,
-        "loss": 0.0119,
-        "bidir": true
-      },
-      {
-        "from": "SOP_DW_RPT",
-        "to": "SP4EVARPT",
-        "snr": 24.59,
-        "rssi": -95.45,
+        "to": "GA_GAC_ROOM",
+        "snr": 6.89,
+        "rssi": -113.15,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "BAN06MTestXiaoRPT",
-        "to": "GDYNIA_Izerska_RPT",
-        "snr": 21.5,
-        "rssi": -98.54,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "ChwaszczynoP0lnaRPT",
-        "to": "GKABANINOREP",
-        "snr": -0.09,
-        "rssi": -120.14,
-        "snr_std_dev": 0.5,
-        "loss": 0.0088,
-        "bidir": true
-      },
-      {
-        "from": "GDA_Karczemki_2",
-        "to": "GKABANINOREP",
-        "snr": 22.41,
-        "rssi": -97.63,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "RPT_hV4_tx27_b4000_",
-        "to": "RPT_REKCIN",
-        "snr": 21.29,
-        "rssi": -98.75,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDA_Karczemki_2",
-        "to": "Osowa_Repeater",
-        "snr": 0.76,
-        "rssi": -119.28,
-        "snr_std_dev": 0.5,
-        "loss": 0.0044,
-        "bidir": true
-      },
-      {
-        "from": "RPT_KLODAWA",
-        "to": "GDA_BORKOWO_2_RPT",
-        "snr": 18.19,
-        "rssi": -101.85,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "RPT_BORKOWO",
-        "to": "RPT_KLODAWA",
-        "snr": 12.56,
-        "rssi": -107.48,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDAROKITNICARPT2b",
-        "to": "GDANSKSUCHANINO_SM",
-        "snr": 20.44,
-        "rssi": -99.6,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GD_RPT_DIODAK",
-        "to": "GDA_W_WOJCIECH_testy",
-        "snr": 22.26,
-        "rssi": -97.78,
+        "from": "GD_OSOWA_RDS_RPT",
+        "to": "GWE_Dobrzewino2_RPT",
+        "snr": 19.36,
+        "rssi": -100.68,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
         "from": "RPT_JANK_01",
-        "to": "RPT_ZLA_WIES",
-        "snr": 19.11,
-        "rssi": -100.93,
+        "to": "GDAOlszynka",
+        "snr": 8.58,
+        "rssi": -111.46,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "GTC_JednosciNarodu_R",
-        "to": "GDA_Skowarcz_V3HPV",
-        "snr": 13.79,
-        "rssi": -106.25,
+        "from": "meshgopl_GDA_Oliwa",
+        "to": "GDA_Heweliusza",
+        "snr": 23.03,
+        "rssi": -97.01,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "GTC_JednosciNarodu_R",
-        "to": "RPT_Skowarcz_V4X",
-        "snr": 16.17,
-        "rssi": -103.87,
+        "from": "GWE_Bojano_RPT",
+        "to": "BAN06MTestXiaoRPT",
+        "snr": 22.14,
+        "rssi": -97.9,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "SQ2PPJ_Repeater_2",
+        "from": "WEDOLINKAWwa_RPT",
+        "to": "Ga_GAC_Rak",
+        "snr": 8.45,
+        "rssi": -111.59,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "RPT_JANK_01",
+        "to": "RPT_KLODAWA",
+        "snr": 14.45,
+        "rssi": -105.59,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "RPT_KIELPINO_KARTUZY",
+        "to": "Eagles_Nest",
+        "snr": 23.06,
+        "rssi": -96.98,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "RUMJ01",
         "to": "GPUpolchowovlrussola",
-        "snr": 16.44,
-        "rssi": -103.61,
+        "snr": 22.99,
+        "rssi": -97.05,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "RPT_WSL_01",
-        "to": "RPT_Skowarcz_V4X",
-        "snr": 14.47,
-        "rssi": -105.57,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDA_Skowarcz_V3HPV",
-        "to": "GDA_BORKOWO_2_RPT",
-        "snr": 15.29,
-        "rssi": -104.75,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GD_RPT_DIODAK",
-        "to": "GDARubinowa",
-        "snr": 13.17,
-        "rssi": -106.88,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDA_Karczemki_2",
-        "to": "E22p868",
-        "snr": 4.93,
-        "rssi": -115.11,
-        "snr_std_dev": 0.5,
-        "loss": 0.0002,
-        "bidir": true
-      },
-      {
-        "from": "XiaoS3_Room_testowy",
-        "to": "GDA_W_WOJCIECH_testy",
-        "snr": 13.73,
-        "rssi": -106.31,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDY_Leszczynki_RPT",
-        "to": "GPUpolchowovlrussola",
-        "snr": 17.01,
-        "rssi": -103.03,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDAMichalin",
-        "to": "GKA_ulewo",
-        "snr": 11.1,
-        "rssi": -108.94,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "XiaoS3_Room_testowy",
-        "to": "RPT_SKOWARCZ",
-        "snr": 9.08,
-        "rssi": -110.96,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "Ga_Gac_testowy_rpt",
-        "to": "Ryzy_RPT",
-        "snr": 15.53,
-        "rssi": -104.51,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "BAN06MTestXiaoRPT",
+        "from": "Eagles_Nest",
         "to": "GKA_Borcz",
-        "snr": 2.07,
-        "rssi": -117.97,
+        "snr": 19.53,
+        "rssi": -100.51,
         "snr_std_dev": 0.5,
-        "loss": 0.0016,
         "bidir": true
       },
       {
-        "from": "RPT_ZLA_WIES",
-        "to": "GD_Cedrowa_RPT_0",
-        "snr": 13.96,
-        "rssi": -106.08,
+        "from": "GKA_ulewo",
+        "to": "Dobrzewino2_DIAM_RPT",
+        "snr": 13.62,
+        "rssi": -106.42,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "RPT_Skowarcz_V4X",
+        "to": "GDA_W_WOJCIECH_testy",
+        "snr": 21.23,
+        "rssi": -98.81,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "GDA_CEDRYM_RPT",
+        "to": "RPT_PRG_01",
+        "snr": 11.89,
+        "rssi": -108.15,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "RPT_GD_Wrze_Komorows",
+        "to": "Ga_GAC_Rak",
+        "snr": 13.69,
+        "rssi": -106.35,
         "snr_std_dev": 0.5,
         "bidir": true
       },
@@ -2515,126 +1135,60 @@
         "bidir": true
       },
       {
-        "from": "Bojano_Lesoki_RPT",
-        "to": "GKA_PRZYJAZN_RPT",
-        "snr": 12.8,
-        "rssi": -107.24,
+        "from": "RPT_KLODAWA",
+        "to": "GDA_Przerobka",
+        "snr": -1.97,
+        "rssi": -122.01,
         "snr_std_dev": 0.5,
+        "loss": 0.0384,
         "bidir": true
       },
       {
-        "from": "Ga_GAC_Rak",
-        "to": "RTP_GDN_Traugutta_",
-        "snr": 14.39,
-        "rssi": -105.65,
+        "from": "GDA2R",
+        "to": "GDA_Cedry_Roomtest",
+        "snr": 11.66,
+        "rssi": -108.38,
         "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDA_Przerobka",
-        "to": "GDY_MKackKarwiny",
-        "snr": 12.32,
-        "rssi": -107.72,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "RPT_JANK_01",
-        "to": "XiaoS3_Room_testowy",
-        "snr": 12.73,
-        "rssi": -107.31,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GD_Wrz_D_Soch_REP_V4",
-        "to": "GDY_Oksywie_RPT",
-        "snr": 13.62,
-        "rssi": -106.42,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDAROKITNICARPT2b",
-        "to": "MIK_DW_RPT",
-        "snr": -4.33,
-        "rssi": -124.37,
-        "snr_std_dev": 0.5,
-        "loss": 0.2077,
         "bidir": true
       },
       {
         "from": "GD_Swibno_rpt",
-        "to": "GDA_W_WOJCIECH_testy",
-        "snr": 13.94,
-        "rssi": -106.1,
+        "to": "GD_Jab_01",
+        "snr": 9.39,
+        "rssi": -110.65,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "GDYZATOKARPT",
-        "to": "RTP_GDN_Traugutta_",
-        "snr": 13.02,
-        "rssi": -107.02,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "node",
-        "to": "RPT_PRG_01",
-        "snr": 5.66,
-        "rssi": -114.38,
+        "from": "GDAMichalin",
+        "to": "GWE_Dobrzewino_3_tes",
+        "snr": 8.27,
+        "rssi": -111.77,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
         "from": "MIK_DW_RPT",
-        "to": "GDARubinowa",
-        "snr": 7.09,
-        "rssi": -112.95,
+        "to": "RPT_REKCIN",
+        "snr": 8.64,
+        "rssi": -111.4,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "MIK_DW_RPT_2",
-        "to": "GDA_W_WOJCIECH_testy",
-        "snr": 14.67,
-        "rssi": -105.37,
+        "from": "MIK_DW_RPT",
+        "to": "GDA_Karczemki_2",
+        "snr": 7.79,
+        "rssi": -112.25,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "meshgopl_GDA_Oliwa",
-        "to": "GDA_CEDRYM_RPT",
-        "snr": 11.7,
-        "rssi": -108.34,
+        "from": "Chwaszczyno_RS",
+        "to": "Eagles_Nest",
+        "snr": 7.33,
+        "rssi": -112.71,
         "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "RPT_JANK_01",
-        "to": "MIK_DW_RPT_2",
-        "snr": 8.92,
-        "rssi": -111.12,
-        "snr_std_dev": 0.5,
-        "bidir": true
-      },
-      {
-        "from": "GDA_Trabki_Wielkie_0",
-        "to": "GKW_HLT_RPT",
-        "snr": 1.91,
-        "rssi": -118.13,
-        "snr_std_dev": 0.5,
-        "loss": 0.0018,
-        "bidir": true
-      },
-      {
-        "from": "RPT_GDA_Trabki_Wlk01",
-        "to": "Malbork_RPT_SP2ZFT",
-        "snr": 2.56,
-        "rssi": -117.48,
-        "snr_std_dev": 0.5,
-        "loss": 0.0011,
         "bidir": true
       }
     ]

@@ -1,0 +1,34 @@
+{
+  "id": "6f9b802deb8c",
+  "name": "test1_scen1",
+  "created_at": 1775727463.3752444,
+  "updated_at": 1775728182.2570899,
+  "config": {
+    "simulation": {
+      "duration_ms": 60000,
+      "warmup_ms": 5000,
+      "step_ms": 5,
+      "hot_start": true
+    },
+    "topology_id": "a856a09a92fd",
+    "commands": [
+      {
+        "at_ms": 10000,
+        "node": "C1",
+        "command": "msg C2 testing message longer than usual"
+      }
+    ],
+    "message_schedule": [
+      {
+        "from": "C2",
+        "to": "C1",
+        "start_ms": 20000,
+        "interval_ms": 5000,
+        "count": 5,
+        "message": "scheduled message from c2 to c1",
+        "command_prefix": "msg"
+      }
+    ],
+    "expect": []
+  }
+}
