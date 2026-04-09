@@ -10,9 +10,17 @@
 #include "MeshWrapper.h"
 #include "SimClock.h"
 
-// Symbols needed for receiver preamble lock (SX1276 empirical).
+// Symbols needed for receiver preamble lock (Semtech AN1200.22, Bor 2016).
 // Capture thresholds (locked/unlocked) are configurable via OrchestratorConfig.
-static constexpr int PREAMBLE_LOCK_SYMBOLS = 5;
+static constexpr int PREAMBLE_LOCK_SYMBOLS = 6;
+
+// Symmetric (undirected) link index for n nodes.
+// Maps ordered pair (a,b) to the same slot regardless of direction.
+static int symmetricLinkIndex(int a, int b, int n) {
+    int lo = (a < b) ? a : b;
+    int hi = (a < b) ? b : a;
+    return lo * n - lo * (lo + 1) / 2 + (hi - lo - 1);
+}
 
 int Orchestrator::findNode(const std::string& name) const {
     for (size_t i = 0; i < _nodes.size(); i++) {
@@ -33,12 +41,18 @@ void Orchestrator::configure(const OrchestratorConfig& cfg) {
     _warmup_ms = cfg.warmup_ms;
     _verbose = cfg.verbose;
     _seed = cfg.seed;
-    _rng.seed(static_cast<std::mt19937::result_type>(cfg.seed));
+    _rng_fading.seed(static_cast<std::mt19937::result_type>(cfg.seed ^ 0x1));
+    _rng_loss.seed(static_cast<std::mt19937::result_type>(cfg.seed ^ 0x2));
+    _rng_cad.seed(static_cast<std::mt19937::result_type>(cfg.seed ^ 0x3));
+    _rng_stagger.seed(static_cast<std::mt19937::result_type>(cfg.seed ^ 0x4));
+    _rng_adversarial.seed(static_cast<std::mt19937::result_type>(cfg.seed ^ 0x5));
     _clock = VirtualClock(cfg.epoch_start);
 
     _capture_locked_db = cfg.capture_locked_db;
     _capture_unlocked_db = cfg.capture_unlocked_db;
     _cad_miss_prob = cfg.cad_miss_prob;
+    _cad_reliable_snr = cfg.cad_reliable_snr;
+    _cad_marginal_snr = cfg.cad_marginal_snr;
     _snr_coherence_ms = cfg.snr_coherence_ms;
 
     _pending_replays.clear();
@@ -96,9 +110,9 @@ void Orchestrator::configure(const OrchestratorConfig& cfg) {
         }
     }
 
-    // Initialize per-directed-link fading state for O-U process
+    // Initialize per-undirected-link fading state for O-U process (reciprocal)
     _fading_state.clear();
-    _fading_state.resize(n * n);
+    _fading_state.resize(n * (n - 1) / 2);
 
     _hot_start = cfg.hot_start;
 
@@ -226,7 +240,7 @@ void Orchestrator::registerTransmissions(unsigned long current_ms) {
             if (it->is_replay) { ++it; continue; }
 
             // Roll probability
-            if (prob(_rng) >= adv.probability) { ++it; continue; }
+            if (prob(_rng_adversarial) >= adv.probability) { ++it; continue; }
 
             const char* sname = _nodes[sender]->name.c_str();
 
@@ -247,7 +261,7 @@ void Orchestrator::registerTransmissions(unsigned long current_ms) {
                 // Flip N random bits
                 for (int b = 0; b < bits && !it->data.empty(); b++) {
                     std::uniform_int_distribution<int> byte_dist(0, (int)it->data.size() - 1);
-                    it->data[byte_dist(_rng)] ^= (1 << bit_dist(_rng));
+                    it->data[byte_dist(_rng_adversarial)] ^= (1 << bit_dist(_rng_adversarial));
                 }
                 if (_verbose) {
                     fprintf(stderr, "[%8.3fs] ADV-CORRUPT %s %dB (%d bits)\n",
@@ -359,20 +373,20 @@ void Orchestrator::registerTransmissions(unsigned long current_ms) {
                     if (_snr_coherence_ms > 0.0f) {
                         // Ornstein-Uhlenbeck (continuous-time AR(1)) correlated fading.
                         // Consecutive receptions on the same link see correlated SNR.
-                        auto& fs = _fading_state[sender * n + receiver];
+                        auto& fs = _fading_state[symmetricLinkIndex(sender, receiver, n)];
                         float dt = (float)(current_ms - fs.last_ms);
                         float alpha = std::exp(-dt / _snr_coherence_ms);
                         float alpha_sq = alpha * alpha;
                         if (alpha_sq > 1.0f) alpha_sq = 1.0f;  // float precision guard
                         std::normal_distribution<float> unit(0.0f, 1.0f);
                         fs.offset = alpha * fs.offset
-                                  + std::sqrt(1.0f - alpha_sq) * lp.snr_std_dev * unit(_rng);
+                                  + std::sqrt(1.0f - alpha_sq) * lp.snr_std_dev * unit(_rng_fading);
                         fs.last_ms = current_ms;
                         rx_snr = lp.snr + fs.offset;
                     } else {
                         // i.i.d. Gaussian (original behavior)
                         std::normal_distribution<float> dist(lp.snr, lp.snr_std_dev);
-                        rx_snr = dist(_rng);
+                        rx_snr = dist(_rng_fading);
                     }
                 }
 
@@ -403,11 +417,20 @@ void Orchestrator::registerTransmissions(unsigned long current_ms) {
                 unsigned long lbt_from = node_now + preamble_detect_ms;
                 unsigned long lbt_until = node_now + airtime32;
                 if (lbt_from < lbt_until) {
-                    // Probabilistic CAD: real receivers have a false-negative rate
-                    if (_cad_miss_prob > 0.0f && prob(_rng) < _cad_miss_prob) {
+                    // SNR-dependent CAD miss: reliable at high SNR, degrades toward marginal
+                    float effective_miss = _cad_miss_prob;
+                    if (rx_snr < _cad_reliable_snr) {
+                        if (rx_snr <= _cad_marginal_snr) {
+                            effective_miss = 1.0f;
+                        } else {
+                            float t = (rx_snr - _cad_marginal_snr) / (_cad_reliable_snr - _cad_marginal_snr);
+                            effective_miss = 1.0f - t * (1.0f - _cad_miss_prob);
+                        }
+                    }
+                    if (effective_miss > 0.0f && prob(_rng_cad) < effective_miss) {
                         if (_verbose) {
-                            fprintf(stderr, "[%8.3fs]   ~  %s CAD miss (p=%.3f)\n",
-                                    current_ms / 1000.0, rname, _cad_miss_prob);
+                            fprintf(stderr, "[%8.3fs]   ~  %s CAD miss (p=%.3f snr=%.1f)\n",
+                                    current_ms / 1000.0, rname, effective_miss, rx_snr);
                         }
                     } else {
                         _nodes[receiver]->radio.notifyChannelBusy(lbt_from, lbt_until);
@@ -435,7 +458,7 @@ void Orchestrator::registerTransmissions(unsigned long current_ms) {
                 bool lost = false;
                 if (lp.loss > 0.0f) {
                     std::uniform_real_distribution<float> dist(0.0f, 1.0f);
-                    lost = dist(_rng) < lp.loss;
+                    lost = dist(_rng_loss) < lp.loss;
                 }
 
                 // Create PendingRx with sampled SNR
@@ -462,7 +485,7 @@ void Orchestrator::registerTransmissions(unsigned long current_ms) {
                 int fec_sym = (cr >= 1 && cr <= 4) ? fec_sym_table[cr - 1] : 0;
                 double fec_tolerance_ms = fec_sym * t_sym;
                 int pre_sym = _nodes[receiver]->radio.getPreambleSymbols();
-                double preamble_grace_ms = (pre_sym - 5) * t_sym;
+                double preamble_grace_ms = (pre_sym - PREAMBLE_LOCK_SYMBOLS) * t_sym;
 
                 // Collision check: test each direction independently
                 for (auto& existing : _nodes[receiver]->active_rx) {
@@ -704,16 +727,48 @@ void Orchestrator::hotStart() {
                 "%lums advert phase, quiesce=%lums\n", n, ADVERT_PHASE_MS, QUIESCE_MS);
     }
 
-    // Direct companion→companion advert injection (repeaters won't forward these)
+    // Direct companion→companion advert injection (repeaters won't forward these).
+    // Only inject between companions that are topologically connected (BFS through
+    // all nodes/links). This prevents phantom routes between disconnected components
+    // while correctly handling multi-hop networks.
+    //
+    // Build per-companion reachability set via BFS through the full link topology.
+    std::vector<std::vector<bool>> companion_reach;  // [companion_seq] -> reachable[node_idx]
+    std::vector<int> companion_indices;
     for (int i = 0; i < n; i++) {
         if (_nodes[i]->role != NodeRole::Companion) continue;
+        companion_indices.push_back(i);
+        // BFS from companion i
+        std::vector<bool> visited(n, false);
+        std::vector<int> queue;
+        visited[i] = true;
+        queue.push_back(i);
+        for (size_t qi = 0; qi < queue.size(); qi++) {
+            int cur = queue[qi];
+            for (int nb = 0; nb < n; nb++) {
+                if (visited[nb]) continue;
+                LinkParams lp;
+                if (_link_model->getLink(cur, nb, lp)) {
+                    visited[nb] = true;
+                    queue.push_back(nb);
+                }
+            }
+        }
+        companion_reach.push_back(std::move(visited));
+    }
+
+    for (size_t ci = 0; ci < companion_indices.size(); ci++) {
+        int i = companion_indices[ci];
         _nodes[i]->activate();
         auto bytes = _nodes[i]->mesh->exportSelfAdvert();
         if (bytes.empty()) continue;
-        for (int j = 0; j < n; j++) {
-            if (j == i || _nodes[j]->role != NodeRole::Companion) continue;
-            _nodes[j]->activate();
-            _nodes[j]->radio.enqueue(bytes.data(), (int)bytes.size(), 10.0f, -70.0f);
+        for (size_t cj = 0; cj < companion_indices.size(); cj++) {
+            if (ci == cj) continue;
+            int j = companion_indices[cj];
+            if (companion_reach[ci][j]) {
+                _nodes[j]->activate();
+                _nodes[j]->radio.enqueue(bytes.data(), (int)bytes.size(), 10.0f, -70.0f);
+            }
         }
     }
 
@@ -842,7 +897,7 @@ bool Orchestrator::run() {
     {
         std::uniform_int_distribution<unsigned long> stagger_dist(0, 120000);
         for (auto& node : _nodes) {
-            unsigned long stagger = stagger_dist(_rng);
+            unsigned long stagger = stagger_dist(_rng_stagger);
             // Round to step boundary for deterministic advancement
             unsigned long steps = stagger / _step_ms;
             for (unsigned long s = 0; s < steps; s++) {

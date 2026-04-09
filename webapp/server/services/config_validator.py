@@ -403,6 +403,26 @@ def _validate_sim_radio(radio: Any, result: ValidationResult) -> None:
             radio["cad_miss_prob"], "simulation.radio.cad_miss_prob", result,
         )
 
+    if "cad_reliable_snr" in radio:
+        v = radio["cad_reliable_snr"]
+        if not isinstance(v, (int, float)):
+            result._error("simulation.radio.cad_reliable_snr must be a number")
+
+    if "cad_marginal_snr" in radio:
+        v = radio["cad_marginal_snr"]
+        if not isinstance(v, (int, float)):
+            result._error("simulation.radio.cad_marginal_snr must be a number")
+
+    # Cross-validate: reliable >= marginal
+    reliable = radio.get("cad_reliable_snr", 0.0)
+    marginal = radio.get("cad_marginal_snr", -15.0)
+    if isinstance(reliable, (int, float)) and isinstance(marginal, (int, float)):
+        if reliable < marginal:
+            result._error(
+                f"simulation.radio.cad_reliable_snr ({reliable}) must be >= "
+                f"cad_marginal_snr ({marginal})"
+            )
+
     if "snr_coherence_ms" in radio:
         v = radio["snr_coherence_ms"]
         if not isinstance(v, (int, float)):

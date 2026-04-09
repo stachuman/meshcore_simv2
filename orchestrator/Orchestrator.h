@@ -26,12 +26,14 @@ struct OrchestratorConfig {
     // Global radio defaults (overridable per-node)
     int sf = 8;
     int bw = 62500;
-    int cr = 4;
+    int cr = 1;
 
     // Radio physics tuning
     float capture_locked_db = 3.0f;    // capture threshold when primary locked
     float capture_unlocked_db = 6.0f;  // capture threshold when preambles overlap
     float cad_miss_prob = 0.05f;       // CAD false-negative probability [0,1]
+    float cad_reliable_snr = 0.0f;    // above this SNR: cad_miss_prob applies
+    float cad_marginal_snr = -15.0f;  // below this SNR: always miss. Between: interpolate.
     float snr_coherence_ms = 0.0f;     // fading coherence time (0 = i.i.d.)
 
     struct NodeDef {
@@ -97,12 +99,19 @@ class Orchestrator {
     bool _verbose = false;
     bool _hot_start = false;
     uint64_t _seed = 42;
-    std::mt19937 _rng;  // seeded in configure() from cfg.seed
+    // Separate RNG streams per stochastic process (seeded from cfg.seed in configure())
+    std::mt19937 _rng_fading;      // SNR fading (i.i.d. + O-U)
+    std::mt19937 _rng_loss;        // stochastic link loss
+    std::mt19937 _rng_cad;         // CAD miss probability
+    std::mt19937 _rng_stagger;     // clock stagger
+    std::mt19937 _rng_adversarial; // adversarial mode rolls
 
     // Radio physics parameters
     float _capture_locked_db = 3.0f;
     float _capture_unlocked_db = 6.0f;
     float _cad_miss_prob = 0.05f;
+    float _cad_reliable_snr = 0.0f;
+    float _cad_marginal_snr = -15.0f;
     float _snr_coherence_ms = 0.0f;
 
     // Per-directed-link fading state (Ornstein-Uhlenbeck)
@@ -110,7 +119,7 @@ class Orchestrator {
         float offset = 0.0f;         // current fading offset from mean SNR
         unsigned long last_ms = 0;   // timestamp of last update
     };
-    std::vector<LinkFadingState> _fading_state;  // n*n, sender*n+receiver
+    std::vector<LinkFadingState> _fading_state;  // n*(n-1)/2, symmetric (reciprocal fading)
 
     struct PendingReplay {
         unsigned long emit_ms;

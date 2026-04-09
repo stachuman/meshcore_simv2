@@ -18,7 +18,7 @@ Implementation references: `orchestrator/Orchestrator.cpp`,
 5. [Confirmed Correct](#5-confirmed-correct)
 6. [Comparison with Other Simulators](#6-comparison-with-other-simulators)
 7. [Academic Reference Values](#7-academic-reference-values)
-8. [Recommended Improvements](#8-recommended-improvements)
+8. [Remaining Opportunities](#8-remaining-opportunities)
 9. [References](#9-references)
 
 ---
@@ -31,248 +31,72 @@ physics model (not a simplified protocol simulation), and correctly implements:
 timing-dependent capture, half-duplex with TX-aborts-RX, LBT with CAD miss
 probability, O-U correlated fading, and 3-stage collision resolution.
 
-Two high-severity issues were identified that affect simulation accuracy. Several
-medium-severity refinements would improve fidelity. The model is otherwise
+The audit identified 2 HIGH and 6 MEDIUM severity issues. All have been
+resolved: code fixes for H1, M2, M3, M4, M5, M6; analysis confirmed H2 was
+not a bug; M1 was accepted by design with documentation. The model is now
 well-aligned with academic literature.
 
 ### Severity Classification
 
-| Severity | Count | Meaning |
-|----------|-------|---------|
-| HIGH     | 2     | Measurably affects simulation results |
-| MEDIUM   | 6     | May affect edge-case accuracy |
-| LOW      | 5     | Minor, unlikely to affect conclusions |
+| Severity | Found | Resolved | Meaning |
+|----------|-------|----------|---------|
+| HIGH     | 2     | 2 (1 fixed, 1 not a bug) | Measurably affects simulation results |
+| MEDIUM   | 6     | 6 (5 fixed, 1 by design) | May affect edge-case accuracy |
+| LOW      | 5     | 0 (accepted)             | Minor, unlikely to affect conclusions |
 
 ---
 
-## 2. HIGH Severity Findings
+## 2. HIGH Severity Findings (All Resolved)
 
-### H1. Default Coding Rate Mismatch
+### H1. Default Coding Rate Mismatch — FIXED
 
-**Location**: Config defaults, all test/sweep configs that omit explicit `cr`.
+Default `cr` changed from 4 (CR 4/8) to 1 (CR 4/5) to match MeshCore
+hardware. Files: `Orchestrator.h`, `SimRadio.h`.
 
-**Issue**: The config value `cr=4` corresponds to CR 4/8 (maximum redundancy).
-MeshCore hardware defaults to CR 4/5 (`cr=1`). The mapping is
-`CR = 4/(4+cr)`, so:
+### H2. Capture Effect SNR vs SIR — Not a Bug
 
-| Config value | Coding rate | Overhead |
-|-------------|-------------|----------|
-| cr=1        | 4/5         | 25% (MeshCore default) |
-| cr=2        | 4/6         | 50% |
-| cr=3        | 4/7         | 75% |
-| cr=4        | 4/8         | 100% |
-
-**Impact**: Using `cr=4` instead of `cr=1` inflates payload airtime by
-approximately 33-60% depending on payload size (the payload symbol count
-formula divides by `(CR+4)`, so CR 4/8 uses 8 bits per 4 data bits vs CR
-4/5 using 5 bits per 4 data bits). This causes:
-
-- Longer packets = higher collision probability
-- More channel occupancy = more LBT deferrals
-- Longer duty-cycle utilization
-- Delay optimization results calibrated against wrong airtime baseline
-
-**Fix**: Ensure all configs explicitly set `cr` to match the target hardware.
-For standard MeshCore, this is `cr=1` (CR 4/5). Consider changing the
-default in config parsing.
-
-**Verification**: Compare `SimRadio::getEstAirtimeFor()` output at cr=1 vs
-cr=4 for a typical 50-byte packet at SF8/BW62500:
-
-    cr=1: T_sym=4.096ms, payload_symbols = 8+max(ceil((400-32+44)/(4*8))*9,0) = 8+54 = 62 symbols
-    cr=4: T_sym=4.096ms, payload_symbols = 8+max(ceil((400-32+44)/(4*8))*12,0) = 8+72 = 80 symbols
-
-    cr=1 airtime: (12.25+62)*4.096 = 304.1 ms
-    cr=4 airtime: (12.25+80)*4.096 = 377.9 ms  (+24% longer)
-
-For smaller payloads the relative difference is larger.
+At the same receiver, noise floor N cancels: `SNR_A - SNR_B = SIR_AB` in dB.
+No fix needed.
 
 ---
 
-### H2. Capture Effect Compares SNR Difference Instead of True SIR
+## 3. MEDIUM Severity Findings (All Resolved)
 
-**Location**: `Orchestrator.cpp`, collision detection in `isDestroyedBy()`.
+### M1. TX Snap-to-Step-Boundary — Accepted by Design
 
-**Issue**: The collision model compares `primary.rx_snr - interferer.rx_snr`
-against the capture threshold. This is the difference of two SNR values
-(each signal/noise), not the Signal-to-Interference Ratio (SIR =
-signal_desired / signal_interferer).
+All TXes within a step share the same `rx_start_ms`. Analysis showed lock
+time (6*T_sym = 24.6ms at SF8/BW62.5k) >> step_ms (4ms), so sub-step
+offsets cannot cause a preamble lock. Users should set `step_ms <= T_sym`
+for fast configs (documented in RADIO_MODEL.md Section 11).
 
-Academic literature universally defines capture threshold in terms of **SIR**
-(Bor et al. 2016, Rahmadhani & Kuipers 2018, Semtech AN1200.22).
+### M2. Single RNG Cross-Coupling — FIXED
 
-**Why it matters**: SNR = P_signal / P_noise. When both signals are strong
-(high SNR), `SNR_A - SNR_B` closely approximates `SIR_AB` in dB because
-noise is negligible. But when signals are weak (near sensitivity threshold),
-noise dominates and the SNR difference diverges from true SIR:
+Split into 5 purpose-specific `mt19937` streams (`_rng_fading`, `_rng_loss`,
+`_rng_cad`, `_rng_stagger`, `_rng_adversarial`), seeded from master seed
+via XOR constants.
 
-    Example: Two signals at a receiver with noise floor N.
-    Signal A: P_A = 10*N  -> SNR_A = 10 dB
-    Signal B: P_B = 4*N   -> SNR_B = 6 dB
-    SNR difference: 4 dB
-    True SIR: P_A/P_B = 2.5 = 4 dB  (matches -- noise negligible)
+### M3. CAD Miss Probability is Distance-Independent — FIXED
 
-    Signal A: P_A = 2*N   -> SNR_A = 3 dB
-    Signal B: P_B = 1.5*N -> SNR_B = 1.76 dB
-    SNR difference: 1.24 dB
-    True SIR: P_A/P_B = 1.33 = 1.25 dB  (still close)
+Replaced flat `cad_miss_prob` with SNR-gated model: `cad_reliable_snr`
+(above: base miss rate), `cad_marginal_snr` (below: always miss), linear
+interpolation between. Defaults: 0.0 dB / -15.0 dB.
 
-    Signal A: P_A = 0.5*N -> SNR_A = -3 dB  (below noise!)
-    Signal B: P_A = 0.2*N -> SNR_B = -7 dB
-    SNR difference: 4 dB
-    True SIR: P_A/P_B = 2.5 = 4 dB  (but both below noise -- neither decodable)
+### M4. Preamble Lock Symbols — FIXED
 
-In practice the divergence is small because signals below SNR threshold are
-already filtered as `drop_weak`. However, for marginal signals near the
-threshold (which are the interesting cases for fading analysis), the error
-can be 1-2 dB.
+Changed `PREAMBLE_LOCK_SYMBOLS` from 5 to 6 per Semtech AN1200.22 and
+Bor et al. 2016. Updated `getPreambleDetectMs()` to match.
 
-**Fix**: Compute SIR from RSSI values (linear power ratio) rather than SNR
-difference. The link model already carries `rssi` per link, so:
+### M5. O-U Fading is Direction-Independent — FIXED
 
-    sir_db = primary.rssi_dbm - interferer.rssi_dbm
-    if sir_db >= capture_threshold: primary survives
+Changed from per-directed (`n*n`) to per-undirected (`n*(n-1)/2`) symmetric
+indexing. A->B and B->A now share the same fading offset (reciprocal shadow
+fading).
 
-This is both more correct and simpler. Falls back to current behavior for
-configs without RSSI data if `rssi_dbm` is converted from `snr` + noise
-floor.
+### M6. Hot-Start Companion Adverts Bypass Link Topology — FIXED
 
----
-
-## 3. MEDIUM Severity Findings
-
-### M1. TX Snap-to-Step-Boundary
-
-**Location**: `Orchestrator.cpp`, `registerTransmissions()`.
-
-**Issue**: All transmissions that MeshCore queues during a step are registered
-with `rx_start_ms = current_ms` (the start of the step). Sub-step timing
-information is lost.
-
-**Impact**: With default `step_ms=5` at SF8/BW62500 (T_sym=4.096ms):
-- Two nodes starting TX 1ms apart appear simultaneous (unlocked capture, 6dB threshold)
-- In reality the 1ms offset might give partial preamble lock (3dB threshold)
-- Overestimates collision severity in borderline cases
-
-**Mitigation options**:
-- Track sub-step TX offset (fractional ms from step start)
-- Reduce step_ms for collision-sensitive scenarios
-- Accept as a conservative approximation (overestimates collisions)
-
----
-
-### M2. Single RNG Cross-Coupling
-
-**Location**: `Orchestrator.cpp`, single `mt19937 _rng`.
-
-**Issue**: One RNG instance seeds all stochastic processes: per-link SNR
-fading, stochastic loss, CAD miss, clock stagger, adversarial drop/replay.
-Drawing random values for one process shifts the sequence for all others.
-
-**Impact**: Subtle coupling between logically independent processes. Adding
-a new node changes the fading realization for existing nodes. Does not
-affect aggregate statistics across many seeds, but prevents reproducible
-isolation of individual stochastic effects.
-
-**Fix**: Use separate `mt19937` streams per process type, all seeded
-deterministically from the master seed:
-
-    rng_fading  = mt19937(master_seed ^ 0x1)
-    rng_loss    = mt19937(master_seed ^ 0x2)
-    rng_cad     = mt19937(master_seed ^ 0x3)
-    rng_stagger = mt19937(master_seed ^ 0x4)
-
----
-
-### M3. CAD Miss Probability is Distance-Independent
-
-**Location**: `Orchestrator.cpp`, LBT notification in `registerTransmissions()`.
-
-**Issue**: The current model applies a flat `cad_miss_prob` (default 0.05)
-regardless of received signal strength. In reality, CAD detection probability
-is SNR-dependent.
-
-**Evidence** (Benaissa et al. 2021, PMC7865706):
-- CAD detection is reliable up to ~1.3 km (high SNR)
-- Between 1.3-1.9 km: detection becomes unstable
-- Beyond 1.9 km: packets still receivable but CAD unreliable
-- No false positives observed (CAD never detects non-existent signals)
-- No improvement with SX1262 vs SX1276
-
-The key insight: **CAD detection range is significantly shorter than packet
-reception range.** Nodes at the edge of reception range will almost always
-miss CAD, potentially causing hidden-terminal collisions.
-
-**Better model**: SNR-gated CAD miss probability:
-
-    if rx_snr > cad_reliable_snr (e.g. -5 dB):
-        miss_prob = cad_miss_prob_base  (e.g. 0.02)
-    elif rx_snr > cad_marginal_snr (e.g. -15 dB):
-        miss_prob = interpolate linearly (e.g. 0.02 to 0.80)
-    else:
-        miss_prob = 1.0  (always miss)
-
----
-
-### M4. Preamble Lock Symbols
-
-**Location**: `Orchestrator.cpp`, `PREAMBLE_LOCK_SYMBOLS = 5`.
-
-**Issue**: The commonly cited minimum for receiver synchronization is
-**6 preamble symbols** (Semtech AN1200.22, confirmed by Bor et al. 2016,
-Benaissa et al. 2021).
-
-**Impact**: Marginal. The capture threshold transition point shifts by one
-symbol time:
-- SF8/BW62500: 1 * 4.096ms = 4.1ms earlier lock threshold
-- This makes capture slightly more favorable (lower threshold applies sooner)
-
-**Fix**: Change `PREAMBLE_LOCK_SYMBOLS` from 5 to 6. Update derived
-preamble grace period from `(8-5)*T_sym = 3*T_sym` to `(8-6)*T_sym = 2*T_sym`.
-
----
-
-### M5. O-U Fading is Direction-Independent
-
-**Location**: `Orchestrator.cpp`, `_fading_state[]` indexed by `[sender*N + receiver]`.
-
-**Issue**: Each directed link (A->B vs B->A) has an independent O-U fading
-state. In reality, large-scale shadow fading is **reciprocal** (same
-obstruction affects both directions), while small-scale fading can differ.
-
-**Evidence**: Multiple measurement campaigns confirm that the LoRa RF channel
-is "nearly reciprocal" under static conditions (Martinez 2019, Bor et al.
-2017). Real link asymmetry comes from:
-- TX power differences (irrelevant for P2P mesh with identical hardware)
-- Local noise floor differences (different interference environments)
-- Antenna pattern differences
-
-**Impact**: Low for MeshCore simulation. The current independent fading per
-direction is actually a reasonable approximation when `snr_std_dev` captures
-the combined effect of shadow fading + small-scale fading. For a more
-physical model, the shadow fading component should be correlated (or
-identical) in both directions.
-
----
-
-### M6. Hot-Start Companion Adverts Bypass Link Topology
-
-**Location**: `Orchestrator.cpp`, hot-start phase.
-
-**Issue**: During hot-start, companion-to-companion adverts are injected
-directly (via `exportSelfAdvert()`) to all other companions, regardless of
-whether a link exists between them.
-
-**Rationale**: Repeaters don't forward companion adverts (MeshCore's
-`Mesh::allowPacketForward` returns false for companions). Without direct
-injection, companions would never learn about each other.
-
-**Impact**: Companions that are physically unreachable in the real network
-topology will still know about each other after hot-start. This could
-cause message routing attempts through paths that don't exist.
-
-**Possible fix**: Only inject companion adverts between companions that share
-at least one common repeater neighbor (transitive reachability check).
+Replaced all-to-all companion advert injection with BFS reachability through
+the full link topology. Only companions connected (directly or via multi-hop
+repeater chain) receive each other's adverts.
 
 ---
 
@@ -426,8 +250,8 @@ ensuring visualization bars align with TX bars.
 4. **LBT with CAD miss**: Models channel activity detection with configurable
    miss probability. No other LoRa mesh simulator implements this.
 
-5. **O-U correlated fading**: Time-correlated channel variations per directed
-   link. Most packet-level simulators use i.i.d. or no fading.
+5. **O-U correlated fading**: Time-correlated, reciprocal channel variations
+   per link. Most packet-level simulators use i.i.d. or no fading.
 
 6. **Half-duplex TX-aborts-RX**: Models the transceiver switching from RX to
    TX mid-reception. Most simulators only model TX-blocks-RX.
@@ -453,24 +277,24 @@ accurate capture probability curves (instead of hard thresholds).
 |-----------|-----------------|-----------|--------|
 | Same-SF capture, locked | 1-3 dB SIR | 3 dB (SNR diff) | Benaissa et al. 2021 |
 | Same-SF capture, unlocked | ~6 dB SIR | 6 dB (SNR diff) | Semtech docs, Bor et al. 2016 |
-| Preamble lock symbols | 6 symbols | 5 symbols | Semtech AN1200.22 |
+| Preamble lock symbols | 6 symbols | 6 symbols | Semtech AN1200.22 |
 | Inter-SF rejection | -16 to -36 dB | N/A (single SF) | Croce et al. 2018 |
 
 ### CAD Performance
 
 | Parameter | Literature Value | Our Value | Source |
 |-----------|-----------------|-----------|--------|
-| CAD miss rate (short range) | ~0% | 5% flat | Benaissa et al. 2021 |
-| CAD miss rate (medium range) | 10-50% | 5% flat | Benaissa et al. 2021 |
-| CAD miss rate (long range) | 50-100% | 5% flat | Benaissa et al. 2021 |
+| CAD miss rate (short range) | ~0% | `cad_miss_prob` (default 5%) | Benaissa et al. 2021 |
+| CAD miss rate (medium range) | 10-50% | SNR-interpolated (5%→100%) | Benaissa et al. 2021 |
+| CAD miss rate (long range) | 50-100% | 100% (below `cad_marginal_snr`) | Benaissa et al. 2021 |
 | CAD false positive rate | ~0% | 0% (not modeled) | Benaissa et al. 2021 |
-| CAD detection time | ~2 symbols | 5 symbols (preamble detect) | Semtech AN1200.85 |
+| CAD detection time | ~2 symbols | 6 symbols (preamble detect) | Semtech AN1200.85 |
 
 ### Channel Characteristics
 
 | Parameter | Literature Value | Our Model | Source |
 |-----------|-----------------|-----------|--------|
-| Channel reciprocity | Nearly reciprocal (<few dB) | Independent per direction | Martinez 2019, Bor 2017 |
+| Channel reciprocity | Nearly reciprocal (<few dB) | Reciprocal (symmetric index) | Martinez 2019, Bor 2017 |
 | Temporal fading std dev | 2-8 dB (environment) | Configurable `snr_std_dev` | Cattani et al. 2017, Liando et al. 2019 |
 | Temporal coherence | 0.5-5 seconds (urban) | Configurable `snr_coherence_ms` | Multiple studies |
 | CFO impact (SF7-9) | Negligible at +/-10ppm | Not modeled | Khartoum Eng J |
@@ -493,33 +317,15 @@ and exact at CR 4/8.
 
 ---
 
-## 8. Recommended Improvements
+## 8. Remaining Opportunities
 
-### Priority 1: Must Fix
+All HIGH and MEDIUM findings have been resolved. The following minor items
+remain as potential future improvements:
 
-| ID | Issue | Effort | Impact |
-|----|-------|--------|--------|
-| H1 | Set correct CR default (cr=1 for CR 4/5) | Config change | All airtimes corrected |
-| H2 | Use RSSI-based SIR for capture comparison | Small code change | Correct collision outcomes |
-
-### Priority 2: Should Fix
-
-| ID | Issue | Effort | Impact |
-|----|-------|--------|--------|
-| M4 | Change PREAMBLE_LOCK_SYMBOLS to 6 | One-line change | Correct lock timing |
-| M3 | SNR-dependent CAD miss probability | Moderate | More realistic LBT at range |
-| M2 | Separate RNG streams per process | Small refactor | Reproducible isolation |
-| M1 | Sub-step TX timing offset | Moderate | Better capture decisions |
-
-### Priority 3: Nice to Have
-
-| ID | Issue | Effort | Impact |
-|----|-------|--------|--------|
-| M5 | Correlated shadow fading (reciprocal) | Moderate | More physical fading |
-| M6 | Topology-aware companion advert injection | Small | Correct hot-start |
-| -- | Header coded at CR 4/8 in airtime formula | Small | Slightly more accurate airtime |
-| -- | SNR-dependent CAD detection range model | Moderate | Better hidden-terminal modeling |
-| -- | Per-process RNG with seedable streams | Small | Better experiment isolation |
+| Issue | Effort | Impact |
+|-------|--------|--------|
+| Header coded at CR 4/8 in airtime formula | Small | ~5 symbols difference at low CR |
+| L1-L5 low-severity items (see Section 4) | Various | Negligible |
 
 ---
 

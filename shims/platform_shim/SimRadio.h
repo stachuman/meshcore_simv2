@@ -69,7 +69,7 @@ class SimRadio : public mesh::Radio {
 
 public:
     SimRadio(mesh::MillisecondClock& ms,
-             int sf = 8, int bw_hz = 62500, int cr = 4);
+             int sf = 8, int bw_hz = 62500, int cr = 1);
 
     void enqueue(const uint8_t* data, int len, float snr, float rssi);
     void notifyRxStart(uint32_t duration_ms);

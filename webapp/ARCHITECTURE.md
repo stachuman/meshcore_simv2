@@ -9,9 +9,10 @@ pip install -r requirements.txt
 uvicorn server.main:app --reload --port 8000
 # Open http://localhost:8000
 
-# Docker
+# Docker (requires pre-built orchestrator binary)
+cmake -S . -B build && cmake --build build --target orchestrator
 cd webapp
-docker compose up --build
+docker compose build && docker compose up
 # Open http://localhost:8000
 ```
 
@@ -168,18 +169,23 @@ Initialized in `main.py` lifespan:
 
 ```
 webapp/static/
-  css/common.css       # Dark theme, components, utilities (432 lines)
-  js/api.js            # fetchJSON, postJSON, deleteJSON, connectSSE, helpers
-  index.html           # Dashboard: stats grid + recent sims table
-  editor.html          # CodeMirror 5 JSON editor + validate/save/run
-  simulations.html     # Full sim list with expandable details + delete
-  configs.html         # Config upload/manage/run/download
-  sweep.html           # Sweep config + progress + sortable results table
-  visualize.html       # Swim-lane timeline (adapted from visualization/)
-  map_view.html        # Geographic topology map (adapted from visualization/)
+  css/common.css        # Light theme, components, utilities
+  js/api.js             # fetchJSON, postJSON, deleteJSON, connectSSE, helpers
+  index.html            # Dashboard: stats grid + recent sims table
+  editor.html           # CodeMirror 5 JSON editor + validate/save/run
+  simulations.html      # Full sim list with expandable details + delete
+  simulation.html       # Single sim detail: progress SSE + log viewer
+  scenarios.html        # Scenario upload/manage/run/download
+  scenario_editor.html  # Visual scenario editor: nodes, links, commands, map
+  configs.html          # Config upload/manage/run/download
+  topologies.html       # Topology upload/manage
+  topology_editor.html  # Visual topology editor: nodes, links, Leaflet map
+  sweep.html            # Sweep config + progress + sortable results table
+  visualize.html        # Swim-lane timeline (adapted from visualization/)
+  map_view.html         # Geographic topology + force graph + message tracing
 ```
 
-All pages use the same nav bar, dark theme, and `api.js` helpers. No build step -- CodeMirror 5 loaded from CDN.
+All pages use the same nav bar, light theme, and `api.js` helpers. No build step -- CodeMirror 5 loaded from CDN.
 
 ### Page Data Flow
 
@@ -234,12 +240,64 @@ Not every deployment needs sweeps. Lazy init avoids creating the ProcessPoolExec
 - **Sims and Sweeps routers** use no-trailing-slash (`/api/sims`, `/api/sweeps`) -- frontend matches
 - Both work; just maintain consistency within each router
 
-## Docker Build
+## Docker
 
-Multi-stage: `ubuntu:22.04` builds the C++ orchestrator, `python:3.11-slim` runs the webapp. Named volume `sim-data` persists simulation data across container restarts.
+The Docker image ships a **pre-built orchestrator binary** — no C++ sources or build tools are included. You must compile the orchestrator locally first.
 
+### Prerequisites
+
+- Docker Engine + Compose plugin installed
+- If running inside an **LXC container** (e.g. Proxmox), enable nesting on the host:
+  ```bash
+  pct set <CTID> --features nesting=1,fuse=1
+  pct restart <CTID>
+  ```
+
+### Build & Run
+
+```bash
+# 1. Build orchestrator binary (once, or after C++ changes)
+cmake -S . -B build && cmake --build build --target orchestrator
+
+# 2. Build Docker image (fast — no compilation, just packaging)
+cd webapp
+docker compose build
+
+# 3. Run
+docker compose up            # foreground
+docker compose up -d         # detached
+
+# Open http://localhost:8000
 ```
-docker compose up --build          # first time
-docker compose up                  # subsequent
-docker compose down -v             # wipe data
+
+### What goes into the image
+
+The `.dockerignore` uses a whitelist approach — only these files enter the build context:
+
+| Source | Destination | Purpose |
+|--------|-------------|---------|
+| `build/orchestrator/orchestrator` | `/usr/local/bin/orchestrator` | Pre-built C++ binary |
+| `webapp/server/` | `/app/server/` | FastAPI backend |
+| `webapp/static/` | `/app/static/` | Frontend (HTML/CSS/JS) |
+| `webapp/requirements.txt` | pip install | Python deps |
+
+Runtime base: `python:3.11-slim` + `libssl3` + `libstdc++6`.
+
+### Data persistence
+
+Named volume `sim-data` persists simulation data across container restarts:
+
+```bash
+docker compose down              # stop, keep data
+docker compose down -v           # stop + wipe all sim data
 ```
+
+### Environment variables
+
+Configured in `docker-compose.yml`, all optional overrides:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ORCHESTRATOR_PATH` | `/usr/local/bin/orchestrator` | Binary path inside container |
+| `DATA_DIR` | `/app/data` | Persistent data root |
+| `MAX_CONCURRENT_SIMS` | `4` | Parallel simulation limit |

@@ -80,11 +80,11 @@ echo ""
 
 SWEEP_DEFAULTS=(
   --tx-base  "0.0:2.0:0.2"
-  --tx-slope "0.3:0.6:0.3"
+  --tx-slope "0.0:0.6:0.3"
   --dtx-base  "0.0:1.0:0.2"
-  --dtx-slope "0.3:0.6:0.3"
+  --dtx-slope "0.0:0.6:0.3"
   --rx-base  "0.0:6.0:2.0"
-  --rx-slope "0.3:0.6:0.3"
+  --rx-slope "0.0:0.6:0.3"
   --clamp-max 6.0
   --seeds 6
   --build-dir "$PROJECT_DIR/build-copy1"

@@ -45,6 +45,8 @@ static OrchestratorConfig parseJson(const json& j) {
             if (r.contains("capture_locked_db"))   cfg.capture_locked_db = r["capture_locked_db"].get<float>();
             if (r.contains("capture_unlocked_db")) cfg.capture_unlocked_db = r["capture_unlocked_db"].get<float>();
             if (r.contains("cad_miss_prob"))        cfg.cad_miss_prob = r["cad_miss_prob"].get<float>();
+            if (r.contains("cad_reliable_snr"))     cfg.cad_reliable_snr = r["cad_reliable_snr"].get<float>();
+            if (r.contains("cad_marginal_snr"))     cfg.cad_marginal_snr = r["cad_marginal_snr"].get<float>();
             if (r.contains("snr_coherence_ms"))     cfg.snr_coherence_ms = r["snr_coherence_ms"].get<float>();
         }
     }
@@ -267,6 +269,11 @@ static void validateConfig(const OrchestratorConfig& cfg) {
     if (cfg.cad_miss_prob < 0.0f || cfg.cad_miss_prob > 1.0f)
         errors.push_back("simulation.radio.cad_miss_prob must be [0.0, 1.0] (got " +
                          std::to_string(cfg.cad_miss_prob) + ")");
+    if (cfg.cad_reliable_snr < cfg.cad_marginal_snr)
+        errors.push_back("simulation.radio.cad_reliable_snr (" +
+                         std::to_string(cfg.cad_reliable_snr) +
+                         ") must be >= cad_marginal_snr (" +
+                         std::to_string(cfg.cad_marginal_snr) + ")");
     if (cfg.snr_coherence_ms < 0.0f)
         errors.push_back("simulation.radio.snr_coherence_ms must be >= 0 (got " +
                          std::to_string(cfg.snr_coherence_ms) + ")");

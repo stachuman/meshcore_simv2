@@ -27,7 +27,7 @@ Based on Semtech AN1200.13 (LoRa Modem Designer's Guide).
 
     T_preamble = (N_pre + 4.25) * T_sym
 
-N_pre = 8 symbols (SX1276 default, hardcoded in `SimRadio::getPreambleSymbols()`).
+N_pre = 16 symbols (MeshCore SX1262 configuration, hardcoded in `SimRadio::getPreambleSymbols()`).
 
 ### Payload airtime
 
@@ -78,7 +78,7 @@ Properties:
 - Marginal distribution: N(0, snr_std_dev^2) -- same variance as i.i.d.
 - Autocorrelation: exp(-|dt| / snr_coherence_ms)
 - Higher coherence time = slower fading (channel changes less between packets)
-- Each directed link (A->B, B->A) has independent fading state
+- Fading is **reciprocal**: the same offset applies to both A->B and B->A (symmetric indexing). This models the physical reality that shadow fading is caused by common obstructions affecting both directions equally.
 - First sample after initialization is effectively independent (large dt drives alpha to 0)
 
 This models real-world small-scale fading where the channel varies slowly relative to packet rate. Typical urban LoRa coherence times are 0.5-5 seconds.
@@ -144,9 +144,9 @@ When multiple packets overlap in time at the same receiver, the collision model 
 
 Real SX1276/SX1262 receivers lock onto the first detected preamble. The capture threshold depends on whether the primary signal achieved preamble lock before the interferer arrived.
 
-**Preamble lock**: After receiving `PREAMBLE_LOCK_SYMBOLS` (5) clean preamble symbols, the receiver has synchronized its correlator to the primary signal's chirp pattern.
+**Preamble lock**: After receiving `PREAMBLE_LOCK_SYMBOLS` (6) clean preamble symbols, the receiver has synchronized its correlator to the primary signal's chirp pattern.
 
-    lock_time = primary.rx_start_ms + 5 * T_sym
+    lock_time = primary.rx_start_ms + 6 * T_sym
 
 **Threshold selection** (configurable via `simulation.radio`):
 
@@ -166,9 +166,9 @@ This is evaluated for each `(primary, interferer)` pair in both directions. The 
 
 ### 4.2 Preamble Grace Period
 
-If the interferer only overlaps the non-critical early portion of the primary's preamble, it does not destroy the primary. The first 3 symbols (of 8 total preamble) are grace period:
+If the interferer only overlaps the non-critical early portion of the primary's preamble, it does not destroy the primary. The first 10 symbols (of 16 total preamble) are grace period:
 
-    preamble_grace = (N_pre - 5) * T_sym = 3 * T_sym
+    preamble_grace = (N_pre - PREAMBLE_LOCK_SYMBOLS) * T_sym = (16 - 6) * T_sym = 10 * T_sym
     critical_time = primary.rx_start_ms + preamble_grace
 
     if interferer.rx_end_ms <= critical_time:
@@ -228,9 +228,9 @@ If a node starts TX while an active reception is in progress (via `SimRadio::sta
 
 Channel activity is detected after a preamble detection delay:
 
-    preamble_detect_delay = 5 * T_sym
+    preamble_detect_delay = 6 * T_sym
 
-This matches the preamble lock time -- the receiver needs ~5 symbol periods to detect and classify an incoming preamble via Channel Activity Detection (CAD).
+This matches the preamble lock time -- the receiver needs ~6 symbol periods to detect and classify an incoming preamble via Channel Activity Detection (CAD).
 
 The channel is marked busy from `node_now + preamble_detect_delay` until `node_now + airtime`. Only signals above the SNR threshold trigger LBT notification (weak signals are invisible to CAD).
 
@@ -238,17 +238,29 @@ The channel is marked busy from `node_now + preamble_detect_delay` until `node_n
 
 ### 6.1 CAD Miss Probability
 
-Real CAD has a non-zero false-negative rate (Semtech AN1200.85 documents typical missed detection probabilities). When `cad_miss_prob > 0` (default 0.05 = 5%), each LBT detection event has a probability of being missed. A missed detection means the receiver does not see the channel as busy and may proceed to transmit, potentially causing a collision.
+Real CAD has a non-zero false-negative rate (Semtech AN1200.85 documents typical missed detection probabilities). CAD miss probability is **SNR-dependent**: reliable at high SNR, degrading toward marginal signals, and always missing below the marginal threshold.
 
     for each above-threshold reception at a receiver:
-        if random() < cad_miss_prob:
+        if rx_snr >= cad_reliable_snr:
+            effective_miss = cad_miss_prob          (base rate)
+        elif rx_snr <= cad_marginal_snr:
+            effective_miss = 1.0                    (always miss)
+        else:
+            effective_miss = interpolate linearly from 1.0 to cad_miss_prob
+
+        if random() < effective_miss:
             skip LBT notification (receiver unaware)
         else:
             notifyChannelBusy(from, until)
 
 The missed detection only affects the LBT/`isReceiving()` mechanism. The actual RF energy still participates in collision detection -- if the receiver does transmit, the collision model correctly handles the resulting interference.
 
-Configuration: `simulation.radio.cad_miss_prob` (0.0 = perfect detection, 1.0 = CAD always misses).
+This models the empirically observed behavior (Benaissa et al. 2021) where CAD detection range is significantly shorter than packet reception range. Nodes at the edge of reception range will almost always miss CAD.
+
+Configuration:
+- `simulation.radio.cad_miss_prob` (default 0.05): base false-negative rate at high SNR
+- `simulation.radio.cad_reliable_snr` (default 0.0 dB): above this SNR, base rate applies
+- `simulation.radio.cad_marginal_snr` (default -15.0 dB): below this SNR, always miss
 
 ---
 
@@ -308,7 +320,7 @@ Key insight: a constant clock **offset** doesn't stagger timers (cancels in `nex
 
 ## 11. Time Resolution
 
-The simulation advances in discrete `step_ms` increments (default 4 ms). All events within the same step are treated as simultaneous. This affects timing-sensitive effects:
+The simulation advances in discrete `step_ms` increments (default 4 ms). All events within the same step are treated as simultaneous — all nodes' `loop()` calls see the same clock value, and all TXes queued during a step get `rx_start_ms = current_ms`. There is no sub-step timing.
 
 | Radio config | T_sym | Recommended step_ms |
 |---|---|---|
@@ -320,6 +332,12 @@ The simulation advances in discrete `step_ms` increments (default 4 ms). All eve
 
 The orchestrator emits a warning to stderr when `step_ms` exceeds the minimum symbol time across all nodes. For best accuracy, use `step_ms <= T_sym`.
 
+### Why sub-step TX timing is not modeled
+
+Sub-step TX timing was evaluated and deliberately not implemented. The key reason: for the locked capture threshold to apply, two packets must be separated by at least `PREAMBLE_LOCK_SYMBOLS * T_sym` (24.6ms at SF8/BW62.5k). Packets separated by this much naturally land in different simulation steps. Within a single 4ms step, no preamble lock can occur regardless of sub-step ordering — the unlocked threshold (6 dB) correctly applies.
+
+The three evaluated approaches (per-node micro-stepping, random sub-step offset, node-clock recording) were all rejected due to fundamental limitations: micro-stepping creates deterministic iteration-order bias, random offsets have no physical basis, and node clocks all return the same value within a step. The `step_ms` configuration is the correct lever for timing resolution.
+
 ---
 
 ## 12. Constants Summary
@@ -330,11 +348,13 @@ The orchestrator emits a warning to stderr when `step_ms` exceeds the minimum sy
 | capture_unlocked_db | **6.0 dB** (configurable) | LoRaSim | OrchestratorConfig |
 | cad_miss_prob | **0.05** (configurable) | Typical CAD false-negative rate | OrchestratorConfig |
 | snr_coherence_ms | **0.0** (configurable) | 0 = i.i.d., >0 = O-U process | OrchestratorConfig |
-| PREAMBLE_LOCK_SYMBOLS | 5 symbols | SX1276 empirical | Orchestrator.cpp |
-| Preamble symbols (N_pre) | 8 | SX1276 default | SimRadio.h |
-| Preamble grace | (N_pre - 5) * T_sym = 3 * T_sym | Derived | Orchestrator.cpp |
+| PREAMBLE_LOCK_SYMBOLS | 6 symbols | Semtech AN1200.22, Bor 2016 | Orchestrator.cpp |
+| Preamble symbols (N_pre) | 16 | MeshCore SX1262 config | SimRadio.h |
+| Preamble grace | (N_pre - 6) * T_sym = 10 * T_sym | Derived | Orchestrator.cpp |
 | FEC tolerance | {0, 0, 1, 1} symbols for CR 4/5..4/8 | LoRa Hamming codes | Orchestrator.cpp |
-| Preamble detect delay | 5 * T_sym | SX1276 CAD | SimRadio.cpp |
+| Preamble detect delay | 6 * T_sym | Matches lock symbols | SimRadio.cpp |
+| cad_reliable_snr | **0.0 dB** (configurable) | Above this: base miss rate | OrchestratorConfig |
+| cad_marginal_snr | **-15.0 dB** (configurable) | Below this: always miss | OrchestratorConfig |
 | SNR thresholds | SF7:-7.5 ... SF12:-20.0 dB | SX1276 datasheet | SimRadio.cpp |
 
 ---

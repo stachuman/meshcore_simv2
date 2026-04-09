@@ -218,7 +218,7 @@ def main():
                         help="rx_delay_base slope (default: 0.01:0.03:0.005)")
 
     # Clamping
-    parser.add_argument("--clamp-min", type=float, default=0.05,
+    parser.add_argument("--clamp-min", type=float, default=0.0,
                         help="Min value for table entries (default: 0.05)")
     parser.add_argument("--clamp-max", type=float, default=5.0,
                         help="Max value for table entries (default: 5.0)")

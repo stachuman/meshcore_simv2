@@ -40,11 +40,13 @@ The orchestrator reads a single JSON file that defines the network, radio links,
 | `seed` | int | 42 | RNG seed for all randomness (stagger, SNR variance, link loss, adversarial, per-node MeshCore). Change for Monte Carlo runs. |
 | `radio.sf` | int | 8 | Global default LoRa spreading factor (7-12). Applied to all nodes unless overridden per-node. |
 | `radio.bw` | int | 62500 | Global default bandwidth in Hz. |
-| `radio.cr` | int | 4 | Global default coding rate (1-4). |
+| `radio.cr` | int | 1 | Global default coding rate (1-4). Maps to CR 4/(4+cr): 1=CR4/5 (MeshCore default), 4=CR4/8. |
 | `radio.capture_locked_db` | float | 3.0 | Capture threshold (dB) when receiver has locked onto a preamble. See [RADIO_MODEL.md](RADIO_MODEL.md) sec 4.1. |
 | `radio.capture_unlocked_db` | float | 6.0 | Capture threshold (dB) when preambles overlap (no lock). |
-| `radio.cad_miss_prob` | float | 0.05 | CAD false-negative probability [0.0-1.0]. Fraction of LBT notifications silently dropped. 0 = perfect CAD. |
-| `radio.snr_coherence_ms` | float | 0.0 | Fading coherence time for Ornstein-Uhlenbeck correlated fading. 0 = i.i.d. Gaussian (original behavior). Requires `snr_std_dev > 0` on links to have effect. |
+| `radio.cad_miss_prob` | float | 0.05 | CAD base false-negative probability [0.0-1.0] at high SNR. Actual miss rate is SNR-dependent (see below). 0 = perfect CAD. |
+| `radio.cad_reliable_snr` | float | 0.0 | SNR threshold (dB) above which the base `cad_miss_prob` applies. Between this and `cad_marginal_snr`, miss rate interpolates linearly. |
+| `radio.cad_marginal_snr` | float | -15.0 | SNR threshold (dB) below which CAD always misses (miss rate = 1.0). Must be <= `cad_reliable_snr`. |
+| `radio.snr_coherence_ms` | float | 0.0 | Fading coherence time for Ornstein-Uhlenbeck correlated fading. 0 = i.i.d. Gaussian (original behavior). Fading is reciprocal (same offset both directions). Requires `snr_std_dev > 0` on links to have effect. |
 
 **Typical setup**: For message-passing tests, use `hot_start: true` with `warmup_ms` long enough for the hot-start advert exchange to complete. Commands should fire after warmup ends.
 

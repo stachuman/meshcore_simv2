@@ -38,7 +38,7 @@ void SimRadio::notifyChannelBusy(unsigned long from_ms, unsigned long until_ms) 
 }
 
 uint32_t SimRadio::getPreambleDetectMs() const {
-    return (uint32_t)(5.0 * getSymbolMs());
+    return (uint32_t)(6.0 * getSymbolMs());
 }
 
 bool SimRadio::isReceiving() {
