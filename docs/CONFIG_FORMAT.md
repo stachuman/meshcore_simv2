@@ -33,7 +33,7 @@ The orchestrator reads a single JSON file that defines the network, radio links,
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `duration_ms` | int | 300000 | Total simulation time |
-| `step_ms` | int | 4 | Time resolution per tick |
+| `step_ms` | int | 1 | Simulation time step in milliseconds. **Changed from 5ms to 1ms** for hardware delay accuracy. Values > 1 trigger warning and auto-clamp to 1ms. |
 | `epoch_start` | int | 1700000000 | Unix epoch for simulated RTC |
 | `warmup_ms` | int | 0 | During warmup, packets are delivered instantly (no physics). Must be < `duration_ms`. |
 | `hot_start` | bool | false | Inject mutual node awareness at t=0 (skips slow advert propagation). Settle time is auto-detected via quiescence. |
@@ -47,6 +47,35 @@ The orchestrator reads a single JSON file that defines the network, radio links,
 | `radio.cad_reliable_snr` | float | 0.0 | SNR threshold (dB) above which the base `cad_miss_prob` applies. Between this and `cad_marginal_snr`, miss rate interpolates linearly. |
 | `radio.cad_marginal_snr` | float | -15.0 | SNR threshold (dB) below which CAD always misses (miss rate = 1.0). Must be <= `cad_reliable_snr`. |
 | `radio.snr_coherence_ms` | float | 0.0 | Fading coherence time for Ornstein-Uhlenbeck correlated fading. 0 = i.i.d. Gaussian (original behavior). Fading is reciprocal (same offset both directions). Requires `snr_std_dev > 0` on links to have effect. |
+
+### simulation.radio.hardware (optional)
+
+Hardware turnaround delays for RX↔TX transitions. Models SX1262 transceiver (Heltec V3, Seeed Xiao nRF52).
+
+**Defaults (if section omitted):** `rx_to_tx_delay_ms: 1.0`, `tx_to_rx_delay_ms: 5.0`
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `rx_to_tx_delay_ms` | float | 1.0 | RX→TX switching time (PA ramp + mode switching) |
+| `tx_to_rx_delay_ms` | float | 5.0 | TX→RX switching time (STANDBY_RC oscillator stabilization) |
+
+**Example:**
+```json
+{
+  "simulation": {
+    "radio": {
+      "hardware": {
+        "rx_to_tx_delay_ms": 1.0,
+        "tx_to_rx_delay_ms": 5.0
+      }
+    }
+  }
+}
+```
+
+**Note:** Set both to 0.0 for idealized testing only (not representative of real hardware).
+
+**⚠️ Important:** To accurately model the 1ms RX→TX delay, `step_ms` must be **≤ 1ms**. The orchestrator validates this at startup and emits a warning if `step_ms > 1`, automatically clamping to 1ms.
 
 **Typical setup**: For message-passing tests, use `hot_start: true` with `warmup_ms` long enough for the hot-start advert exchange to complete. Commands should fire after warmup ends.
 

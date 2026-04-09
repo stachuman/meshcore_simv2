@@ -16,9 +16,11 @@ std::unique_ptr<MeshWrapper> createCompanionMesh(NodeContext& ctx);
 
 NodeContext::NodeContext(const std::string& name, NodeRole role,
                          uint32_t epoch_base,
-                         int sf, int bw, int cr)
+                         int sf, int bw, int cr,
+                         float rx_to_tx_delay_ms,
+                         float tx_to_rx_delay_ms)
     : name(name), role(role), own_clock(epoch_base),
-      radio(own_clock, sf, bw, cr)
+      radio(own_clock, sf, bw, cr, rx_to_tx_delay_ms, tx_to_rx_delay_ms)
 {
     // Capture outgoing packets for orchestrator routing
     radio.setTxCallback([this](const uint8_t* data, int len, uint32_t airtime_ms) {

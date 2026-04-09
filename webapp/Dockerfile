@@ -1,5 +1,5 @@
 # MeshCore Simulator — ready-to-use image
-# Requires pre-built orchestrator binary: cmake -S . -B build && cmake --build build --target orchestrator
+# Requires pre-built orchestrator binary: cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release && cmake --build build-release --target orchestrator
 FROM python:3.11-slim
 
 # Runtime deps for the orchestrator binary (libcrypto3, libstdc++6)
@@ -13,8 +13,8 @@ WORKDIR /app
 COPY webapp/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Pre-built orchestrator binary
-COPY build/orchestrator/orchestrator /usr/local/bin/orchestrator
+# Pre-built orchestrator binary (built with Release mode for portability)
+COPY build-release/orchestrator/orchestrator /usr/local/bin/orchestrator
 RUN chmod +x /usr/local/bin/orchestrator
 
 # Webapp code

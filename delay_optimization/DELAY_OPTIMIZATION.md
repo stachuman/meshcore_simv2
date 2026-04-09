@@ -117,10 +117,38 @@ The density test scripts use the following setup:
 
 - **4 companions** placed via farthest-point sampling
 - **15 minutes** simulation duration (900,000 ms)
+- **2ms time resolution** (`step_ms = 2`) — changed from initial 4ms for better capture/collision accuracy (see Section 3.1)
 - **Message interval**: 70s mean for direct messages, 80s mean for channel broadcasts
 - **5 direct messages** and **4 channel messages** per schedule entry
 - **Poisson-distributed timing**: each message gets an exponential inter-arrival time (mean = interval), clamped to [0.2x, 3x] to avoid extreme bunching or gaps. This models realistic user behavior rather than fixed-interval robots.
 - **6 seeds** per parameter combination (seeds 42-47) to account for stochastic variation
+
+### 3.1 Time Resolution Choice
+
+The simulation time resolution (`step_ms`) determines the granularity of collision detection, capture effect timing, and half-duplex modeling. For the radio parameters used in all tests (SF=8, BW=62.5kHz), the symbol time is:
+
+```
+T_sym = 2^8 / 62500 Hz = 4.096 ms
+```
+
+Critical physics-based timing intervals that depend on sub-symbol resolution:
+
+- **Preamble lock for capture**: 5 symbols = 20.5ms — the simulator needs to detect if one packet locked the receiver 5 symbols *before* an interferer arrives
+- **LBT channel detection**: 5 symbols = 20.5ms preamble detection delay
+- **Collision survival**: timing-dependent capture requires accurate measurement of arrival time differences
+
+**Initial tests** used `step_ms = 4ms` (1.02 steps per symbol), which passes the warning threshold (`step_ms <= T_sym`) but provides minimal timing accuracy:
+- Preamble lock window: only ~5 simulation steps
+- Timing error: ±4ms in determining packet arrival order
+
+**Final sweep runs** use `step_ms = 2ms` (2.05 steps per symbol) for:
+- **2x better capture accuracy**: ±2ms timing error vs ±4ms
+- **10 steps for preamble lock**: more precise collision modeling
+- **Smoother parameter gradients**: reduces quantization artifacts in optimization results
+
+**Trade-off**: 2ms resolution doubles simulation runtime (~2x wall-clock time for the full sweep), but provides more reliable collision/capture modeling. For a 42,768-run parameter sweep where we're optimizing delay values, the accuracy improvement justifies the runtime cost.
+
+All three density test scripts (`run_sparse.sh`, `run_medium.sh`, `run_dense.sh`) use `step_ms = 2` for consistency.
 
 ### Schedule patterns
 

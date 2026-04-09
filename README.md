@@ -10,6 +10,8 @@ A single-process network simulator for [MeshCore](https://github.com/ripplebiz/M
 
 Requires CMake 3.16+, a C++17 compiler, OpenSSL development libraries, and Python 3.10+.
 
+### Quick Start (Unoptimized Development Build)
+
 ```bash
 # Install system dependencies (Debian/Ubuntu)
 sudo apt install build-essential cmake libssl-dev python3 python3-venv
@@ -23,13 +25,37 @@ python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 
-# Build
+# Build (unoptimized for debugging)
 cmake -S . -B build
 cmake --build build
 
 # Quick run - simulation and then visualization
-./tools/run_sim.ph ./test/t34_delay_bench_butterfly
+./tools/run_sim.sh ./test/t34_delay_bench_butterfly
 ```
+
+### Optimized Builds
+
+For production use, build with optimization flags:
+
+**NativeRelease** (maximum performance, local machine only):
+```bash
+cmake -S . -B build-native -DCMAKE_BUILD_TYPE=NativeRelease
+cmake --build build-native -j$(nproc)
+```
+- Uses `-O3 -march=native -flto=auto -ffast-math`
+- **4-6x faster** than unoptimized builds
+- CPU-specific (not portable to different CPUs)
+- Used automatically by delay_optimization scripts
+
+**Release** (portable, Docker-friendly):
+```bash
+cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release
+cmake --build build-release -j$(nproc)
+```
+- Uses `-O3 -flto=auto`
+- **2-3x faster** than unoptimized builds
+- Portable across x86_64 CPUs
+- Used by Docker builds
 
 If you already cloned without `--recursive`, initialize the MeshCore submodule:
 

@@ -361,7 +361,7 @@ The three evaluated approaches (per-node micro-stepping, random sub-step offset,
 
 ## 13. Radio State Machine
 
-SimRadio implements a 3-state machine matching RadioLib's hardware model (`RadioLibWrappers.cpp`):
+SimRadio implements a 3-state machine matching RadioLib's hardware model (`RadioLibWrappers.cpp`). Transitions are subject to **hardware turnaround delays** (see Section 14).
 
 ```
     +------+   startSendRaw (success)    +----------+
@@ -419,7 +419,98 @@ Configuration: `"tx_fail_prob": 0.5` at node level. See CONFIG_FORMAT.md.
 
 ---
 
-## 14. What Is NOT Modeled
+## 14. Hardware Turnaround Delays
+
+Real LoRa transceivers require hardware settling time when switching between RX and TX modes. The simulator models SX1262 chipset delays (Heltec V3, Seeed Xiao nRF52) **by default**.
+
+### Configuration
+
+Hardware delays can be configured in `simulation.radio.hardware`:
+
+```json
+{
+  "simulation": {
+    "radio": {
+      "hardware": {
+        "rx_to_tx_delay_ms": 1.0,
+        "tx_to_rx_delay_ms": 5.0
+      }
+    }
+  }
+}
+```
+
+**Defaults:** If not specified, uses realistic SX1262 values (1.0ms RX→TX, 5.0ms TX→RX).
+
+**Override to 0.0:** For idealized testing only. Not representative of real hardware.
+
+**⚠️ Important:** To accurately model the 1ms RX→TX delay, `step_ms` must be **≤ 1ms**. The orchestrator validates this at startup and emits a warning if `step_ms > 1`, automatically clamping to 1ms.
+
+### SX1262 Timing Characteristics
+
+**RX → TX Transition:** ~1ms
+- PA ramp time: ~40μs
+- Mode switching overhead: ~960μs
+
+**TX → RX Transition:** ~5ms (asymmetric!)
+- SX1262 enters STANDBY_RC mode after TX
+- Crystal oscillator (TCXO) requires ~5ms to stabilize
+- **Critical for repeaters:** Creates a post-TX blind window
+
+### Implementation
+
+The SimRadio state machine enforces these constraints:
+
+1. **Cannot start TX** if `current_time < _earliest_tx_ms`
+2. **Cannot return to RX** until `current_time >= _earliest_rx_ms`
+3. **Cannot detect preambles** (LBT) during settling period
+
+After a transmission completes:
+- Node stops blocking the channel immediately (for collision detection)
+- Hardware remains in settling for an additional 5ms
+- **Blind window:** Node is idle but cannot receive or detect LBT preambles
+
+**Partial preamble detection:** If a preamble starts DURING settling but is still active AFTER the radio becomes ready, the radio detects it from the moment it wakes up. Preambles that end before the radio is ready are missed entirely.
+
+### Impact on Repeater Behavior
+
+The asymmetric TX→RX delay creates realistic relay timing constraints:
+
+**Example relay cycle:**
+1. Repeater receives packet (RX mode)
+2. Processes and queues relay (1ms RX→TX delay)
+3. Transmits relay packet
+4. **5ms blind window** (STANDBY_RC settling)
+5. Returns to RX mode
+
+During the blind window, the repeater misses:
+- Incoming packets
+- LBT preamble detection from other nodes
+
+This models real-world mesh behavior and explains why delay tuning matters in dense networks.
+
+### Comparison with Other Simulators
+
+**Unique feature:** Hardware turnaround delays are **not modeled** in established LoRa simulators:
+
+| Simulator | Hardware RX↔TX Delays | Focus |
+|-----------|----------------------|-------|
+| **LoRaSim** | ❌ No | Collision modeling, MAC layer delays |
+| **Meshtasticator** | ❌ No | Protocol-level (weighted TX delays based on SNR) |
+| **LoRaWANSim** | ❌ No | Network behavior, path loss, airtime |
+| **FAST-LoRa** | ❌ No | Analytical models, computational efficiency |
+| **MeshCore Real Sim** | ✅ **Yes** | **Hardware-level timing fidelity** |
+
+**Real-world validation:** Forum discussions confirm that "immediately switching to RX mode after TX can result in failure" -- hardware delays are critical for accurate simulation.
+
+Our implementation adds realism that other simulators abstract away, making it suitable for:
+- Delay parameter optimization (explains why certain configurations work in dense networks)
+- Repeater timing analysis (understanding blind windows and relay behavior)
+- Hardware-accurate mesh protocol development
+
+---
+
+## 15. What Is NOT Modeled
 
 | Feature | Why omitted |
 |---|---|
@@ -434,13 +525,30 @@ Configuration: `"tx_fail_prob": 0.5` at node level. See CONFIG_FORMAT.md.
 
 ---
 
-## 15. References
+## 16. References
+
+### Radio Physics and Hardware
 
 - Semtech AN1200.13 -- LoRa Modem Designer's Guide (airtime formulas)
 - Semtech AN1200.22 -- LoRa Modulation Basics (inter-SF isolation matrix, co-SF capture)
 - Semtech AN1200.85 -- Introduction to Channel Activity Detection
+- [SX1262 Datasheet](https://www.semtech.com/products/wireless-rf/lora-connect/sx1262) -- Hardware timing characteristics
+- [RFM95 TX/RX Switching Discussion](https://www.thethingsnetwork.org/forum/t/does-the-rfm95-need-a-minimum-delay-between-switching-from-tx-to-rx/7663) -- Real-world evidence of turnaround delay importance
+
+### Collision and Capture Models
+
 - [LoRaSim](https://github.com/adwaitnd/lorasim) -- Original 6 dB capture model
 - [Dense LoRa Deployment: CAD and Capture Effect](https://pmc.ncbi.nlm.nih.gov/articles/PMC7865706/) -- Empirical timing-dependent capture measurements
 - [Simulating LoRaWAN: Inter-SF Interference (ICC 2019)](https://ieeexplore.ieee.org/document/8761055/) -- Three collision model comparison
 - [Coded LoRa FEC Analysis](https://arxiv.org/pdf/1911.10245) -- LoRa Hamming code correction capacity
+
+### Propagation and Fading
+
 - [LoRa Propagation Models Review](https://pmc.ncbi.nlm.nih.gov/articles/PMC11207269/) -- Small-scale fading characterization
+
+### Simulator Comparison
+
+- [LoRaSim](https://github.com/mcbor/lorasim) -- Discrete-event collision simulator (no hardware delays)
+- [Meshtasticator](https://github.com/meshtastic/Meshtasticator) -- Meshtastic network simulator (protocol-level timing)
+- [LoRaWANSim](https://www.mdpi.com/1424-8220/21/3/695) -- Flexible LoRaWAN network simulator
+- [FAST-LoRa](https://arxiv.org/abs/2507.23342) -- Analytical simulation framework (2024)

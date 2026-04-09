@@ -48,6 +48,11 @@ static OrchestratorConfig parseJson(const json& j) {
             if (r.contains("cad_reliable_snr"))     cfg.cad_reliable_snr = r["cad_reliable_snr"].get<float>();
             if (r.contains("cad_marginal_snr"))     cfg.cad_marginal_snr = r["cad_marginal_snr"].get<float>();
             if (r.contains("snr_coherence_ms"))     cfg.snr_coherence_ms = r["snr_coherence_ms"].get<float>();
+            if (r.contains("hardware")) {
+                auto& hw = r["hardware"];
+                if (hw.contains("rx_to_tx_delay_ms")) cfg.rx_to_tx_delay_ms = hw["rx_to_tx_delay_ms"].get<float>();
+                if (hw.contains("tx_to_rx_delay_ms")) cfg.tx_to_rx_delay_ms = hw["tx_to_rx_delay_ms"].get<float>();
+            }
         }
     }
 

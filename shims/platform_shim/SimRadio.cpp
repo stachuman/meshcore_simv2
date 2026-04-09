@@ -4,8 +4,11 @@
 #include <algorithm>
 #include <cmath>
 
-SimRadio::SimRadio(mesh::MillisecondClock& ms, int sf, int bw_hz, int cr)
-    : _sf(sf), _bw_hz(bw_hz), _cr(cr), _ms(ms)
+SimRadio::SimRadio(mesh::MillisecondClock& ms, int sf, int bw_hz, int cr,
+                   float rx_to_tx_delay_ms, float tx_to_rx_delay_ms)
+    : _sf(sf), _bw_hz(bw_hz), _cr(cr), _ms(ms),
+      _rx_to_tx_delay_ms(rx_to_tx_delay_ms), _tx_to_rx_delay_ms(tx_to_rx_delay_ms),
+      _earliest_tx_ms(0), _earliest_rx_ms(0)
 {
     if (_bw_hz <= 0) {
         fprintf(stderr, "SimRadio: bw_hz=%d invalid, defaulting to 125000\n", _bw_hz);
@@ -27,18 +30,36 @@ static void bytes_to_hex(char* out, const uint8_t* in, int len) {
 }
 
 void SimRadio::notifyRxStart(uint32_t duration_ms) {
-    unsigned long new_until = _ms.getMillis() + duration_ms;
+    unsigned long now = _ms.getMillis();
+    unsigned long new_until = now + duration_ms;
+
     if (new_until > _rx_active_until) {
         _rx_active_until = new_until;
+        // After active RX, need settling time before TX
+        _earliest_tx_ms = new_until + (uint32_t)_rx_to_tx_delay_ms;
     }
 }
 
 void SimRadio::notifyChannelBusy(unsigned long from_ms, unsigned long until_ms) {
-    _lbt_windows.push_back({from_ms, until_ms});
+    // Radio can only detect preambles that are ACTIVE when it becomes ready
+    unsigned long detection_start = std::max(from_ms, (unsigned long)_earliest_rx_ms);
+
+    if (detection_start >= until_ms) {
+        // Preamble ended before radio became ready - cannot detect
+        return;
+    }
+
+    // Preamble is active when radio ready - store adjusted window
+    _lbt_windows.push_back({detection_start, until_ms});
 }
 
 uint32_t SimRadio::getPreambleDetectMs() const {
     return (uint32_t)(6.0 * getSymbolMs());
+}
+
+void SimRadio::resetHardwareDelays() {
+    _earliest_tx_ms = 0;
+    _earliest_rx_ms = 0;
 }
 
 bool SimRadio::isReceiving() {
@@ -137,12 +158,26 @@ bool SimRadio::startSendRaw(const uint8_t* bytes, int len) {
         }
     }
 
+    uint32_t now = _ms.getMillis();
+
+    // Hardware settling: absorb RX→TX delay into TX timing.
+    // Real SX1262 accepts startTransmit() and handles PA ramp internally.
+    // We model this by delaying the effective TX start, not rejecting the call
+    // (returning false would cause MeshCore Dispatcher to permanently drop the packet).
+    uint32_t effective_start = std::max(now, _earliest_tx_ms);
+
     _rx_active_until = 0;  // TX aborts any ongoing RX demodulation
     _state = RadioState::TX_WAIT;
 
     uint32_t airtime = getEstAirtimeFor(len);
+
+    // Schedule earliest RX-ready time (TX end + settling delay)
+    _earliest_rx_ms = effective_start + airtime + (uint32_t)_tx_to_rx_delay_ms;
+
 #ifdef ORCHESTRATOR_BUILD
     if (_tx_callback) {
+        // Report pure RF airtime (not including hw_delay) so collision detection,
+        // half-duplex tracking, and visualization use correct RF envelope duration.
         _tx_callback(bytes, len, airtime);
     }
 #else
@@ -151,7 +186,7 @@ bool SimRadio::startSendRaw(const uint8_t* bytes, int len) {
     fprintf(stdout, "{\"type\":\"tx\",\"hex\":\"%s\",\"airtime_ms\":%u}\n", hex_buf, (unsigned)airtime);
     fflush(stdout);
 #endif
-    _tx_done_at = _ms.getMillis() + airtime;
+    _tx_done_at = effective_start + airtime;
     _packets_sent++;
     return true;
 }
@@ -159,12 +194,18 @@ bool SimRadio::startSendRaw(const uint8_t* bytes, int len) {
 bool SimRadio::isSendComplete() {
     if (_state != RadioState::TX_WAIT) return false;
     if (_ms.getMillis() < _tx_done_at) return false;
-    _state = RadioState::IDLE;  // TX done → IDLE (RadioLib clears to STATE_IDLE)
+    // Don't report TX complete until hardware settles (TX→RX delay).
+    // This keeps state as TX_WAIT during the settling period, preventing
+    // recvRaw() from transitioning to RX mode prematurely.
+    if (_ms.getMillis() < _earliest_rx_ms) return false;
+    _state = RadioState::IDLE;  // TX done + settled → IDLE
     return true;
 }
 
 void SimRadio::onSendFinished() {
-    _state = RadioState::IDLE;  // Stays IDLE until recvRaw() restarts RX
+    // By the time this is called, isSendComplete() has already verified
+    // that both TX and settling are complete, and set state to IDLE.
+    _state = RadioState::IDLE;
 }
 
 bool SimRadio::isInRecvMode() const {

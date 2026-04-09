@@ -16,7 +16,7 @@
 
 struct OrchestratorConfig {
     unsigned long duration_ms = 300000;
-    int step_ms = 4;
+    int step_ms = 1;
     uint32_t epoch_start = 1700000000;
     unsigned long warmup_ms = 0;
     bool hot_start = false;
@@ -35,6 +35,10 @@ struct OrchestratorConfig {
     float cad_reliable_snr = 0.0f;    // above this SNR: cad_miss_prob applies
     float cad_marginal_snr = -15.0f;  // below this SNR: always miss. Between: interpolate.
     float snr_coherence_ms = 0.0f;     // fading coherence time (0 = i.i.d.)
+
+    // Hardware turnaround delays (SX1262 defaults)
+    float rx_to_tx_delay_ms = 1.0f;    // RX→TX turnaround time
+    float tx_to_rx_delay_ms = 5.0f;    // TX→RX turnaround time
 
     struct NodeDef {
         std::string name;

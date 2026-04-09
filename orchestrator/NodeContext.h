@@ -83,7 +83,9 @@ struct NodeContext {
 
     NodeContext(const std::string& name, NodeRole role,
                 uint32_t epoch_base,
-                int sf = 8, int bw = 62500, int cr = 4);
+                int sf = 8, int bw = 62500, int cr = 4,
+                float rx_to_tx_delay_ms = 1.0f,
+                float tx_to_rx_delay_ms = 5.0f);
     ~NodeContext();
 
     // Swap all 6 global context pointers/proxies to point at this node's

@@ -3,6 +3,23 @@ project(meshcore_real_sim LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_C_STANDARD 11)
 
+# Custom build types for runtime performance optimization
+if(CMAKE_BUILD_TYPE STREQUAL "NativeRelease")
+    set(CMAKE_CXX_FLAGS_NATIVERELEASE "-O3 -march=native -mtune=native -DNDEBUG -flto=auto -ffast-math" CACHE STRING "" FORCE)
+    set(CMAKE_C_FLAGS_NATIVERELEASE "-O3 -march=native -mtune=native -DNDEBUG -flto=auto -ffast-math" CACHE STRING "" FORCE)
+    set(CMAKE_EXE_LINKER_FLAGS_NATIVERELEASE "-flto=auto" CACHE STRING "" FORCE)
+    mark_as_advanced(CMAKE_CXX_FLAGS_NATIVERELEASE CMAKE_C_FLAGS_NATIVERELEASE CMAKE_EXE_LINKER_FLAGS_NATIVERELEASE)
+    message(STATUS "Build type: NativeRelease (CPU-specific optimizations for maximum performance)")
+endif()
+
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -flto=auto" CACHE STRING "" FORCE)
+    set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG -flto=auto" CACHE STRING "" FORCE)
+    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "-flto=auto" CACHE STRING "" FORCE)
+    mark_as_advanced(CMAKE_CXX_FLAGS_RELEASE CMAKE_C_FLAGS_RELEASE CMAKE_EXE_LINKER_FLAGS_RELEASE)
+    message(STATUS "Build type: Release (portable optimizations for Docker/distribution)")
+endif()
+
 # MeshCore source directory — override with -DMESHCORE_DIR=/path/to/fork
 set(MESHCORE_DIR "${CMAKE_SOURCE_DIR}/MeshCore" CACHE PATH "Path to MeshCore source tree")
 message(STATUS "Using MeshCore from: ${MESHCORE_DIR}")

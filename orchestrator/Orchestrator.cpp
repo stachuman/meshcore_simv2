@@ -38,6 +38,17 @@ void Orchestrator::configure(const OrchestratorConfig& cfg) {
 
     _duration_ms = cfg.duration_ms;
     _step_ms = cfg.step_ms;
+
+    // Validate step_ms against hardware delay granularity (only when delays are active)
+    if (cfg.rx_to_tx_delay_ms > 0.0f || cfg.tx_to_rx_delay_ms > 0.0f) {
+        const int MAX_STEP_MS = 1;
+        if (_step_ms > MAX_STEP_MS) {
+            std::fprintf(stderr, "Warning: step_ms=%d exceeds hardware delay granularity (%dms). "
+                        "Clamping to step_ms=%d.\n", _step_ms, MAX_STEP_MS, MAX_STEP_MS);
+            _step_ms = MAX_STEP_MS;
+        }
+    }
+
     _warmup_ms = cfg.warmup_ms;
     _verbose = cfg.verbose;
     _seed = cfg.seed;
@@ -69,7 +80,9 @@ void Orchestrator::configure(const OrchestratorConfig& cfg) {
     for (const auto& nd : cfg.nodes) {
         auto ctx = std::make_unique<NodeContext>(nd.name, nd.role,
                                                  cfg.epoch_start,
-                                                 nd.sf, nd.bw, nd.cr);
+                                                 nd.sf, nd.bw, nd.cr,
+                                                 cfg.rx_to_tx_delay_ms,
+                                                 cfg.tx_to_rx_delay_ms);
         ctx->adversarial = nd.adversarial;
         ctx->lat = nd.lat;
         ctx->lon = nd.lon;
@@ -909,7 +922,13 @@ bool Orchestrator::run() {
         }
     }
 
-    if (_hot_start) hotStart();
+    if (_hot_start) {
+        hotStart();
+        // Reset hardware delay timestamps to prevent stale hot-start values
+        for (auto& node : _nodes) {
+            node->radio.resetHardwareDelays();
+        }
+    }
 
     // Main simulation loop
     unsigned long current_ms = 0;

@@ -5,9 +5,12 @@
 # Compare with run_medium.sh and run_dense.sh.
 #
 # Prerequisites:
-#   1. MeshCore fork at ../MeshCore-stachuman (or set MESHCORE_DIR)
-#   2. Fork build: cmake -S . -B build-fork -DMESHCORE_DIR=$(pwd)/../MeshCore-stachuman
-#   3. API cache recommended: first run downloads ~31K nodes
+#   1. MeshCore fork at ../MeshCore-sparse (or set MESHCORE_DIR)
+#   2. API cache recommended: first run downloads ~31K nodes
+#
+# The optimize_tuning.py script builds the orchestrator with NativeRelease
+# optimizations (-O3 -march=native -flto=auto -ffast-math) for maximum
+# performance. Each sweep iteration rebuilds with different delay parameters.
 #
 # Usage:
 #   ./delay_optimization/run_sparse.sh                    # Full sweep
@@ -23,6 +26,10 @@ TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 TOPO_FILE="$SCRIPT_DIR/${VARIANT}_topology.json"
 TEST_FILE="$SCRIPT_DIR/${VARIANT}_test.json"
 CSV_FILE="$SCRIPT_DIR/results_${VARIANT}_${TIMESTAMP}.csv"
+
+# --- Build paths for NativeRelease optimizations ---
+BUILD_DIR="$PROJECT_DIR/build-native-fork-sparse"
+MESHCORE_PATH="${MESHCORE_DIR:-$PROJECT_DIR/../MeshCore-sparse}"
 
 # --- Density parameters (sparse) ---
 LINK_SURVIVAL=0.2
@@ -52,6 +59,7 @@ python3 -m topology_generator \
     --max-good-links "$MAX_GOOD" \
     --link-survival "$LINK_SURVIVAL" \
     --clutter-db 6.0 \
+    --step 1 \
     -v -o "$TOPO_FILE"
 
 # --- Step 2: Inject test cases ---
@@ -86,10 +94,10 @@ SWEEP_DEFAULTS=(
   --rx-base  "0.0:6.0:2.0"
   --rx-slope "0.0:0.6:0.3"
   --clamp-max 6.0
-  --seeds 6
-  --build-dir "$PROJECT_DIR/build-fork"
-  --meshcore-dir "${MESHCORE_DIR:-$PROJECT_DIR/../MeshCore-stachuman}"
-  -j 6
+  --seeds 8
+  --build-dir "$BUILD_DIR"
+  --meshcore-dir "$MESHCORE_PATH"
+  -j 8
   -o "$CSV_FILE"
 )
 

@@ -49,6 +49,14 @@ class SimRadio : public mesh::Radio {
     int _cr;
     int _preamble_len = 16;  // MeshCore configures SX1262 with preambleLength=16
 
+    // Hardware turnaround delays (configured per simulation)
+    float _rx_to_tx_delay_ms;
+    float _tx_to_rx_delay_ms;
+
+    // Hardware readiness tracking
+    uint32_t _earliest_tx_ms;   // Cannot start TX before this time
+    uint32_t _earliest_rx_ms;   // Cannot return to RX before this time
+
     mesh::MillisecondClock& _ms;
     unsigned long _tx_done_at = 0;
 
@@ -69,12 +77,15 @@ class SimRadio : public mesh::Radio {
 
 public:
     SimRadio(mesh::MillisecondClock& ms,
-             int sf = 8, int bw_hz = 62500, int cr = 1);
+             int sf = 8, int bw_hz = 62500, int cr = 1,
+             float rx_to_tx_delay_ms = 1.0f,
+             float tx_to_rx_delay_ms = 5.0f);
 
     void enqueue(const uint8_t* data, int len, float snr, float rssi);
     void notifyRxStart(uint32_t duration_ms);
     void notifyChannelBusy(unsigned long from_ms, unsigned long until_ms);
     uint32_t getPreambleDetectMs() const;
+    void resetHardwareDelays();
 
     // ---- mesh::Radio interface ----
     int      recvRaw(uint8_t* bytes, int sz)            override;
