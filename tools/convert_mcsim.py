@@ -107,7 +107,7 @@ def main():
         "_source": f"Converted from mcsim: {args.input}",
         "simulation": {
             "duration_ms": 300000,
-            "step_ms": 5,
+            "step_ms": 1,
             "warmup_ms": 5000,
             "hot_start": True,
         },

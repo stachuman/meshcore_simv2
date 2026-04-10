@@ -28,6 +28,11 @@ if(NOT EXISTS "${MESHCORE_DIR}/src/Mesh.h")
                         "  Expected to find ${MESHCORE_DIR}/src/Mesh.h")
 endif()
 
+# Runtime delay tuning — when ON, the sweep shim's mutable DelayTuning.h
+# shadows the fork's static const header, allowing optimize_tuning.py to
+# vary delay parameters via JSON config without rebuilding.
+option(DELAY_TUNING_RUNTIME "Enable runtime delay tuning override for sweep builds" OFF)
+
 # Find OpenSSL
 find_package(OpenSSL REQUIRED)
 
@@ -60,6 +65,12 @@ set(COMMON_INCLUDES
     ${MESHCORE_DIR}/lib/ed25519
 )
 
+if(DELAY_TUNING_RUNTIME)
+    # Prepend sweep shim so its helpers/DelayTuning.h shadows the fork's version
+    list(INSERT COMMON_INCLUDES 0 ${CMAKE_SOURCE_DIR}/shims/sweep_shim)
+    message(STATUS "Runtime delay tuning: ENABLED (sweep mode)")
+endif()
+
 # ---- Shim sources (shared by both binaries) ----
 set(SHIM_SOURCES
     ${CMAKE_SOURCE_DIR}/shims/arduino_shim/Arduino.cpp
@@ -73,6 +84,11 @@ set(SHIM_SOURCES
     ${CMAKE_SOURCE_DIR}/shims/lib_shim/FS.cpp
     ${CMAKE_SOURCE_DIR}/shims/lib_shim/CayenneLPP.cpp
 )
+
+if(DELAY_TUNING_RUNTIME)
+    list(APPEND SHIM_SOURCES ${CMAKE_SOURCE_DIR}/shims/sweep_shim/DelayTuning.cpp)
+    add_compile_definitions(DELAY_TUNING_RUNTIME)
+endif()
 
 # ---- MeshCore sources (shared by both binaries) ----
 set(MESHCORE_SOURCES

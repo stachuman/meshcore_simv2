@@ -233,7 +233,7 @@ class SimManager:
         record = self._sims.get(sim_id)
         if record and record.status in ("completed", "failed", "cancelled"):
             try:
-                q.put_nowait({"status": record.status, "progress": record.progress_pct})
+                q.put_nowait({"status": record.status, "progress": record.progress_pct / 100.0})
                 q.put_nowait(None)
             except asyncio.QueueFull:
                 pass
@@ -264,7 +264,12 @@ class SimManager:
         async with self._semaphore:
             record.status = "running"
             self._save_status(sim_id)
-            self._notify_progress(sim_id, {"status": "running", "progress": 0})
+            self._notify_progress(sim_id, {
+                "status": "running",
+                "progress": 0,
+                "phase": "init",
+                "message": "Starting orchestrator...",
+            })
 
             try:
                 proc = await asyncio.create_subprocess_exec(
@@ -296,7 +301,7 @@ class SimManager:
                     record.status = "completed"
                     record.progress_pct = 100
                     self._notify_progress(
-                        sim_id, {"status": "completed", "progress": 100}
+                        sim_id, {"status": "completed", "progress": 1.0}
                     )
                 elif record.status == "cancelled":
                     # Already handled by cancel_sim
@@ -349,25 +354,33 @@ class SimManager:
     ) -> str:
         """Parse orchestrator stderr for progress updates.
 
-        The orchestrator emits verbose timestamped lines like:
-            [  10.500s] TX NodeA 42B airtime=123ms
+        The orchestrator emits structured progress lines:
+            [PROGRESS] init: 3 nodes, step=1ms, duration=90.0s
+            [PROGRESS] hot-start: exchanging adverts (3 nodes)
+            [PROGRESS] hot-start: complete
+            [PROGRESS] warmup: instant delivery for 5.0s
+            [PROGRESS] 50% (45.0s / 90.0s)
+            [PROGRESS] running: physics simulation started
         and summary lines like:
             === Simulation Summary (60.0s) ===
-
-        Progress is estimated from the simulation time in these timestamps
-        relative to the known duration_ms from the config.
 
         Returns the full stderr text (for error reporting on failure).
         """
         record = self._sims[sim_id]
         full_output: list[str] = []
 
-        # Regex for orchestrator timestamp: [  10.500s]
+        # [PROGRESS] phase: message  OR  [PROGRESS] 50% (45.0s / 90.0s)
+        progress_phase_pat = re.compile(
+            r"^\[PROGRESS\]\s+(\w[\w-]*):\s*(.*)"
+        )
+        progress_pct_pat = re.compile(
+            r"^\[PROGRESS\]\s+(\d+)%\s+\(([^)]+)\)"
+        )
+        # Regex for orchestrator timestamp: [  10.500s] (verbose mode fallback)
         ts_pattern = re.compile(r"^\[\s*([\d.]+)s\]")
-        # Regex for generic percentage (fallback)
-        pct_pattern = re.compile(r"(\d+)%")
 
         last_notified_pct = -1
+        in_summary = False
 
         while True:
             line = await stream.readline()
@@ -376,45 +389,57 @@ class SimManager:
             text = line.decode("utf-8", errors="replace").rstrip()
             full_output.append(text)
 
-            # Try to extract simulation time from verbose output
+            # Once summary header is seen, forward ALL remaining lines
+            if "=== Simulation Summary" in text:
+                in_summary = True
+            if in_summary:
+                self._notify_progress(sim_id, {
+                    "status": "running",
+                    "detail": text,
+                })
+                continue
+
+            # Structured progress: phase messages (init, hot-start, warmup, running)
+            phase_match = progress_phase_pat.match(text)
+            if phase_match:
+                phase = phase_match.group(1)
+                message = phase_match.group(2)
+                self._notify_progress(sim_id, {
+                    "status": "running",
+                    "phase": phase,
+                    "message": message,
+                })
+                continue
+
+            # Structured progress: percentage
+            pct_match = progress_pct_pat.match(text)
+            if pct_match:
+                pct = min(int(pct_match.group(1)), 99)
+                time_info = pct_match.group(2)
+                if pct > last_notified_pct:
+                    last_notified_pct = pct
+                    record.progress_pct = pct
+                    self._notify_progress(sim_id, {
+                        "status": "running",
+                        "progress": pct / 100.0,
+                        "message": time_info,
+                    })
+                continue
+
+            # Verbose mode fallback: extract sim time from [  10.500s] lines
             ts_match = ts_pattern.search(text)
             if ts_match and duration_ms and duration_ms > 0:
                 sim_time_s = float(ts_match.group(1))
                 sim_time_ms = sim_time_s * 1000.0
                 pct = int(min(sim_time_ms / duration_ms * 100, 99))
-                # Only notify on meaningful progress changes (avoid flooding)
                 if pct > last_notified_pct:
                     last_notified_pct = pct
                     record.progress_pct = pct
-                    record.progress_detail = text
                     self._notify_progress(sim_id, {
                         "status": "running",
-                        "progress": pct,
-                        "detail": text,
+                        "progress": pct / 100.0,
                     })
                 continue
-
-            # Fallback: look for explicit percentage in output
-            pct_match = pct_pattern.search(text)
-            if pct_match:
-                pct = min(int(pct_match.group(1)), 99)
-                if pct > last_notified_pct:
-                    last_notified_pct = pct
-                    record.progress_pct = pct
-                    record.progress_detail = text
-                    self._notify_progress(sim_id, {
-                        "status": "running",
-                        "progress": pct,
-                        "detail": text,
-                    })
-                continue
-
-            # Forward simulation summary lines
-            if "=== Simulation Summary" in text or "Delivery:" in text:
-                self._notify_progress(sim_id, {
-                    "status": "running",
-                    "detail": text,
-                })
 
         return "\n".join(full_output)
 

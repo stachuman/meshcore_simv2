@@ -78,8 +78,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300,
-    "collapsed": true
+    "width": 300
   },
   "right": {
     "id": "db8568549e660428",
@@ -95,7 +94,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "delay_optimization/DELAY_OPTIMIZATION.md",
+                "file": "docs/RADIO_MODEL.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -105,7 +104,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for DELAY_OPTIMIZATION"
+              "title": "Backlinks for RADIO_MODEL"
             }
           },
           {
@@ -114,12 +113,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "delay_optimization/DELAY_OPTIMIZATION.md",
+                "file": "docs/RADIO_MODEL.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links from DELAY_OPTIMIZATION"
+              "title": "Outgoing links from RADIO_MODEL"
             }
           },
           {
@@ -157,13 +156,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "delay_optimization/DELAY_OPTIMIZATION.md",
+                "file": "docs/RADIO_MODEL.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of DELAY_OPTIMIZATION"
+              "title": "Outline of RADIO_MODEL"
             }
           }
         ]
@@ -186,17 +185,27 @@
   },
   "active": "9442ae9149e69cb1",
   "lastOpenFiles": [
+    "delay_optimization/results_dense_20260410_111302.csv",
+    "delay_optimization/results_medium_20260410_111256.csv",
+    "delay_optimization/results_sparse_20260410_111201.csv",
+    "delay_optimization/run_sweep.sh~",
+    "build/CMakeFiles/Progress/64",
+    "build/CMakeFiles/Progress/2",
+    "build/CMakeFiles/Progress/1",
+    "build/CMakeFiles/Progress/68",
+    "build/CMakeFiles/Progress/67",
+    "build/CMakeFiles/Progress/66",
+    "build/CMakeFiles/Progress/65",
+    "docs/superpowers/specs/2026-04-09-hardware-turnaround-delays-design.md",
+    "docs/superpowers/plans/2026-04-09-hardware-turnaround-delays.md",
+    "docs/superpowers/plans/2026-04-09-build-optimization.md",
+    "docs/RADIO_MODEL.md",
+    "docs/SIMULATION_QUALITY_AUDIT.md",
+    "docs/CONVERT_TOPOLOGY.md",
+    "delay_optimization/SEATTLE_SIMULATIONS.md",
+    "webapp/ARCHITECTURE.md",
     "docs/CONFIG_FORMAT.md",
-    "delay_optimization/validation_test.json",
-    "tools/set_delays.py.tmp.2243214.1775552282845",
-    "tools/optimize_delays.py.tmp.2243214.1775552186153",
-    "tools/optimize_tuning.py.tmp.2243214.1775552131925",
-    "delay_optimization/run_medium_validation.sh.tmp.2243214.1775552111257",
-    "delay_optimization/DELAY_OPTIMIZATION.md.tmp.2243214.1775551943248",
-    "delay_optimization/DELAY_OPTIMIZATION.md.tmp.2243214.1775551922103",
     "delay_optimization/DELAY_OPTIMIZATION.md",
-    "delay_optimization/DELAY_OPTIMIZATION.md.tmp.2243214.1775551824806",
-    "delay_optimization/DELAY_OPTIMIZATION.md.tmp.2243214.1775551815447",
-    "delay_optimization/DELAY_OPTIMIZATION.md.tmp.2243214.1775551796809"
+    "delay_optimization/gdansk_test.png"
   ]
 }

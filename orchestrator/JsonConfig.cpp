@@ -54,6 +54,18 @@ static OrchestratorConfig parseJson(const json& j) {
                 if (hw.contains("tx_to_rx_delay_ms")) cfg.tx_to_rx_delay_ms = hw["tx_to_rx_delay_ms"].get<float>();
             }
         }
+        if (sim.contains("delay_tuning")) {
+            auto& dt = sim["delay_tuning"];
+            cfg.delay_tuning.enabled = true;
+            if (dt.contains("tx_base"))   cfg.delay_tuning.tx_base   = dt["tx_base"].get<float>();
+            if (dt.contains("tx_slope"))  cfg.delay_tuning.tx_slope  = dt["tx_slope"].get<float>();
+            if (dt.contains("dtx_base"))  cfg.delay_tuning.dtx_base  = dt["dtx_base"].get<float>();
+            if (dt.contains("dtx_slope")) cfg.delay_tuning.dtx_slope = dt["dtx_slope"].get<float>();
+            if (dt.contains("rx_base"))   cfg.delay_tuning.rx_base   = dt["rx_base"].get<float>();
+            if (dt.contains("rx_slope"))  cfg.delay_tuning.rx_slope  = dt["rx_slope"].get<float>();
+            if (dt.contains("clamp_min")) cfg.delay_tuning.clamp_min = dt["clamp_min"].get<float>();
+            if (dt.contains("clamp_max")) cfg.delay_tuning.clamp_max = dt["clamp_max"].get<float>();
+        }
     }
 
     if (j.contains("nodes")) {

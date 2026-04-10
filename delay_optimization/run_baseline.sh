@@ -89,6 +89,7 @@ chan_pct = float(cm.group(1)) if cm else 0.0
 # Parse fate
 fate_col = 0.0
 fate_drop = 0.0
+fate_ack = 0.0
 fate_tracked = 0
 fate_delivered = 0
 fate_lost = 0
@@ -97,16 +98,19 @@ if fm:
     fate_tracked = int(fm.group(1))
     fate_delivered = int(fm.group(2))
     fate_lost = int(fm.group(3))
+dm = re.search(r'Per delivered message: mean tx=[\d.]+\s+rx=[\d.]+\s+collision=[\d.]+\s+drop=[\d.]+\s+ack_copies=([\d.]+)', stderr)
+if dm:
+    fate_ack = float(dm.group(1))
 lm = re.search(r'Per lost message:\s+mean tx=[\d.]+\s+rx=[\d.]+\s+collision=([\d.]+)\s+drop=([\d.]+)', stderr)
 if lm:
     fate_col = float(lm.group(1))
     fate_drop = float(lm.group(2))
 
-print(f'{delivered},{sent},{pct:.1f},{ack_pct:.1f},{chan_pct:.1f},{fate_tracked},{fate_delivered},{fate_lost},{fate_col},{fate_drop}')
+print(f'{delivered},{sent},{pct:.1f},{ack_pct:.1f},{chan_pct:.1f},{fate_tracked},{fate_delivered},{fate_lost},{fate_col},{fate_drop},{fate_ack}')
 ")
         echo "$result"
     else
-        echo "0,0,0.0,0.0,0.0,0,0,0,0.0,0.0"
+        echo "0,0,0.0,0.0,0.0,0,0,0,0.0,0.0,0.0"
     fi
 
     rm -f "$tmp_config" "$stderr_file"
@@ -131,6 +135,7 @@ run_density() {
     local all_chan=""
     local all_col=""
     local all_drop=""
+    local all_ack_copies=""
     local fate_tracked_sum=0
     local fate_delivered_sum=0
     local fate_lost_sum=0
@@ -142,11 +147,11 @@ run_density() {
         local result
         result=$(run_one "$config_file" "$seed")
 
-        local del sent pct ack chan ft fd fl fc fdrop
-        IFS=',' read -r del sent pct ack chan ft fd fl fc fdrop <<< "$result"
+        local del sent pct ack chan ft fd fl fc fdrop fack
+        IFS=',' read -r del sent pct ack chan ft fd fl fc fdrop fack <<< "$result"
 
-        printf "delivery=%.1f%% ack=%.1f%% chan=%.1f%% col/lost=%.1f drp/lost=%.1f\n" \
-            "$pct" "$ack" "$chan" "$fc" "$fdrop"
+        printf "delivery=%.1f%% ack=%.1f%% chan=%.1f%% col/lost=%.1f drp/lost=%.1f ack_copies=%.1f\n" \
+            "$pct" "$ack" "$chan" "$fc" "$fdrop" "$fack"
 
         total_del=$((total_del + del))
         total_sent=$((total_sent + sent))
@@ -155,6 +160,7 @@ run_density() {
         all_chan="$all_chan $chan"
         all_col="$all_col $fc"
         all_drop="$all_drop $fdrop"
+        all_ack_copies="$all_ack_copies $fack"
         fate_tracked_sum=$((fate_tracked_sum + ft))
         fate_delivered_sum=$((fate_delivered_sum + fd))
         fate_lost_sum=$((fate_lost_sum + fl))
@@ -169,8 +175,10 @@ acks = [float(x) for x in '$all_ack'.split()]
 chans = [float(x) for x in '$all_chan'.split()]
 cols = [float(x) for x in '$all_col'.split()]
 drops = [float(x) for x in '$all_drop'.split()]
+ack_copies = [float(x) for x in '$all_ack_copies'.split()]
 cols_nonzero = [c for c in cols if c > 0]
 drops_nonzero = [d for d in drops if d > 0]
+ack_copies_nonzero = [a for a in ack_copies if a > 0]
 
 mean_pct = statistics.mean(pcts)
 std_pct = statistics.stdev(pcts) if len(pcts) > 1 else 0
@@ -178,13 +186,14 @@ mean_ack = statistics.mean(acks)
 mean_chan = statistics.mean(chans)
 mean_col = statistics.mean(cols_nonzero) if cols_nonzero else 0
 mean_drop = statistics.mean(drops_nonzero) if drops_nonzero else 0
+mean_ack_copies = statistics.mean(ack_copies_nonzero) if ack_copies_nonzero else 0
 
 print()
 print(f'  BASELINE {\"$density\".upper():8s}:  delivery={mean_pct:.1f}% +/-{std_pct:.1f}%  '
       f'(min={min(pcts):.0f}% max={max(pcts):.0f}%)  '
       f'{$total_del}/{$total_sent}')
 print(f'                    ack={mean_ack:.1f}%  chan={mean_chan:.1f}%  '
-      f'col/lost={mean_col:.1f}  drp/lost={mean_drop:.1f}')
+      f'col/lost={mean_col:.1f}  drp/lost={mean_drop:.1f}  ack_copies/del={mean_ack_copies:.1f}')
 print(f'                    fate: {$fate_tracked_sum} tracked, {$fate_delivered_sum} delivered, {$fate_lost_sum} lost')
 "
     echo ""

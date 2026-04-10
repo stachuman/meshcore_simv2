@@ -111,10 +111,12 @@ chan_pct = float(cm.group(1)) if cm else 0.0
 lm = re.search(r'Per lost message:\s+mean tx=[\d.]+\s+rx=[\d.]+\s+collision=([\d.]+)\s+drop=([\d.]+)', stderr)
 col = float(lm.group(1)) if lm else 0.0
 drp = float(lm.group(2)) if lm else 0.0
-print(f'{delivered},{sent},{pct:.1f},{ack_pct:.1f},{chan_pct:.1f},{col:.1f},{drp:.1f}')
+dam = re.search(r'Per delivered message: mean tx=[\d.]+\s+rx=[\d.]+\s+collision=[\d.]+\s+drop=[\d.]+\s+ack_copies=([\d.]+)', stderr)
+ack_c = float(dam.group(1)) if dam else 0.0
+print(f'{delivered},{sent},{pct:.1f},{ack_pct:.1f},{chan_pct:.1f},{col:.1f},{drp:.1f},{ack_c:.1f}')
 "
     else
-        echo "0,0,0.0,0.0,0.0,0.0,0.0"
+        echo "0,0,0.0,0.0,0.0,0.0,0.0,0.0"
     fi
 
     rm -f "$tmp_config" "$stderr_file"
@@ -132,7 +134,7 @@ for variant in "${VARIANTS[@]}"; do
         echo "--- $label (tx=$txd dtx=$dtxd rx=$rxd) ---"
     fi
 
-    all_pct="" all_ack="" all_chan="" all_col="" all_drop=""
+    all_pct="" all_ack="" all_chan="" all_col="" all_drop="" all_ack_copies=""
     total_del=0 total_sent=0
 
     for i in $(seq 0 $((NUM_SEEDS - 1))); do
@@ -140,10 +142,10 @@ for variant in "${VARIANTS[@]}"; do
         printf "  seed %d ... " "$seed"
 
         result=$(run_one "$TEST_FILE" "$seed" "$txd" "$dtxd" "$rxd")
-        IFS=',' read -r del sent pct ack chan col drp <<< "$result"
+        IFS=',' read -r del sent pct ack chan col drp ack_c <<< "$result"
 
-        printf "del=%.1f%% ack=%.1f%% chan=%.1f%% col=%.1f drp=%.1f\n" \
-            "$pct" "$ack" "$chan" "$col" "$drp"
+        printf "del=%.1f%% ack=%.1f%% chan=%.1f%% col=%.1f drp=%.1f ack_c=%.1f\n" \
+            "$pct" "$ack" "$chan" "$col" "$drp" "$ack_c"
 
         total_del=$((total_del + del))
         total_sent=$((total_sent + sent))
@@ -152,6 +154,7 @@ for variant in "${VARIANTS[@]}"; do
         all_chan="$all_chan $chan"
         all_col="$all_col $col"
         all_drop="$all_drop $drp"
+        all_ack_copies="$all_ack_copies $ack_c"
     done
 
     # Aggregate
@@ -162,9 +165,12 @@ acks = [float(x) for x in '$all_ack'.split()]
 chans = [float(x) for x in '$all_chan'.split()]
 cols = [float(x) for x in '$all_col'.split()]
 drops = [float(x) for x in '$all_drop'.split()]
+ack_copies = [float(x) for x in '$all_ack_copies'.split()]
+ack_copies_nz = [a for a in ack_copies if a > 0]
 m = statistics.mean(pcts)
 s = statistics.stdev(pcts) if len(pcts) > 1 else 0
-print(f'{m:.1f}|{s:.1f}|{statistics.mean(acks):.1f}|{statistics.mean(chans):.1f}|{statistics.mean(cols):.1f}|{statistics.mean(drops):.1f}|$total_del|$total_sent')
+mac = statistics.mean(ack_copies_nz) if ack_copies_nz else 0.0
+print(f'{m:.1f}|{s:.1f}|{statistics.mean(acks):.1f}|{statistics.mean(chans):.1f}|{statistics.mean(cols):.1f}|{statistics.mean(drops):.1f}|$total_del|$total_sent|{mac:.1f}')
 ")
     RESULTS["$label"]="$agg"
     echo ""
@@ -197,6 +203,7 @@ for label, data in results.items():
         'mean_drop': float(parts[5]),
         'total_del': int(parts[6]),
         'total_sent': int(parts[7]),
+        'mean_ack_copies': float(parts[8]) if len(parts) > 8 else 0.0,
     })
 
 # Sort by delivery descending
@@ -205,8 +212,8 @@ rows.sort(key=lambda r: r['mean_del'], reverse=True)
 # Find baseline (zero or stock_default)
 base = next((r for r in rows if r['label'] == 'stock_default'), rows[0])
 
-print(f\"  {'Variant':<18s}  {'Delivery':>12s}  {'vs stock':>8s}  {'Ack':>6s}  {'Chan':>6s}  {'Col/lost':>8s}  {'Drp/lost':>8s}\")
-print(f\"  {'-'*18}  {'-'*12}  {'-'*8}  {'-'*6}  {'-'*6}  {'-'*8}  {'-'*8}\")
+print(f\"  {'Variant':<18s}  {'Delivery':>12s}  {'vs stock':>8s}  {'Ack':>6s}  {'Chan':>6s}  {'Col/lost':>8s}  {'Drp/lost':>8s}  {'Ack/del':>7s}\")
+print(f\"  {'-'*18}  {'-'*12}  {'-'*8}  {'-'*6}  {'-'*6}  {'-'*8}  {'-'*8}  {'-'*7}\")
 
 for r in rows:
     d = r['mean_del'] - base['mean_del']
@@ -214,7 +221,7 @@ for r in rows:
     delta = f'{sign}{d:.1f}pp'
     if r['label'] == base['label']:
         delta = '(base)'
-    print(f\"  {r['label']:<18s}  {r['mean_del']:>5.1f}%+/-{r['std_del']:.1f}  {delta:>8s}  {r['mean_ack']:>5.1f}%  {r['mean_chan']:>5.1f}%  {r['mean_col']:>7.1f}  {r['mean_drop']:>7.1f}\")
+    print(f\"  {r['label']:<18s}  {r['mean_del']:>5.1f}%+/-{r['std_del']:.1f}  {delta:>8s}  {r['mean_ack']:>5.1f}%  {r['mean_chan']:>5.1f}%  {r['mean_col']:>7.1f}  {r['mean_drop']:>7.1f}  {r['mean_ack_copies']:>6.1f}\")
 
 print()
 print(f'  Total msgs per seed: {rows[0][\"total_sent\"] // 6}')

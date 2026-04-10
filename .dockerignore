@@ -1,0 +1,23 @@
+# Only send what the Dockerfile needs to the Docker daemon.
+# Start by ignoring everything, then whitelist specific paths.
+
+# Ignore everything by default
+*
+
+# Allow orchestrator binary (Release build for Docker)
+!build-release/orchestrator/orchestrator
+
+# Allow webapp source
+!webapp/requirements.txt
+!webapp/server/
+!webapp/server/**
+!webapp/static/
+!webapp/static/**
+
+# Dockerfile
+!webapp/Dockerfile
+
+# Exclude bytecode and caches even from whitelisted paths
+**/__pycache__
+**/*.pyc
+**/*.pyo

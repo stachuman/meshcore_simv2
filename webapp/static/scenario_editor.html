@@ -305,6 +305,27 @@
             <tbody id="msgsched-tbody"></tbody>
           </table>
           <button class="add-row-btn" id="btn-add-msgsched">+ Add Schedule</button>
+          <button class="add-row-btn" id="btn-rand-msgsched">Randomize...</button>
+          <div id="rand-msgsched-form" style="display:none; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:10px 12px; margin-bottom:12px;">
+            <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; font-size:11px; font-family:var(--font-mono);">
+              <label style="color:var(--text-dim);">Flows:
+                <input id="rand-flows" type="number" min="1" value="6" style="width:50px; background:var(--bg-input); color:var(--text); border:1px solid var(--border); padding:2px 5px; font-size:11px; border-radius:var(--radius);">
+              </label>
+              <label style="color:var(--text-dim);">Interval (ms):
+                <input id="rand-interval" type="number" min="1000" value="20000" style="width:70px; background:var(--bg-input); color:var(--text); border:1px solid var(--border); padding:2px 5px; font-size:11px; border-radius:var(--radius);">
+              </label>
+              <label style="color:var(--text-dim);">Start (ms):
+                <input id="rand-start" type="number" min="0" value="10000" style="width:70px; background:var(--bg-input); color:var(--text); border:1px solid var(--border); padding:2px 5px; font-size:11px; border-radius:var(--radius);">
+              </label>
+              <label style="color:var(--text-dim); display:flex; align-items:center; gap:3px;">
+                <input id="rand-ack" type="checkbox"> Ack
+              </label>
+              <label style="color:var(--text-dim); display:flex; align-items:center; gap:3px;">
+                <input id="rand-replace" type="checkbox" checked> Replace existing
+              </label>
+              <button class="btn btn-sm btn-primary" id="btn-rand-generate">Generate</button>
+            </div>
+          </div>
 
           <h3>Channel Schedule</h3>
           <table class="vis-table" id="chansched-table">
@@ -344,6 +365,7 @@
       <div class="param-row">
         <label>Duration (ms)</label>
         <input id="p-duration" class="form-input" type="number" value="60000">
+        <button class="btn btn-sm" id="btn-auto-duration" title="Auto-calculate from scheduled events">Auto</button>
       </div>
       <div class="param-row">
         <label>Step (ms)</label>
@@ -432,7 +454,7 @@
     simulation: {
       duration_ms: 60000,
       warmup_ms: 5000,
-      step_ms: 5,
+      step_ms: 1,
       hot_start: true
     },
     commands: [
@@ -542,7 +564,7 @@
       const obj = JSON.parse(editor.getValue());
       if (!obj.simulation) obj.simulation = {};
       obj.simulation.duration_ms = parseInt(document.getElementById('p-duration').value) || 60000;
-      obj.simulation.step_ms = parseInt(document.getElementById('p-step').value) || 5;
+      obj.simulation.step_ms = parseInt(document.getElementById('p-step').value) || 1;
       obj.simulation.warmup_ms = parseInt(document.getElementById('p-warmup').value) || 5000;
       obj.simulation.hot_start = document.getElementById('p-hotstart').checked;
       const seed = document.getElementById('p-seed').value;
@@ -1785,6 +1807,178 @@
     markDirty();
     renderExpectTable();
   });
+
+  // -- Random message schedule generator ----------------------------
+  document.getElementById('btn-rand-msgsched').addEventListener('click', () => {
+    const form = document.getElementById('rand-msgsched-form');
+    const visible = form.style.display !== 'none';
+    form.style.display = visible ? 'none' : '';
+    if (!visible) {
+      // Set default flows = min(6, companion pair count)
+      const companions = getCompanionNames();
+      const pairCount = companions.length * (companions.length - 1);
+      document.getElementById('rand-flows').value = Math.min(6, pairCount) || 1;
+      document.getElementById('rand-flows').max = pairCount || 1;
+    }
+  });
+
+  function getCompanionNames() {
+    if (!topoData || !topoData.nodes) return [];
+    return topoData.nodes
+      .filter(n => (n.role || 'repeater') === 'companion')
+      .map(n => n.name)
+      .filter(Boolean);
+  }
+
+  document.getElementById('btn-rand-generate').addEventListener('click', () => {
+    const companions = getCompanionNames();
+    if (companions.length < 2) {
+      addStatus('warning', 'Need at least 2 companion nodes in topology to generate message schedules.');
+      return;
+    }
+
+    const flowCount = parseInt(document.getElementById('rand-flows').value) || 1;
+    const interval = parseInt(document.getElementById('rand-interval').value) || 20000;
+    const startOffset = parseInt(document.getElementById('rand-start').value) || 10000;
+    const useAck = document.getElementById('rand-ack').checked;
+    const replaceExisting = document.getElementById('rand-replace').checked;
+
+    // Generate all ordered pairs
+    const pairs = [];
+    for (const a of companions) {
+      for (const b of companions) {
+        if (a !== b) pairs.push([a, b]);
+      }
+    }
+
+    // Shuffle (Fisher-Yates)
+    for (let i = pairs.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pairs[i], pairs[j]] = [pairs[j], pairs[i]];
+    }
+
+    const selected = pairs.slice(0, Math.min(flowCount, pairs.length));
+
+    const entries = selected.map((pair, idx) => ({
+      from: pair[0],
+      to: pair[1],
+      start_ms: startOffset + idx * 2000,
+      interval_ms: interval,
+      message: 'test msg {n}',
+      command_prefix: useAck ? 'msga' : 'msg',
+      ack: useAck,
+    }));
+
+    if (replaceExisting) {
+      visualData.message_schedule = entries;
+    } else {
+      visualData.message_schedule = visualData.message_schedule.concat(entries);
+    }
+
+    markDirty();
+    renderMsgSchedTable();
+
+    // Also sync to JSON if in JSON mode
+    if (currentMode === 'json') {
+      try {
+        const obj = getEditorJSON();
+        if (replaceExisting) {
+          obj.message_schedule = entries.map(s => {
+            const e = { from: s.from, to: s.to, start_ms: s.start_ms, interval_ms: s.interval_ms };
+            if (s.message) e.message = s.message;
+            e.command_prefix = s.command_prefix;
+            return e;
+          });
+        } else {
+          if (!obj.message_schedule) obj.message_schedule = [];
+          for (const s of entries) {
+            const e = { from: s.from, to: s.to, start_ms: s.start_ms, interval_ms: s.interval_ms };
+            if (s.message) e.message = s.message;
+            e.command_prefix = s.command_prefix;
+            obj.message_schedule.push(e);
+          }
+        }
+        programmaticChange = true;
+        editor.setValue(JSON.stringify(obj, null, 2));
+        programmaticChange = false;
+      } catch (_) {}
+    }
+
+    document.getElementById('rand-msgsched-form').style.display = 'none';
+    addStatus('ok', 'Generated ' + entries.length + ' message schedule(s).');
+  });
+
+  // -- Auto duration calculation ------------------------------------
+  document.getElementById('btn-auto-duration').addEventListener('click', () => {
+    const duration = computeAutoDuration();
+    if (duration == null) {
+      addStatus('warning', 'No scheduled events found to compute duration.');
+      return;
+    }
+    document.getElementById('p-duration').value = duration;
+    syncParamsToEditor();
+    addStatus('ok', 'Duration set to ' + duration + ' ms (last event + 60s buffer).');
+  });
+
+  function computeAutoDuration() {
+    let parsed;
+    try {
+      if (currentMode === 'visual') {
+        // Build a temporary object from visual data
+        parsed = {};
+        parsed.commands = visualData.commands.map(c => ({ at_ms: c.at_ms }));
+        parsed.message_schedule = visualData.message_schedule;
+        parsed.channel_schedule = visualData.channel_schedule;
+      } else {
+        parsed = getEditorJSON();
+      }
+    } catch (_) {
+      return null;
+    }
+
+    let maxTime = 0;
+    let found = false;
+
+    // Scan commands
+    for (const cmd of (parsed.commands || [])) {
+      if (cmd.at_ms != null) {
+        maxTime = Math.max(maxTime, cmd.at_ms);
+        found = true;
+      }
+    }
+
+    // Scan message_schedule
+    for (const s of (parsed.message_schedule || [])) {
+      const start = s.start_ms || 0;
+      const interval = s.interval_ms || 0;
+      const count = s.count;
+      if (count != null && count > 0) {
+        maxTime = Math.max(maxTime, start + interval * (count - 1));
+      } else {
+        // count omitted (auto-fill) — just use start_ms
+        maxTime = Math.max(maxTime, start);
+      }
+      found = true;
+    }
+
+    // Scan channel_schedule
+    for (const s of (parsed.channel_schedule || [])) {
+      const start = s.start_ms || 0;
+      const interval = s.interval_ms || 0;
+      const count = s.count;
+      if (count != null && count > 0) {
+        maxTime = Math.max(maxTime, start + interval * (count - 1));
+      } else {
+        maxTime = Math.max(maxTime, start);
+      }
+      found = true;
+    }
+
+    if (!found) return null;
+
+    // Add 60s buffer, minimum 60s
+    return Math.max(60000, maxTime + 60000);
+  }
 
   // -- Status area helpers ------------------------------------------
   function addStatus(type, message) {

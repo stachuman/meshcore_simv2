@@ -7,14 +7,18 @@
 
 struct MsgStats {
     int sent_flood = 0;       // direct messages sent via flood routing
-    int sent_direct = 0;      // direct messages sent via direct routing
+    int sent_direct = 0;      // direct messages sent via direct/path routing
     int sent_group = 0;       // group/channel messages sent
-    int acks_pending = 0;     // message acks we're waiting for
-    int acks_received = 0;    // message acks received back
-    // Per-destination send counts (key = destination name)
-    std::map<std::string, int> sent_to;
+    // ACK tracking split by routing type
+    int acks_flood_pending = 0;
+    int acks_flood_received = 0;
+    int acks_direct_pending = 0;
+    int acks_direct_received = 0;
+    // Per-destination send counts split by routing type (key = destination name)
+    std::map<std::string, int> sent_flood_to;
+    std::map<std::string, int> sent_direct_to;
     // Per-sender receive counts (key = sender name)
-    std::map<std::string, int> recv_direct;   // direct messages received
+    std::map<std::string, int> recv_direct;   // direct messages received (any routing)
     int recv_group = 0;       // group/channel messages received
     std::map<std::string, int> recv_group_by_sender; // channel messages by sender name
 
@@ -24,6 +28,8 @@ struct MsgStats {
         for (auto& kv : recv_direct) n += kv.second;
         return n;
     }
+    int acksPending() const { return acks_flood_pending + acks_direct_pending; }
+    int acksReceived() const { return acks_flood_received + acks_direct_received; }
 };
 
 // Type-erased interface for mesh nodes in the orchestrator.

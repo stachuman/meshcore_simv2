@@ -40,6 +40,16 @@ struct OrchestratorConfig {
     float rx_to_tx_delay_ms = 1.0f;    // RX→TX turnaround time
     float tx_to_rx_delay_ms = 5.0f;    // TX→RX turnaround time
 
+    // Runtime delay tuning (used only with DELAY_TUNING_RUNTIME builds)
+    struct DelayTuningParams {
+        bool enabled = false;
+        float tx_base = 1.0f, tx_slope = 0.0f;
+        float dtx_base = 0.4f, dtx_slope = 0.0f;
+        float rx_base = 0.4f, rx_slope = 0.0f;
+        float clamp_min = 0.0f, clamp_max = 5.0f;
+    };
+    DelayTuningParams delay_tuning;
+
     struct NodeDef {
         std::string name;
         NodeRole role = NodeRole::Repeater;
@@ -147,6 +157,10 @@ class Orchestrator {
     std::vector<OrchestratorConfig::Assertion> _assertions;
     int _tx_count = 0;
     int _rx_count = 0;
+    int _ackpath_tx = 0;
+    int _ackpath_rx = 0;
+    int _ackpath_collision = 0;
+    int _ackpath_drop = 0;  // halfduplex + loss (no weak — weak = never viable)
     std::map<std::string, int> _event_counts;  // "event_type" or "event_type:node" → count
 
     // Pre-built per-node event keys to avoid string alloc on hot path
@@ -166,11 +180,18 @@ class Orchestrator {
         int collisions = 0;
         int drops = 0;              // weak + halfduplex + loss combined
         bool delivered = false;     // tracked hash reached to_idx as successful RX
+        bool sent_as_flood = true;  // routing type at send time (flood vs direct/path)
+        int ackpath_rx_at_sender = 0;  // how many ACK/PATH copies reached from_idx
     };
     std::vector<MessageFate> _message_fates;
     std::unordered_map<uint32_t, int> _hash_to_fate;  // pkt_hash → fate index
     std::unordered_map<int, int> _pending_msg_fates;   // node_idx → fate index (awaiting initial TX)
     std::vector<std::set<int>> _step_rx_fates;          // [node_idx] → fate indices delivered this step
+
+    // Per-message ACK/PATH tracking: follows ack/path packets back to original sender
+    std::unordered_map<uint32_t, int> _ackpath_hash_to_fate;  // ackpath pkt hash → fate index
+    std::vector<std::set<int>> _pending_ackpath_fates;   // [node_idx] → fates awaiting initial ack/path TX
+    std::vector<std::set<int>> _ackpath_relay_fates;     // [node_idx] → fates for ack/path relay linking
 
     int findNode(const std::string& name) const;
     void routePackets(unsigned long current_ms);

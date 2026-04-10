@@ -2,7 +2,7 @@
   "_source": "ITM topology generator, region=53.7,17.3,54.8,19.5",
   "simulation": {
     "duration_ms": 900000,
-    "step_ms": 4,
+    "step_ms": 1,
     "warmup_ms": 5000,
     "hot_start": true,
     "radio": {

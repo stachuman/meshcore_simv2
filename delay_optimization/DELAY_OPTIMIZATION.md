@@ -121,7 +121,7 @@ The density test scripts use the following setup:
 - **Message interval**: 70s mean for direct messages, 80s mean for channel broadcasts
 - **5 direct messages** and **4 channel messages** per schedule entry
 - **Poisson-distributed timing**: each message gets an exponential inter-arrival time (mean = interval), clamped to [0.2x, 3x] to avoid extreme bunching or gaps. This models realistic user behavior rather than fixed-interval robots.
-- **6 seeds** per parameter combination (seeds 42-47) to account for stochastic variation
+- **8 seeds** per parameter combination (seeds 42-49) to account for stochastic variation
 
 ### 3.1 Time Resolution Choice
 
@@ -161,7 +161,7 @@ Four patterns run concurrently (interleaved), all using Poisson-distributed send
 | **many-to-1** | `msga` | All send to last companion (alice->dave, bob->dave, carol->dave) | Tests convergent traffic / congestion |
 | **channel broadcast** | `msgc` | Each companion sends on public channel (channel 0) | Tests flood routing under mixed traffic |
 
-Direct messages (first three patterns) use `msga` (message with ack tracking) so both delivery and acknowledgement rates are measured. Channel messages use `msgc` (flood, no ack) — delivery is tracked by counting receptions at all other companions.
+Direct messages (first three patterns) use `msga` (message with ack tracking) so both delivery and acknowledgement rates are measured. The first message to each destination goes via **flood routing** (no known path); subsequent messages use **path/direct routing** (route learned from the first ACK). This natural flood→path transition is tracked in the routing split metrics (see Section 5). Channel messages use `msgc` (flood, no ack) — delivery is tracked by counting receptions at all other companions.
 
 ### Timing
 
@@ -182,7 +182,7 @@ With 4 companions, the auto-scheduler generates per seed run:
 | **Direct total** | | | **50** |
 | Channel | 4 senders | 4 | 16 |
 
-50 direct messages per seed, 300 across 6 seeds.
+50 direct messages per seed, 400 across 8 seeds.
 
 ### Message size
 
@@ -234,14 +234,31 @@ Three MeshCore repeater parameters:
 
 ### Metrics & ranking
 
-Three metrics are collected per run. Variants are ranked by **Delivery %** only; the other two are reported for analysis but do not affect sort order. Lower standard deviation breaks ties.
+Multiple metrics are collected per run. Variants are currently ranked by **Delivery %** only; the others are reported for analysis but do not affect sort order. Lower standard deviation breaks ties.
+
+> **Open question — what is the right success metric?** Delivery % (message reached the destination) and Ack % (sender got confirmation back) measure different things. A network that delivers 90% of messages but only confirms 40% via ACKs will trigger retransmissions, increasing congestion. Conversely, optimizing for Ack % may favour parameters that improve the return path at the expense of forward delivery. The right ranking target likely depends on the use case — fire-and-forget messaging cares about delivery, while interactive chat cares about round-trip ACK. For now, Delivery % is the primary sort key; future work should evaluate whether Ack %, a weighted composite, or a multi-objective approach produces better real-world outcomes.
 
 | Priority | Metric | Definition | Why |
 |:--------:|--------|------------|-----|
-| 1 | **Delivery %** | direct messages received / direct messages sent | Primary objective — point-to-point reliability is the most user-visible quality measure |
-| 2 | **Channel %** | channel receptions / expected receptions (sent x (N_companions - 1)) | Secondary — flood broadcast reach indicates overall network health |
-| 3 | **Ack %** | acknowledgements received / acks expected | Tertiary — round-trip success is desirable but depends on both directions working |
+| 1 | **Delivery %** | direct messages received / direct messages sent | Current primary objective — point-to-point reliability is the most user-visible quality measure |
+| 2 | **Ack %** | all acks received / all acks expected | Round-trip success — may be a better objective for interactive messaging (see open question above) |
+| 3 | **Flood Delivery %** | flood-routed messages delivered / flood-routed messages sent | Delivery split: messages sent via flood routing (no known path to destination) |
+| 4 | **Path Delivery %** | path-routed messages delivered / path-routed messages sent | Delivery split: messages sent via direct/path routing (known route exists) |
+| 5 | **Flood Ack %** | flood acks received / flood acks expected | ACK split: round-trip success for flood-routed messages (ACK embedded in PATH return) |
+| 6 | **Path Ack %** | path acks received / path acks expected | ACK split: round-trip success for path-routed messages (standalone ACK packet) |
+| 7 | **Channel %** | channel receptions / expected receptions (sent x (N_companions - 1)) | Flood broadcast reach indicates overall network health |
+| 8 | **Radio RX Efficiency** | successful receptions / total reception attempts | How much of the radio activity results in useful data |
+| 9 | **ACK/PATH copies per delivered msg** | ACK/PATH packets reaching original sender / delivered messages | Ack return path efficiency — 1.0 is ideal, >1.0 means wasted airtime on redundant ack forwarding |
 | — | **Stability** | standard deviation of Delivery % across seeds | Tiebreaker — lower variance means more predictable behaviour |
+
+#### Flood vs path routing split
+
+MeshCore uses two routing strategies for direct messages:
+
+- **Flood**: when no path to the destination is known, the message is broadcast to all neighbors for relay. The first message to a new contact always goes flood. ACKs for flooded messages are embedded in the PATH return packet.
+- **Path/direct**: when a route has been learned (typically from a previous flood+ACK exchange), the message is sent along the known path. ACKs are standalone packets sent back along the reverse path.
+
+The flood/path split reveals whether delivery failures are concentrated in the route-discovery phase (flood) or the steady-state phase (path). A high flood delivery % with low path delivery % suggests routes are being learned but then breaking; the reverse suggests route discovery is the bottleneck.
 
 ## 5b. Auto-Tune Table Optimization Proposal - PR2125 - https://github.com/meshcore-dev/MeshCore/pull/2125
 
@@ -282,17 +299,16 @@ This gives 11 x 2 x 6 x 2 x 4 x 2 = **2,112 variants** per density level.
 
 ### Method (`tools/optimize_tuning.py`)
 
-The script must recompile the MeshCore fork for each parameter variant:
+The script uses **runtime delay injection** — the orchestrator binary is built once with `-DDELAY_TUNING_RUNTIME=ON`, which replaces the static `const` delay table with a mutable `extern` array populated from the JSON config's `simulation.delay_tuning` section. No per-variant recompilation needed.
 
 1. Parse 6 parameter ranges (each accepts `value` or `min:max:step` format)
-2. Backup original `DelayTuning.h`
-3. **For each parameter combination** (sequential — shared build directory):
-   a. Generate `DelayTuning.h` from linear formula
-   b. Rebuild the fork orchestrator (`cmake --build build-fork`, ~15-25s)
-   c. Run all seeds in parallel (via `-j` flag)
-   d. Parse delivery/ack/channel/fate results
-4. Restore original `DelayTuning.h` (guaranteed via `try/finally`)
-5. Aggregate and rank results
+2. Build the orchestrator once (if not already built)
+3. **For each parameter combination**:
+   a. Generate a 13-entry delay table from the linear formula
+   b. Inject it into the config JSON as `simulation.delay_tuning`
+   c. Run all seeds in parallel (via `-j` flag) — each is a separate OS process
+   d. Parse delivery/ack/channel/fate results including flood/path routing splits
+4. Aggregate and rank results
 
 The config is sanitized before each run: any manual `set rxdelay`/`set txdelay`/`set direct.txdelay` commands are stripped (these disable auto-tune), and `set autotune on` is injected for all repeaters.
 
@@ -304,9 +320,9 @@ python3 tools/optimize_tuning.py config.json \
   --dtx-base 0.0:1.0:0.2 --dtx-slope 0.3:0.6:0.3 \
   --rx-base 0.0:6.0:2.0 --rx-slope 0.3:0.6:0.3 \
   --clamp-max 6.0 \
-  --seeds 6 --build-dir build-fork \
+  --seeds 8 --build-dir build-native-delay \
   --meshcore-dir ../MeshCore-stachuman \
-  -j 6 -o results.csv
+  -j 8 -o results.csv
 ```
 
 | Flag | Default | Description |
@@ -322,7 +338,7 @@ python3 tools/optimize_tuning.py config.json \
 | `--clamp-max` | `5.0` | Maximum value for any table entry |
 | `--seeds` | `3` | Seeds per variant |
 | `--seed-base` | `42` | First seed value |
-| `--build-dir` | `build-fork` | CMake build directory |
+| `--build-dir` | `build-native-delay` | CMake build directory (must be built with `DELAY_TUNING_RUNTIME=ON`) |
 | `--meshcore-dir` | `../MeshCore-stachuman` | Path to MeshCore fork |
 | `-j` / `--jobs` | `1` | Parallel seed runs per variant |
 | `--top` | `10` | Show top N results |
@@ -333,37 +349,54 @@ All range flags accept: `1.0` (constant), `1.0:1.0:0` (constant), or `0.0:5.0:1.
 
 ### Prerequisites
 
-The script requires a pre-configured CMake build directory pointing to the MeshCore fork:
+The script requires a MeshCore fork built with runtime delay injection:
 
 ```bash
-cmake -S . -B build-fork -DMESHCORE_DIR=$(pwd)/../MeshCore-stachuman
-cmake --build build-fork
+cmake -S . -B build-native-delay \
+  -DCMAKE_BUILD_TYPE=NativeRelease \
+  -DMESHCORE_DIR=$(pwd)/../MeshCore-stachuman \
+  -DDELAY_TUNING_RUNTIME=ON
+cmake --build build-native-delay
 ```
+
+The `DELAY_TUNING_RUNTIME=ON` flag replaces the static `const DelayTuning DELAY_TUNING_TABLE[]` with a mutable `extern` array. At startup, `setDelayTuningLinear()` fills it from the JSON config's `simulation.delay_tuning` section. Each process gets its own copy, so multiple sweep runs can execute in parallel safely.
 
 ### Time estimation
 
-Each variant requires a rebuild (~15-25s) plus seed runs. For a 15-minute simulation with 6 seeds and `-j 6`:
+With runtime injection, no per-variant rebuild is needed — only the seed runs. For a 15-minute simulation with 8 seeds and `-j 8`:
 
 | Variants | Seeds | Time per variant | Total |
 |---|---|---|---|
-| 1 | 6 | ~50s | ~1 min |
-| 64 (4x2x4x1x1x1) | 6 | ~50s | ~1 hour |
-| 512 (4x2x4x2x4x2) | 6 | ~50s | ~7 hours |
-| 2112 (11x2x6x2x4x2) | 6 | ~50s | ~29 hours |
+| 1 | 8 | ~15s | ~15s |
+| 64 (4x2x4x1x1x1) | 8 | ~15s | ~16 min |
+| 512 (4x2x4x2x4x2) | 8 | ~15s | ~2 hours |
+| 2112 (11x2x6x2x4x2) | 8 | ~15s | ~9 hours |
 
 ### Output
 
-The script prints a ranked table of all variants with delivery metrics and message fate diagnostics. For the best result, it outputs the full 13-entry C array ready to paste into `DelayTuning.h`:
+The script prints a ranked table of all variants with delivery metrics, flood/path routing splits, and message fate diagnostics. For the best result, it outputs the full 13-entry C array ready to paste into `DelayTuning.h`:
 
 ```
   Top 10 variants (of 512):
-    tx_b   tx_s   dtx_b  dtx_s    rx_b   rx_s    mean    std   min   max  delivered   acks   chan  col/lost  drp/lost
-  ------ ------  ------ ------  ------ ------  ------  -----  ----  ----  ---------  -----  -----  --------  --------
-   0.000 0.3000   0.000 0.3000   0.500 0.3000   51.0%   3.3%   48%   56%   153/300      4%    51%      73.9       0.8
-   0.000 0.3000   0.500 0.6000   0.500 0.3000   50.3%   3.4%   46%   56%   151/300      6%    54%      65.2       1.1
+    tx_b   tx_s   dtx_b  dtx_s    rx_b   rx_s    mean    std   min   max  delivered   acks   chan  F_del  P_del  F_ack  P_ack  r_eff  ap_eff  col/lost  drp/lost  ack/del
+  ------ ------  ------ ------  ------ ------  ------  -----  ----  ----  ---------  -----  -----  -----  -----  -----  -----  -----  ------  --------  --------  -------
+   0.000 0.3000   0.000 0.3000   0.500 0.3000   51.0%   3.3%   48%   56%   153/300      4%    51%    48%    53%     3%     5%    12%     8%      73.9       0.8      1.4
+   0.000 0.3000   0.500 0.6000   0.500 0.3000   50.3%   3.4%   46%   56%   151/300      6%    54%    47%    52%     4%     7%    11%     7%      65.2       1.1      1.6
 ```
 
-The last two columns (`col/lost`, `drp/lost`) come from per-message fate tracking (see Section 5c below). They show the mean number of collisions and drops experienced per lost (undelivered) message, helping diagnose whether failures are due to congestion (high collisions) or link quality (high drops).
+| Column | Description |
+|--------|-------------|
+| `F_del` | Flood delivery % — messages sent via flood routing that were delivered |
+| `P_del` | Path delivery % — messages sent via direct/path routing that were delivered |
+| `F_ack` | Flood ack % — ACKs received for flood-routed messages |
+| `P_ack` | Path ack % — ACKs received for path-routed messages |
+| `r_eff` | Radio RX efficiency — successful receptions / total receptions (including collisions, drops) |
+| `ap_eff` | ACK+path radio RX efficiency — same ratio but only for ACK/PATH packet types |
+| `col/lost` | Mean collisions per lost message (from fate tracking) |
+| `drp/lost` | Mean drops per lost message (from fate tracking) |
+| `ack/del` | Mean ACK/PATH copies reaching the original sender per delivered message |
+
+The fate columns (`col/lost`, `drp/lost`) come from per-message fate tracking (see Section 5c below). They show the mean number of collisions and drops experienced per lost (undelivered) message, helping diagnose whether failures are due to congestion (high collisions) or link quality (high drops). The `ack/del` column shows how many ACK or PATH_RETURN copies reached the original sender per delivered message — 1.0 is ideal, higher values indicate wasted airtime on redundant ack/path forwarding.
 
 ### CSV output
 
@@ -371,26 +404,32 @@ Results are saved incrementally to CSV via the `-o` flag. Rows are appended afte
 
 CSV columns:
 
-| Column | Description |
-|--------|-------------|
-| `tx_base` .. `rx_slope` | The 6 linear model parameters |
-| `mean_delivery_pct` | Mean delivery % across seeds |
-| `std_pct`, `min_pct`, `max_pct` | Delivery % statistics |
-| `total_delivered`, `total_sent` | Absolute counts summed across seeds |
-| `mean_ack_pct` | Mean ack % across seeds (empty if no acks) |
-| `mean_chan_pct` | Mean channel % across seeds (empty if no channel messages) |
-| `n_seeds` | Number of seeds completed |
-| `fate_tracked` | Total messages tracked across seeds |
-| `fate_delivered` | Messages where fate tracking confirmed delivery |
-| `fate_lost` | Messages where fate tracking found no delivery |
-| `lost_mean_collision` | Mean collisions per lost message (averaged across seeds with losses) |
-| `lost_mean_drop` | Mean drops per lost message (averaged across seeds with losses) |
+| Column                          | Description                                                          |
+| ------------------------------- | -------------------------------------------------------------------- |
+| `tx_base` .. `rx_slope`         | The 6 linear model parameters                                        |
+| `mean_delivery_pct`             | Mean delivery % across seeds                                         |
+| `std_pct`, `min_pct`, `max_pct` | Delivery % statistics                                                |
+| `total_delivered`, `total_sent` | Absolute counts summed across seeds                                  |
+| `mean_ack_pct`                  | Mean combined ack % across seeds (empty if no acks)                  |
+| `mean_chan_pct`                 | Mean channel % across seeds (empty if no channel messages)           |
+| `mean_flood_delivery_pct`       | Mean flood-routed delivery % across seeds                            |
+| `mean_path_delivery_pct`        | Mean path-routed delivery % across seeds                             |
+| `mean_flood_ack_pct`            | Mean flood ack % across seeds                                        |
+| `mean_path_ack_pct`             | Mean path ack % across seeds                                         |
+| `n_seeds`                       | Number of seeds completed                                            |
+| `fate_tracked`                  | Total messages tracked across seeds                                  |
+| `fate_delivered`                | Messages where fate tracking confirmed delivery                      |
+| `fate_lost`                     | Messages where fate tracking found no delivery                       |
+| `lost_mean_collision`           | Mean collisions per lost message (averaged across seeds with losses) |
+| `lost_mean_drop`                | Mean drops per lost message (averaged across seeds with losses)      |
+| `mean_radio_eff_pct`            | Mean radio RX efficiency % — successful RX / total RX attempts      |
+| `mean_ackpath_eff_pct`          | Mean ACK+path radio RX efficiency %                                  |
+| `del_mean_ack_copies`           | Mean ACK/PATH copies reaching sender per delivered message           |
+| `lost_mean_ack_copies`          | Mean ACK/PATH copies reaching sender per lost message                |
 
 ### Limitations
 
 - **Linear model constraint**: Real optimal tables may be non-linear (e.g., plateau in the middle, steeper rise at high neighbor counts). The linear model cannot capture these shapes. Future work could add piecewise-linear or polynomial models.
-- **Sequential builds**: Each variant requires a full rebuild (~15-25s). This limits practical sweep size.
-- **Single build directory**: Only one variant can be compiled at a time. Running multiple instances of the script simultaneously against the same build directory will corrupt results.
 - **Topology-specific**: Optimal table values depend on the network's neighbor-count distribution. A network where most nodes have 2-4 neighbors will be sensitive to different table entries than one where most have 8-10.
 - **Static table**: The linear model assumes the relationship between neighbor count and optimal delay is consistent across all network conditions. In practice, the optimal slope may depend on traffic load, message patterns, or radio parameters.
 
@@ -404,7 +443,7 @@ When messages fail to deliver, aggregate stats (e.g., "30% delivery") don't expl
 
 The orchestrator tracks each `msg`/`msga` command from send to delivery (or loss):
 
-1. **Command detection**: When `processCommands` processes a `msg <dest>` or `msga <dest>` command, a `MessageFate` entry is created with `from_idx`, `to_idx`, and `send_time_ms`.
+1. **Command detection**: When `processCommands` processes a `msg <dest>` or `msga <dest>` command, a `MessageFate` entry is created with `from_idx`, `to_idx`, `send_time_ms`, and `sent_as_flood` (determined from the reply string — flood vs direct routing).
 
 2. **Initial TX linking**: In `registerTransmissions`, the first TX from the sending node (matching "msg" packet type) is linked to the fate via its FNV-1a packet hash.
 
@@ -420,29 +459,45 @@ The orchestrator tracks each `msg`/`msga` command from send to delivery (or loss
 
 ### Orchestrator output
 
-The orchestrator prints a per-message fate summary to stderr after the delivery stats:
+The orchestrator prints delivery stats with flood/path routing split, followed by a per-message fate summary:
 
 ```
+Delivery: 3/3 messages (100%)
+Delivery (flood): 1/1 (100%)
+Delivery (path): 2/2 (100%)
+Acks: 2/2 received (100%)
+Acks (flood): 1/1 (100%)
+Acks (path): 1/1 (100%)
+
 Message fate (50 tracked, 11 delivered, 39 lost):
-  Per delivered message: mean tx=194.2  rx=325.5  collision=290.2  drop=0.8
-  Per lost message:      mean tx=43.4  rx=65.0  collision=50.3  drop=0.6
+  Per delivered message: mean tx=194.2  rx=325.5  collision=290.2  drop=0.8  ack_copies=1.4
+  Per lost message:      mean tx=43.4  rx=65.0  collision=50.3  drop=0.6  ack_copies=0.0
 ```
 
-Interpretation:
-- **Delivered messages** had extensive network activity (194 TX, 325 RX) -- the flood reached enough nodes despite 290 collisions per message.
-- **Lost messages** had much less activity (43 TX, 65 RX) -- the relay chain died early, starved by collisions.
+The `Delivery (flood)` / `Delivery (path)` lines show how many messages of each routing type were delivered. Similarly, `Acks (flood)` / `Acks (path)` split ACK reception by the routing type used for the original message.
+
+Interpretation of the fate summary:
+- **Delivered messages** had extensive network activity (194 TX, 325 RX) -- the flood reached enough nodes despite 290 collisions per message. The sender received 1.4 ACK/PATH copies on average (slight redundancy).
+- **Lost messages** had much less activity (43 TX, 65 RX) -- the relay chain died early, starved by collisions. Zero ack copies reached the sender (as expected for undelivered messages).
 - **Low drop counts** in both cases suggest link drops are not the primary failure mode; collisions dominate.
 
 ### Integration with optimize_tuning.py
 
-The optimization script parses the fate summary from each run and aggregates across seeds. Two columns appear in both the results table and CSV:
+The optimization script parses the fate summary and routing split stats from each run and aggregates across seeds. Six additional columns appear in both the results table and CSV:
 
-| Column | Meaning |
-|--------|---------|
-| `col/lost` / `lost_mean_collision` | Mean collisions per lost message -- high values indicate congestion-dominated failure |
-| `drp/lost` / `lost_mean_drop` | Mean drops per lost message -- high values indicate link-quality-dominated failure |
+| Table column | CSV column | Meaning |
+|-------------|------------|---------|
+| `F_del` | `mean_flood_delivery_pct` | Mean delivery % for flood-routed messages |
+| `P_del` | `mean_path_delivery_pct` | Mean delivery % for path-routed messages |
+| `F_ack` | `mean_flood_ack_pct` | Mean ACK % for flood-routed messages |
+| `P_ack` | `mean_path_ack_pct` | Mean ACK % for path-routed messages |
+| `r_eff` | `mean_radio_eff_pct` | Radio RX efficiency — successful RX / total RX attempts |
+| `ap_eff` | `mean_ackpath_eff_pct` | ACK+path radio RX efficiency |
+| `col/lost` | `lost_mean_collision` | Mean collisions per lost message — high values indicate congestion-dominated failure |
+| `drp/lost` | `lost_mean_drop` | Mean drops per lost message — high values indicate link-quality-dominated failure |
+| `ack/del` | `del_mean_ack_copies` | Mean ACK/PATH copies reaching sender per delivered message — 1.0 is ideal |
 
-These help distinguish between parameter regimes where messages fail due to collision overload (increase delays) vs. weak links (topology issue, delays won't help).
+The routing split helps distinguish whether delay parameters disproportionately affect route discovery (flood) vs steady-state delivery (path). The fate columns help distinguish between congestion (high collisions) and link quality (high drops) as failure modes. The `ack/del` column tracks per-message ACK/PATH efficiency: how many ACK or PATH_RETURN copies reached the original sender for each delivered message. A value of 1.0 means exactly one copy arrived (ideal); higher values indicate redundant ack/path forwarding consuming airtime.
 
 ### Limitations
 
@@ -457,22 +512,33 @@ These help distinguish between parameter regimes where messages fail due to coll
 
 Optimal delay parameters may differ across network densities. The `delay_optimization/` directory includes three scripts that generate networks with different link densities from the Gdansk region and run full parameter sweeps on each.
 
+### Script architecture
+
+A unified `run_sweep.sh` script handles all three densities. It takes a variant name as the first argument and selects density-specific parameters via a case statement. The individual scripts (`run_sparse.sh`, `run_medium.sh`, `run_dense.sh`) are thin wrappers:
+
+```bash
+#!/usr/bin/env bash
+exec "$(dirname "$0")/run_sweep.sh" sparse "$@"
+```
+
+All variants share a **single build directory** (`build-native-delay`) and a **single MeshCore fork** (`../MeshCore-stachuman`). The build uses `DELAY_TUNING_RUNTIME=ON`, which makes the delay table injectable from JSON at runtime — no per-variant recompilation needed. When multiple variants run in parallel, `flock` serializes the cmake build step; the first process builds, others wait and skip.
+
 ### What each script does
 
-Each script runs a 4-step pipeline:
+Each variant runs a 4-step pipeline:
 
 1. **Generate topology** — runs `topology_generator` with the Gdansk region, density-specific link survival and edge caps
 2. **Inject test cases** — runs `inject_test.py` to place 4 companions (alice, bob, carol, dave) and generate auto-schedules (70s direct interval, 80s channel interval, 5 direct + 4 channel messages per entry)
 3. **Print topology statistics** — runs `topology_stats.py` to summarize the generated network
-4. **Run optimization sweep** — runs `optimize_tuning.py` with 2,112 variants (11x2x6x2x4x2), 6 seeds, 6 parallel jobs
+4. **Run optimization sweep** — runs `optimize_tuning.py` with 2,112 variants (11x2x6x2x4x2), 8 seeds, 8 parallel jobs
 
 ### Density configurations
 
-| Script | Density | `--link-survival` | `--max-edges-per-node` | `--max-good-links` | Typical neighbors |
-|--------|---------|-------------------|------------------------|--------------------|--------------------|
-| `run_sparse.sh` | Sparse | 0.2 | 6 | 2 | 1-3 |
-| `run_medium.sh` | Medium | 0.4 | 12 | 3 | 3-6 |
-| `run_dense.sh` | Dense | 0.7 | 16 | 6 | 6-12 |
+| Variant | Density | `--link-survival` | `--max-edges-per-node` | `--max-good-links` | Typical neighbors |
+|---------|---------|-------------------|------------------------|--------------------|--------------------|
+| `sparse` | Sparse | 0.2 | 6 | 2 | 1-3 |
+| `medium` | Medium | 0.4 | 12 | 3 | 3-6 |
+| `dense` | Dense | 0.7 | 16 | 6 | 6-12 |
 
 ### Sweep parameters (same for all densities)
 
@@ -500,21 +566,30 @@ Each script generates three files in the `delay_optimization/` directory:
 Scripts are run from the project root (they `cd` automatically):
 
 ```bash
-# Full sweeps
+# Full sweeps (sequential)
 ./delay_optimization/run_sparse.sh
 ./delay_optimization/run_medium.sh
 ./delay_optimization/run_dense.sh
 
+# All three in parallel (flock prevents build races)
+./delay_optimization/run_sparse.sh &
+./delay_optimization/run_medium.sh &
+./delay_optimization/run_dense.sh &
+wait
+
 # Quick test (override seeds/jobs)
 ./delay_optimization/run_sparse.sh --seeds 2 -j 2
+
+# Direct invocation of unified script
+./delay_optimization/run_sweep.sh medium --seeds 4
 ```
 
-Each script accepts `MESHCORE_DIR` as an environment variable to point to the MeshCore fork (defaults to `../MeshCore-stachuman`).
+Each script accepts `MESHCORE_DIR` as an environment variable to point to the MeshCore fork (defaults to `../MeshCore-stachuman`). Any additional arguments after the variant name are passed through to `optimize_tuning.py`.
 
 ### Prerequisites
 
 1. MeshCore fork at `../MeshCore-stachuman` (or set `MESHCORE_DIR`)
-2. Fork build directory configured: `cmake -S . -B build-fork -DMESHCORE_DIR=$(pwd)/../MeshCore-stachuman`
+2. No pre-build step needed — the sweep script builds automatically with `DELAY_TUNING_RUNTIME=ON` into `build-native-delay/`
 3. API cache recommended (`/tmp/meshcore_nodes_cache.json`) — first run downloads ~31K nodes
 4. Python venv active with `requirements.txt` dependencies
 
@@ -550,15 +625,21 @@ python3 tools/topology_stats.py test_config.json
 # Step 4: Quick test run
 build/orchestrator/orchestrator test_config.json > events.ndjson
 
-# Step 5: Auto-tune table sweep (requires MeshCore fork build)
+# Step 5: Auto-tune table sweep (requires MeshCore fork build with runtime delay injection)
+cmake -S . -B build-native-delay \
+    -DCMAKE_BUILD_TYPE=NativeRelease \
+    -DMESHCORE_DIR=$(pwd)/../MeshCore-stachuman \
+    -DDELAY_TUNING_RUNTIME=ON
+cmake --build build-native-delay
+
 python3 tools/optimize_tuning.py test_config.json \
     --tx-base 0.0:2.0:0.2 --tx-slope 0.3:0.6:0.3 \
     --dtx-base 0.0:1.0:0.2 --dtx-slope 0.3:0.6:0.3 \
     --rx-base 0.0:6.0:2.0 --rx-slope 0.3:0.6:0.3 \
     --clamp-max 6.0 \
-    --seeds 6 --build-dir build-fork \
+    --seeds 8 --build-dir build-native-delay \
     --meshcore-dir ../MeshCore-stachuman \
-    -j 6 -o results.csv
+    -j 8 -o results.csv
 
 # Step 6: Visualize a specific run
 python3 visualization/visualize.py events.ndjson --config test_config.json
@@ -576,7 +657,7 @@ python3 tools/optimize_delays.py test_config.json \
 
 ## 7. Results
 
-All results use Gdansk/Pomerania region topologies generated via `topology_generator` with ITM propagation model. Three network densities are tested (see Section 5d). Each sweep uses `optimize_tuning.py` with 512 variants and 6 seeds per variant. Full CSV results are stored in this directory.
+All results below use Gdansk/Pomerania region topologies generated via `topology_generator` with ITM propagation model. Three network densities are tested (see Section 5d). These historical results used `optimize_tuning.py` with 512 variants and 6 seeds per variant (the current default is 8 seeds). The results predate the flood/path routing split — they report combined delivery and ack metrics only. Full CSV results are stored in this directory.
 
 ### 7.1 Sparse network
 

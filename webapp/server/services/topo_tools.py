@@ -44,7 +44,7 @@ def convert_topology(
     estimate_coords: bool = True,
     validate_coords: bool = False,
     duration_ms: int = 300000,
-    step_ms: int = 5,
+    step_ms: int = 1,
     warmup_ms: int = 5000,
     hot_start: bool = True,
     companions: list[dict] | None = None,
@@ -343,7 +343,7 @@ def generate_grid(
     base_lon: float = 18.65,
     num_companions: int = 2,
     duration_ms: int = 300000,
-    step_ms: int = 5,
+    step_ms: int = 1,
     warmup_ms: int = 5000,
 ) -> dict:
     """Generate a grid topology config with geo-coordinates.

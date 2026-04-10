@@ -1,0 +1,53 @@
+{
+  "_name": "t39_ackpath_radio_efficiency",
+  "_desc": "Diamond mesh with 4 repeaters generates competing flood copies + ACK/PATH_RETURN packets that collide. Tests that ackpath counters are wired into event_counts for assertion.",
+  "simulation": {
+    "duration_ms": 80000,
+    "step_ms": 1,
+    "warmup_ms": 5000,
+    "hot_start": true,
+    "seed": 42,
+    "cad_miss_prob": 0.0
+  },
+  "nodes": [
+    { "name": "alice", "role": "companion" },
+    { "name": "R1", "role": "repeater" },
+    { "name": "R2", "role": "repeater" },
+    { "name": "R3", "role": "repeater" },
+    { "name": "R4", "role": "repeater" },
+    { "name": "bob", "role": "companion" }
+  ],
+  "topology": {
+    "links": [
+      { "from": "alice", "to": "R1", "snr": 10.0, "rssi": -75.0, "bidir": true },
+      { "from": "alice", "to": "R3", "snr": 9.0, "rssi": -78.0, "bidir": true },
+      { "from": "R1", "to": "R2", "snr": 10.0, "rssi": -75.0, "bidir": true },
+      { "from": "R3", "to": "R4", "snr": 9.0, "rssi": -78.0, "bidir": true },
+      { "from": "R1", "to": "R4", "snr": 3.0, "rssi": -82.0, "bidir": true },
+      { "from": "R2", "to": "R3", "snr": 7.0, "rssi": -82.0, "bidir": true },
+      { "from": "R2", "to": "bob", "snr": 10.0, "rssi": -75.0, "bidir": true },
+      { "from": "R4", "to": "bob", "snr": 9.0, "rssi": -78.0, "bidir": true }
+    ]
+  },
+  "commands": [
+    { "at_ms": 6000, "node": "@repeaters", "command": "set txdelay 1" },
+    { "at_ms": 10000, "node": "alice", "command": "msga bob m1" },
+    { "at_ms": 14000, "node": "bob", "command": "msga alice m2" },
+    { "at_ms": 18000, "node": "alice", "command": "msga bob m3" },
+    { "at_ms": 22000, "node": "bob", "command": "msga alice m4" },
+    { "at_ms": 26000, "node": "alice", "command": "msga bob m5" },
+    { "at_ms": 30000, "node": "bob", "command": "msga alice m6" }
+  ],
+  "expect": [
+    { "type": "cmd_reply_contains", "node": "alice", "command": "msga bob m1", "value": "ack tracked" },
+    { "type": "cmd_reply_contains", "node": "bob", "command": "msga alice m2", "value": "ack tracked" },
+    { "type": "cmd_reply_contains", "node": "alice", "command": "msga bob m3", "value": "ack tracked" },
+    { "type": "cmd_reply_contains", "node": "bob", "command": "msga alice m4", "value": "ack tracked" },
+    { "type": "cmd_reply_contains", "node": "alice", "command": "msga bob m5", "value": "ack tracked" },
+    { "type": "cmd_reply_contains", "node": "bob", "command": "msga alice m6", "value": "ack tracked" },
+    { "type": "event_count", "event_type": "ackpath_tx", "min": 1, "_comment": "ACK/PATH packets were generated" },
+    { "type": "event_count", "event_type": "ackpath_rx", "min": 1, "_comment": "Some ACK/PATH packets were delivered" },
+    { "type": "event_count", "event_type": "ackpath_collision", "min": 1, "_comment": "ACK/PATH packets experience collisions in the diamond mesh" },
+    { "type": "event_count", "event_type": "collision", "min": 1, "_comment": "Overall collisions happen in the dense mesh" }
+  ]
+}

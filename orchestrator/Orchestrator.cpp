@@ -4,11 +4,27 @@
 #include <memory>
 #include <algorithm>
 #include <cmath>
+#include <set>
 #include <cstdio>
 
 #include "Orchestrator.h"
 #include "MeshWrapper.h"
 #include "SimClock.h"
+
+#ifdef DELAY_TUNING_RUNTIME
+#include <helpers/DelayTuning.h>
+#endif
+
+// SplitMix64 — hash a 64-bit seed into a well-distributed 64-bit value.
+// Used to derive independent mt19937 stream seeds from a single config seed.
+// Without this, XORing the seed with small constants (0x1..0x5) produces
+// near-identical seeds that cause correlated early mt19937 output.
+static uint64_t splitmix64(uint64_t z) {
+    z += 0x9e3779b97f4a7c15ULL;
+    z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9ULL;
+    z = (z ^ (z >> 27)) * 0x94d049bb133111ebULL;
+    return z ^ (z >> 31);
+}
 
 // Symbols needed for receiver preamble lock (Semtech AN1200.22, Bor 2016).
 // Capture thresholds (locked/unlocked) are configurable via OrchestratorConfig.
@@ -52,11 +68,13 @@ void Orchestrator::configure(const OrchestratorConfig& cfg) {
     _warmup_ms = cfg.warmup_ms;
     _verbose = cfg.verbose;
     _seed = cfg.seed;
-    _rng_fading.seed(static_cast<std::mt19937::result_type>(cfg.seed ^ 0x1));
-    _rng_loss.seed(static_cast<std::mt19937::result_type>(cfg.seed ^ 0x2));
-    _rng_cad.seed(static_cast<std::mt19937::result_type>(cfg.seed ^ 0x3));
-    _rng_stagger.seed(static_cast<std::mt19937::result_type>(cfg.seed ^ 0x4));
-    _rng_adversarial.seed(static_cast<std::mt19937::result_type>(cfg.seed ^ 0x5));
+    // Derive independent mt19937 seeds via splitmix64 to avoid correlated streams.
+    // Each stream gets a well-mixed 32-bit seed even for nearby config seeds.
+    _rng_fading.seed(static_cast<std::mt19937::result_type>(splitmix64(cfg.seed ^ 0x1)));
+    _rng_loss.seed(static_cast<std::mt19937::result_type>(splitmix64(cfg.seed ^ 0x2)));
+    _rng_cad.seed(static_cast<std::mt19937::result_type>(splitmix64(cfg.seed ^ 0x3)));
+    _rng_stagger.seed(static_cast<std::mt19937::result_type>(splitmix64(cfg.seed ^ 0x4)));
+    _rng_adversarial.seed(static_cast<std::mt19937::result_type>(splitmix64(cfg.seed ^ 0x5)));
     _clock = VirtualClock(cfg.epoch_start);
 
     _capture_locked_db = cfg.capture_locked_db;
@@ -71,10 +89,15 @@ void Orchestrator::configure(const OrchestratorConfig& cfg) {
     _assertions = cfg.assertions;
     _tx_count = 0;
     _rx_count = 0;
+    _ackpath_tx = 0;
+    _ackpath_rx = 0;
+    _ackpath_collision = 0;
+    _ackpath_drop = 0;
     _event_counts.clear();
     _message_fates.clear();
     _hash_to_fate.clear();
     _pending_msg_fates.clear();
+    _ackpath_hash_to_fate.clear();
 
     // Create nodes (each owns its own VirtualClock for per-node time stagger)
     for (const auto& nd : cfg.nodes) {
@@ -104,6 +127,8 @@ void Orchestrator::configure(const OrchestratorConfig& cfg) {
 
     // Initialize per-node step tracking for message fate relay detection
     _step_rx_fates.resize(_nodes.size());
+    _pending_ackpath_fates.resize(_nodes.size());
+    _ackpath_relay_fates.resize(_nodes.size());
 
     // Build link model
     int n = (int)_nodes.size();
@@ -128,6 +153,22 @@ void Orchestrator::configure(const OrchestratorConfig& cfg) {
     _fading_state.resize(n * (n - 1) / 2);
 
     _hot_start = cfg.hot_start;
+
+#ifdef DELAY_TUNING_RUNTIME
+    if (cfg.delay_tuning.enabled) {
+        setDelayTuningLinear(cfg.delay_tuning.tx_base, cfg.delay_tuning.tx_slope,
+                             cfg.delay_tuning.dtx_base, cfg.delay_tuning.dtx_slope,
+                             cfg.delay_tuning.rx_base, cfg.delay_tuning.rx_slope,
+                             cfg.delay_tuning.clamp_min, cfg.delay_tuning.clamp_max);
+        if (_verbose) {
+            fprintf(stderr, "Delay tuning: tx=%.3f+%.4f*n  dtx=%.3f+%.4f*n  rx=%.3f+%.4f*n  clamp=[%.1f,%.1f]\n",
+                    cfg.delay_tuning.tx_base, cfg.delay_tuning.tx_slope,
+                    cfg.delay_tuning.dtx_base, cfg.delay_tuning.dtx_slope,
+                    cfg.delay_tuning.rx_base, cfg.delay_tuning.rx_slope,
+                    cfg.delay_tuning.clamp_min, cfg.delay_tuning.clamp_max);
+        }
+    }
+#endif
 
     // Build scheduled commands (sorted by time)
     for (const auto& cd : cfg.commands) {
@@ -235,6 +276,13 @@ static bool isMsgPacketType(const uint8_t* data, int len) {
     return ((data[0] >> 2) & 0x0F) == 0x02;
 }
 
+// Helper: check if packet is ACK (0x03) or PATH_RETURN (0x08) — used for radio efficiency metric
+static bool isAckOrPathType(const uint8_t* data, int len) {
+    if (len < 1) return false;
+    uint8_t ptype = (data[0] >> 2) & 0x0F;
+    return ptype == 0x03 || ptype == 0x08;
+}
+
 void Orchestrator::registerTransmissions(unsigned long current_ms) {
     int n = (int)_nodes.size();
 
@@ -338,6 +386,10 @@ void Orchestrator::registerTransmissions(unsigned long current_ms) {
             _tx_count++;
             _event_counts["tx"]++;
             _event_counts[_node_event_keys[sender].tx]++;
+            if (isAckOrPathType(cap.data.data(), (int)cap.data.size())) {
+                _ackpath_tx++;
+                _event_counts["ackpath_tx"]++;
+            }
             _tx_log.push_back({_nodes[sender]->name, cap.airtime_ms});
             EventLog::tx(current_ms, _nodes[sender]->name.c_str(),
                          cap.data.data(), (int)cap.data.size(), cap.airtime_ms);
@@ -370,6 +422,26 @@ void Orchestrator::registerTransmissions(unsigned long current_ms) {
                     linked_fate = fi;
                 }
                 _step_rx_fates[sender].clear();  // consumed — prevent re-linking
+            }
+
+            // ACK/PATH fate tracking: link ack/path TX hash to the message fate
+            if (isAckOrPathType(cap.data.data(), (int)cap.data.size())) {
+                // Initial ack/path from message destination?
+                auto& pending_ack = _pending_ackpath_fates[sender];
+                if (!pending_ack.empty()) {
+                    int fi = *pending_ack.begin();
+                    pending_ack.erase(pending_ack.begin());
+                    _ackpath_hash_to_fate[tx_hash] = fi;
+                } else {
+                    // Relay of ack/path?
+                    auto& relay_ack = _ackpath_relay_fates[sender];
+                    if (!relay_ack.empty()) {
+                        for (int fi : relay_ack) {
+                            _ackpath_hash_to_fate[tx_hash] = fi;
+                        }
+                        relay_ack.clear();
+                    }
+                }
             }
 
             for (int receiver = 0; receiver < n; receiver++) {
@@ -454,6 +526,10 @@ void Orchestrator::registerTransmissions(unsigned long current_ms) {
                 if (_nodes[receiver]->tx_busy_until > current_ms) {
                     _event_counts["drop_halfduplex"]++;
                     _event_counts[_node_event_keys[receiver].drop_halfduplex]++;
+                    if (isAckOrPathType(cap.data.data(), (int)cap.data.size())) {
+                        _ackpath_drop++;
+                        _event_counts["ackpath_drop"]++;
+                    }
                     EventLog::dropHalfDuplex(current_ms, sname, rname,
                                              cap.data.data(), (int)cap.data.size(),
                                              cap.airtime_ms);
@@ -577,6 +653,19 @@ void Orchestrator::deliverReceptions(unsigned long current_ms) {
                     _rx_count++;
                     _event_counts["rx"]++;
                     _event_counts[_node_event_keys[i].rx]++;
+                    if (isAckOrPathType(it->data.data(), (int)it->data.size())) {
+                        _ackpath_rx++;
+                        _event_counts["ackpath_rx"]++;
+                        // ACK/PATH fate: track copies reaching original sender
+                        auto ack_fate_it = _ackpath_hash_to_fate.find(rx_hash);
+                        if (ack_fate_it != _ackpath_hash_to_fate.end()) {
+                            int fi = ack_fate_it->second;
+                            _ackpath_relay_fates[i].insert(fi);  // for relay linking
+                            if (i == _message_fates[fi].from_idx) {
+                                _message_fates[fi].ackpath_rx_at_sender++;
+                            }
+                        }
+                    }
                     _nodes[i]->activate();
                     _nodes[i]->radio.enqueue(
                         it->data.data(), (int)it->data.size(), it->snr, it->rssi);
@@ -592,6 +681,10 @@ void Orchestrator::deliverReceptions(unsigned long current_ms) {
                 } else if (it->halfduplex_abort) {
                     _event_counts["drop_halfduplex"]++;
                     _event_counts[_node_event_keys[i].drop_halfduplex]++;
+                    if (isAckOrPathType(it->data.data(), (int)it->data.size())) {
+                        _ackpath_drop++;
+                        _event_counts["ackpath_drop"]++;
+                    }
                     EventLog::dropHalfDuplex(it->rx_start_ms, sname, rname,
                                              it->data.data(), (int)it->data.size(),
                                              (uint32_t)(it->rx_end_ms - it->rx_start_ms));
@@ -602,6 +695,10 @@ void Orchestrator::deliverReceptions(unsigned long current_ms) {
                 } else if (it->link_loss) {
                     _event_counts["drop_loss"]++;
                     _event_counts[_node_event_keys[i].drop_loss]++;
+                    if (isAckOrPathType(it->data.data(), (int)it->data.size())) {
+                        _ackpath_drop++;
+                        _event_counts["ackpath_drop"]++;
+                    }
                     EventLog::dropLoss(it->rx_start_ms, sname, rname, 0.0f,
                                        it->data.data(), (int)it->data.size());
                     if (_verbose) {
@@ -611,6 +708,10 @@ void Orchestrator::deliverReceptions(unsigned long current_ms) {
                 } else {
                     _event_counts["collision"]++;
                     _event_counts[_node_event_keys[i].collision]++;
+                    if (isAckOrPathType(it->data.data(), (int)it->data.size())) {
+                        _ackpath_collision++;
+                        _event_counts["ackpath_collision"]++;
+                    }
                     const char* iname = (it->interferer_idx >= 0)
                         ? _nodes[it->interferer_idx]->name.c_str() : nullptr;
                     EventLog::collision(it->rx_start_ms, sname, rname, it->snr, it->rssi,
@@ -633,7 +734,10 @@ void Orchestrator::deliverReceptions(unsigned long current_ms) {
                     if (!it->collided && !it->link_loss && !it->halfduplex_abort) {
                         fate.rx_count++;
                         _step_rx_fates[i].insert(fate_it->second);
-                        if (i == fate.to_idx) fate.delivered = true;
+                        if (i == fate.to_idx) {
+                            fate.delivered = true;
+                            _pending_ackpath_fates[i].insert(fate_it->second);
+                        }
                     } else if (it->collided) {
                         fate.collisions++;
                     } else {
@@ -681,6 +785,7 @@ void Orchestrator::processCommands(unsigned long current_ms) {
                 fate.from_idx = cmd.node_index;
                 fate.to_idx = to_idx;
                 fate.send_time_ms = current_ms;
+                fate.sent_as_flood = (reply.find("(flood") != std::string::npos);
                 int fate_idx = (int)_message_fates.size();
                 _message_fates.push_back(std::move(fate));
                 _pending_msg_fates[cmd.node_index] = fate_idx;
@@ -868,6 +973,8 @@ bool Orchestrator::run() {
 
     int n = (int)_nodes.size();
     EventLog::simStart(0, n, _step_ms, _warmup_ms, _hot_start);
+    fprintf(stderr, "[PROGRESS] init: %d nodes, step=%dms, duration=%.1fs\n",
+            n, _step_ms, _duration_ms / 1000.0);
     if (_verbose) {
         fprintf(stderr, "[%8.3fs] SIM START: %d nodes, step=%dms, duration=%.1fs, warmup=%.1fs\n",
                 0.0, n, _step_ms, _duration_ms / 1000.0, _warmup_ms / 1000.0);
@@ -923,7 +1030,9 @@ bool Orchestrator::run() {
     }
 
     if (_hot_start) {
+        fprintf(stderr, "[PROGRESS] hot-start: exchanging adverts (%d nodes)\n", n);
         hotStart();
+        fprintf(stderr, "[PROGRESS] hot-start: complete\n");
         // Reset hardware delay timestamps to prevent stale hot-start values
         for (auto& node : _nodes) {
             node->radio.resetHardwareDelays();
@@ -932,8 +1041,34 @@ bool Orchestrator::run() {
 
     // Main simulation loop
     unsigned long current_ms = 0;
+    unsigned long next_progress_ms = 0;
+    // Report progress every ~2% of duration (at least every 5s of sim time)
+    unsigned long progress_interval_ms = _duration_ms / 50;
+    if (progress_interval_ms < 5000) progress_interval_ms = 5000;
+    bool warmup_logged = false;
+    bool running_logged = false;
+
+    if (_warmup_ms > 0) {
+        fprintf(stderr, "[PROGRESS] warmup: instant delivery for %.1fs\n",
+                _warmup_ms / 1000.0);
+    }
+
     while (current_ms < _duration_ms) {
         bool in_warmup = (current_ms < _warmup_ms);
+
+        // Log phase transition from warmup to running
+        if (!in_warmup && !running_logged) {
+            running_logged = true;
+            fprintf(stderr, "[PROGRESS] running: physics simulation started\n");
+        }
+
+        // Periodic progress: emit sim time / percentage
+        if (current_ms >= next_progress_ms) {
+            int pct = (int)((uint64_t)current_ms * 100 / _duration_ms);
+            fprintf(stderr, "[PROGRESS] %d%% (%.1fs / %.1fs)\n",
+                    pct, current_ms / 1000.0, _duration_ms / 1000.0);
+            next_progress_ms = current_ms + progress_interval_ms;
+        }
 
         processCommands(current_ms);
 
@@ -977,6 +1112,9 @@ bool Orchestrator::run() {
         }
     }
 
+    fprintf(stderr, "[PROGRESS] 100%% (%.1fs / %.1fs)\n",
+            current_ms / 1000.0, _duration_ms / 1000.0);
+
     // Deliver any remaining receptions at end
     deliverReceptions(current_ms);
 
@@ -1010,10 +1148,20 @@ bool Orchestrator::run() {
                node->name.c_str(),
                s.sent_flood, s.sent_direct, s.sent_group,
                s.totalRecvDirect(), s.recv_group);
-        if (!s.sent_to.empty()) {
-            printf(",\"sent_to\":{");
+        if (!s.sent_flood_to.empty()) {
+            printf(",\"sent_flood_to\":{");
             bool first = true;
-            for (auto& kv : s.sent_to) {
+            for (auto& kv : s.sent_flood_to) {
+                if (!first) printf(",");
+                printf("\"%s\":%d", kv.first.c_str(), kv.second);
+                first = false;
+            }
+            printf("}");
+        }
+        if (!s.sent_direct_to.empty()) {
+            printf(",\"sent_direct_to\":{");
+            bool first = true;
+            for (auto& kv : s.sent_direct_to) {
                 if (!first) printf(",");
                 printf("\"%s\":%d", kv.first.c_str(), kv.second);
                 first = false;
@@ -1040,9 +1188,15 @@ bool Orchestrator::run() {
             }
             printf("}");
         }
-        if (s.acks_pending > 0) {
+        if (s.acksPending() > 0) {
             printf(",\"acks_pending\":%d,\"acks_received\":%d",
-                   s.acks_pending, s.acks_received);
+                   s.acksPending(), s.acksReceived());
+            if (s.acks_flood_pending > 0)
+                printf(",\"acks_flood_pending\":%d,\"acks_flood_received\":%d",
+                       s.acks_flood_pending, s.acks_flood_received);
+            if (s.acks_direct_pending > 0)
+                printf(",\"acks_direct_pending\":%d,\"acks_direct_received\":%d",
+                       s.acks_direct_pending, s.acks_direct_received);
         }
         printf("}\n");
         total_direct_sent += s.sent_flood + s.sent_direct;
@@ -1062,7 +1216,21 @@ bool Orchestrator::run() {
 
     // Summary to stderr (always visible)
     fprintf(stderr, "\n=== Simulation Summary (%.1fs) ===\n", current_ms / 1000.0);
-    fprintf(stderr, "Radio: %d TX, %d RX\n\n", _tx_count, _rx_count);
+    {
+        int ec_rx = _event_counts.count("rx") ? _event_counts["rx"] : 0;
+        int ec_col = _event_counts.count("collision") ? _event_counts["collision"] : 0;
+        int ec_dh = _event_counts.count("drop_halfduplex") ? _event_counts["drop_halfduplex"] : 0;
+        int ec_dl = _event_counts.count("drop_loss") ? _event_counts["drop_loss"] : 0;
+        int rx_opps = ec_rx + ec_col + ec_dh + ec_dl;
+        double radio_eff = rx_opps > 0 ? (ec_rx * 100.0 / rx_opps) : 100.0;
+        fprintf(stderr, "Radio: %d TX, %d RX, %d collision, %d drop (%.1f%% rx efficiency)\n",
+                _tx_count, _rx_count, ec_col, ec_dh + ec_dl, radio_eff);
+
+        int ap_opps = _ackpath_rx + _ackpath_collision + _ackpath_drop;
+        double ap_eff = ap_opps > 0 ? (_ackpath_rx * 100.0 / ap_opps) : 100.0;
+        fprintf(stderr, "ACK+path radio: %d TX, %d RX, %d collision, %d drop (%.1f%% rx efficiency)\n\n",
+                _ackpath_tx, _ackpath_rx, _ackpath_collision, _ackpath_drop, ap_eff);
+    }
 
     // Per-companion sent with per-destination breakdown and delivery
     fprintf(stderr, "Sent messages:\n");
@@ -1073,19 +1241,29 @@ bool Orchestrator::run() {
         fprintf(stderr, "  %-12s %d (flood:%d direct:%d group:%d)\n",
                 node->name.c_str(), s.totalSent(),
                 s.sent_flood, s.sent_direct, s.sent_group);
-        for (auto& kv : s.sent_to) {
+        // Collect all destinations from both maps
+        std::set<std::string> all_dests;
+        for (auto& kv : s.sent_flood_to) all_dests.insert(kv.first);
+        for (auto& kv : s.sent_direct_to) all_dests.insert(kv.first);
+        for (auto& dest : all_dests) {
+            int flood_n = 0, direct_n = 0;
+            auto fi = s.sent_flood_to.find(dest);
+            if (fi != s.sent_flood_to.end()) flood_n = fi->second;
+            auto di = s.sent_direct_to.find(dest);
+            if (di != s.sent_direct_to.end()) direct_n = di->second;
+            int total_to = flood_n + direct_n;
             // Look up how many the destination received from this sender
             int delivered = 0;
-            auto it = stats_by_name.find(kv.first);
+            auto it = stats_by_name.find(dest);
             if (it != stats_by_name.end()) {
                 auto recv_it = it->second->recv_direct.find(node->name);
                 if (recv_it != it->second->recv_direct.end())
                     delivered = recv_it->second;
             }
-            fprintf(stderr, "    -> %-10s %d sent, %d delivered",
-                    kv.first.c_str(), kv.second, delivered);
-            if (kv.second > 0)
-                fprintf(stderr, " (%d%%)", delivered * 100 / kv.second);
+            fprintf(stderr, "    -> %-10s %d sent (F:%d P:%d), %d delivered",
+                    dest.c_str(), total_to, flood_n, direct_n, delivered);
+            if (total_to > 0)
+                fprintf(stderr, " (%d%%)", delivered * 100 / total_to);
             fprintf(stderr, "\n");
         }
     }
@@ -1112,11 +1290,28 @@ bool Orchestrator::run() {
     }
     if (total_direct_recv + total_group_recv == 0) fprintf(stderr, "  (none)\n");
 
-    // Delivery summary — direct messages
+    // Delivery summary — direct messages (combined + split by routing type)
     if (total_direct_sent > 0) {
         fprintf(stderr, "\nDelivery: %d/%d messages (%.0f%%)\n",
                 total_direct_recv, total_direct_sent,
                 total_direct_recv * 100.0 / total_direct_sent);
+        // Split by routing type using message fates
+        int flood_sent = 0, flood_delivered = 0, path_sent = 0, path_delivered = 0;
+        for (auto& f : _message_fates) {
+            if (f.sent_as_flood) {
+                flood_sent++;
+                if (f.delivered) flood_delivered++;
+            } else {
+                path_sent++;
+                if (f.delivered) path_delivered++;
+            }
+        }
+        if (flood_sent > 0)
+            fprintf(stderr, "Delivery (flood): %d/%d (%.0f%%)\n",
+                    flood_delivered, flood_sent, flood_delivered * 100.0 / flood_sent);
+        if (path_sent > 0)
+            fprintf(stderr, "Delivery (path): %d/%d (%.0f%%)\n",
+                    path_delivered, path_sent, path_delivered * 100.0 / path_sent);
     } else if (total_group_sent == 0) {
         fprintf(stderr, "\nTotal: 0 sent, 0 received\n");
     }
@@ -1129,26 +1324,39 @@ bool Orchestrator::run() {
                 total_group_recv * 100.0 / expected_receptions);
     }
 
-    // Ack summary (only if any acks were tracked)
-    int total_ack_pending = 0, total_ack_received = 0;
+    // Ack summary (combined + split by routing type)
+    int total_ack_flood_p = 0, total_ack_flood_r = 0;
+    int total_ack_direct_p = 0, total_ack_direct_r = 0;
     for (auto& node : _nodes) {
         if (node->role != NodeRole::Companion) continue;
         auto& s = node->mesh->msg_stats;
-        total_ack_pending += s.acks_pending;
-        total_ack_received += s.acks_received;
+        total_ack_flood_p += s.acks_flood_pending;
+        total_ack_flood_r += s.acks_flood_received;
+        total_ack_direct_p += s.acks_direct_pending;
+        total_ack_direct_r += s.acks_direct_received;
     }
+    int total_ack_pending = total_ack_flood_p + total_ack_direct_p;
+    int total_ack_received = total_ack_flood_r + total_ack_direct_r;
     if (total_ack_pending > 0) {
         fprintf(stderr, "Acks: %d/%d received (%.0f%%)\n",
                 total_ack_received, total_ack_pending,
                 total_ack_received * 100.0 / total_ack_pending);
+        if (total_ack_flood_p > 0)
+            fprintf(stderr, "Acks (flood): %d/%d (%.0f%%)\n",
+                    total_ack_flood_r, total_ack_flood_p,
+                    total_ack_flood_r * 100.0 / total_ack_flood_p);
+        if (total_ack_direct_p > 0)
+            fprintf(stderr, "Acks (path): %d/%d (%.0f%%)\n",
+                    total_ack_direct_r, total_ack_direct_p,
+                    total_ack_direct_r * 100.0 / total_ack_direct_p);
     }
 
     // Message fate summary — per-message collision/drop breakdown
     if (!_message_fates.empty()) {
         int n_tracked = (int)_message_fates.size();
         int n_delivered = 0, n_lost = 0;
-        double del_tx = 0, del_rx = 0, del_col = 0, del_drop = 0;
-        double lost_tx = 0, lost_rx = 0, lost_col = 0, lost_drop = 0;
+        double del_tx = 0, del_rx = 0, del_col = 0, del_drop = 0, del_ack = 0;
+        double lost_tx = 0, lost_rx = 0, lost_col = 0, lost_drop = 0, lost_ack = 0;
         for (auto& f : _message_fates) {
             if (f.delivered) {
                 n_delivered++;
@@ -1156,25 +1364,29 @@ bool Orchestrator::run() {
                 del_rx += f.rx_count;
                 del_col += f.collisions;
                 del_drop += f.drops;
+                del_ack += f.ackpath_rx_at_sender;
             } else {
                 n_lost++;
                 lost_tx += f.tx_count;
                 lost_rx += f.rx_count;
                 lost_col += f.collisions;
                 lost_drop += f.drops;
+                lost_ack += f.ackpath_rx_at_sender;
             }
         }
         fprintf(stderr, "\nMessage fate (%d tracked, %d delivered, %d lost):\n",
                 n_tracked, n_delivered, n_lost);
         if (n_delivered > 0) {
-            fprintf(stderr, "  Per delivered message: mean tx=%.1f  rx=%.1f  collision=%.1f  drop=%.1f\n",
+            fprintf(stderr, "  Per delivered message: mean tx=%.1f  rx=%.1f  collision=%.1f  drop=%.1f  ack_copies=%.1f\n",
                     del_tx / n_delivered, del_rx / n_delivered,
-                    del_col / n_delivered, del_drop / n_delivered);
+                    del_col / n_delivered, del_drop / n_delivered,
+                    del_ack / n_delivered);
         }
         if (n_lost > 0) {
-            fprintf(stderr, "  Per lost message:      mean tx=%.1f  rx=%.1f  collision=%.1f  drop=%.1f\n",
+            fprintf(stderr, "  Per lost message:      mean tx=%.1f  rx=%.1f  collision=%.1f  drop=%.1f  ack_copies=%.1f\n",
                     lost_tx / n_lost, lost_rx / n_lost,
-                    lost_col / n_lost, lost_drop / n_lost);
+                    lost_col / n_lost, lost_drop / n_lost,
+                    lost_ack / n_lost);
         }
     }
 

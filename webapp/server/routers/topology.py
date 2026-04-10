@@ -33,7 +33,7 @@ class ConvertOptions(BaseModel):
     estimate_coords: bool = True
     validate_coords: bool = False
     duration_ms: int = 300000
-    step_ms: int = 5
+    step_ms: int = 1
     warmup_ms: int = 5000
     hot_start: bool = True
     companions: list[dict] = Field(default_factory=list)
@@ -56,7 +56,7 @@ class GenerateRequest(BaseModel):
     base_lon: float = 18.65
     num_companions: int = 2
     duration_ms: int = 300000
-    step_ms: int = 5
+    step_ms: int = 1
     warmup_ms: int = 5000
 
 

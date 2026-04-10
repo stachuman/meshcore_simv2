@@ -60,7 +60,7 @@ def auto_duration_ms(max_dist):
     return max(60000, max_dist * 5000 + 20000)
 
 
-def generate_test(rows, cols, n_companions, duration_ms=None, step_ms=5,
+def generate_test(rows, cols, n_companions, duration_ms=None, step_ms=1,
                   warmup_ms=5000, snr_grid=8.0, snr_companion=10.0, seed=42):
     nodes = []
     links = []

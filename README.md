@@ -234,7 +234,7 @@ The simulator models realistic LoRa radio behavior:
 - **SNR variance** -- per-link Gaussian sampling (`snr_std_dev`)
 - **Stochastic loss** -- per-link drop probability (`loss`)
 - **Adversarial modes** -- per-node packet drop, bit corruption, or delayed replay
-- **Message fate tracking** -- follows each message through the relay chain, counting per-message collisions and drops to diagnose delivery failures
+- **Message fate tracking** -- follows each message through the relay chain, counting per-message collisions, drops, and ACK/PATH copies reaching the sender to diagnose delivery failures and ack efficiency
 
 ## Delay Optimization
 

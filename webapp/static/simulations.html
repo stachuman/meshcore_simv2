@@ -49,6 +49,12 @@
     margin-top: 6px;
   }
 
+  /* Stats cells */
+  .stat-good { color: #16a34a; }
+  .stat-warn { color: #ea580c; }
+  .stat-bad  { color: #dc2626; }
+  .stat-dim  { color: var(--text-dim); font-size: 10px; }
+
   /* Clickable row */
   table.data-table tbody tr.sim-row {
     cursor: pointer;
@@ -113,6 +119,9 @@
             <th>Status</th>
             <th>Nodes</th>
             <th>Duration</th>
+            <th>DM Delivery</th>
+            <th>Channel</th>
+            <th>Acks</th>
             <th>Created</th>
             <th>Actions</th>
           </tr>
@@ -173,6 +182,7 @@
       allSims.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
 
       renderTable();
+      loadStatsForCompleted();
       scheduleAutoRefresh();
 
     } catch (err) {
@@ -223,6 +233,24 @@
       tdDur.textContent = formatDuration(dur);
       tr.appendChild(tdDur);
 
+      // DM Delivery
+      const tdDM = document.createElement('td');
+      tdDM.id = 'stat-dm-' + sim.id;
+      tdDM.innerHTML = sim.status === 'completed' ? '<span class="stat-dim">...</span>' : '';
+      tr.appendChild(tdDM);
+
+      // Channel
+      const tdChan = document.createElement('td');
+      tdChan.id = 'stat-chan-' + sim.id;
+      tdChan.innerHTML = sim.status === 'completed' ? '<span class="stat-dim">...</span>' : '';
+      tr.appendChild(tdChan);
+
+      // Acks
+      const tdAcks = document.createElement('td');
+      tdAcks.id = 'stat-acks-' + sim.id;
+      tdAcks.innerHTML = sim.status === 'completed' ? '<span class="stat-dim">...</span>' : '';
+      tr.appendChild(tdAcks);
+
       // Created
       const tdCreated = document.createElement('td');
       tdCreated.textContent = formatTime(sim.created_at);
@@ -263,7 +291,7 @@
     const tr = document.createElement('tr');
     tr.className = 'detail-row';
     const td = document.createElement('td');
-    td.colSpan = 6;
+    td.colSpan = 9;
 
     let html = '<div class="detail-content"><div class="detail-grid">';
     html += '<span class="key">Full ID:</span><span class="val"><code>' + escapeHtml(sim.id) + '</code></span>';
@@ -322,6 +350,117 @@
       statusEl.textContent = '';
       refreshTimer = null;
     }
+  }
+
+  // ── Stats loading ───────────────────────────────
+  const statsCache = {};  // sim_id -> aggregated stats
+
+  function loadStatsForCompleted() {
+    const completed = allSims.filter(s => s.status === 'completed');
+    for (const sim of completed) {
+      if (statsCache[sim.id]) {
+        renderStats(sim.id, statsCache[sim.id]);
+        continue;
+      }
+      fetchJSON('/api/sims/' + encodeURIComponent(sim.id) + '/meta')
+        .then(meta => {
+          const agg = aggregateStats(meta.stats || []);
+          statsCache[sim.id] = agg;
+          renderStats(sim.id, agg);
+        })
+        .catch(() => {
+          setStatsCells(sim.id, '--', '--', '--');
+        });
+    }
+  }
+
+  function aggregateStats(stats) {
+    let sentFlood = 0, sentDirect = 0, dmRecv = 0;
+    let chanSent = 0, chanRecv = 0;
+    let acksFloodPending = 0, acksFloodRecv = 0;
+    let acksDirectPending = 0, acksDirectRecv = 0;
+    let acksTotalPending = 0, acksTotalRecv = 0;
+    for (const s of stats) {
+      sentFlood += s.sent_flood || 0;
+      sentDirect += s.sent_direct || 0;
+      dmRecv += s.recv_direct || 0;
+      chanSent += s.sent_group || 0;
+      chanRecv += s.recv_group || 0;
+      acksFloodPending += s.acks_flood_pending || 0;
+      acksFloodRecv += s.acks_flood_received || 0;
+      acksDirectPending += s.acks_direct_pending || 0;
+      acksDirectRecv += s.acks_direct_received || 0;
+      acksTotalPending += s.acks_pending || 0;
+      acksTotalRecv += s.acks_received || 0;
+    }
+    const dmSent = sentFlood + sentDirect;
+    // Use split totals if available, fall back to legacy acks_pending/acks_received
+    const hasSplit = acksFloodPending > 0 || acksDirectPending > 0;
+    const acksPending = hasSplit ? (acksFloodPending + acksDirectPending) : acksTotalPending;
+    const acksRecv = hasSplit ? (acksFloodRecv + acksDirectRecv) : acksTotalRecv;
+    return { dmSent, dmRecv, sentFlood, sentDirect, chanSent, chanRecv,
+             acksRecv, acksPending, acksFloodPending, acksFloodRecv,
+             acksDirectPending, acksDirectRecv, hasSplit };
+  }
+
+  function renderStats(simId, agg) {
+    // DM delivery — show flood/path split as subtitle
+    const dmEl = document.getElementById('stat-dm-' + simId);
+    if (dmEl) {
+      if (agg.dmSent === 0) {
+        dmEl.innerHTML = '<span class="stat-dim">none</span>';
+      } else {
+        const pct = Math.round(agg.dmRecv / agg.dmSent * 100);
+        const cls = pct >= 90 ? 'stat-good' : (pct >= 50 ? 'stat-warn' : 'stat-bad');
+        let html = '<span class="' + cls + '">' + agg.dmRecv + '/' + agg.dmSent + ' (' + pct + '%)</span>';
+        // Show flood/path breakdown
+        if (agg.sentFlood > 0 || agg.sentDirect > 0) {
+          html += '<br><span class="stat-dim">F:' + agg.sentFlood + ' P:' + agg.sentDirect + '</span>';
+        }
+        dmEl.innerHTML = html;
+      }
+    }
+
+    // Channel
+    const chEl = document.getElementById('stat-chan-' + simId);
+    if (chEl) {
+      if (agg.chanSent === 0) {
+        chEl.innerHTML = '<span class="stat-dim">none</span>';
+      } else {
+        chEl.innerHTML = '<span>' + agg.chanRecv + ' rx / ' + agg.chanSent + ' tx</span>';
+      }
+    }
+
+    // Acks — denominator is acksPending (total tracked), not acksRecv+acksPending
+    const ackEl = document.getElementById('stat-acks-' + simId);
+    if (ackEl) {
+      if (agg.acksPending === 0) {
+        ackEl.innerHTML = '<span class="stat-dim">n/a</span>';
+      } else {
+        const pct = Math.round(agg.acksRecv / agg.acksPending * 100);
+        const cls = pct >= 90 ? 'stat-good' : (pct >= 50 ? 'stat-warn' : 'stat-bad');
+        let html = '<span class="' + cls + '">' + agg.acksRecv + '/' + agg.acksPending + ' (' + pct + '%)</span>';
+        // Show flood/path breakdown only when split data is available
+        if (agg.hasSplit) {
+          const parts = [];
+          if (agg.acksFloodPending > 0) parts.push('F:' + agg.acksFloodRecv + '/' + agg.acksFloodPending);
+          if (agg.acksDirectPending > 0) parts.push('P:' + agg.acksDirectRecv + '/' + agg.acksDirectPending);
+          if (parts.length > 0) {
+            html += '<br><span class="stat-dim">' + parts.join(' ') + '</span>';
+          }
+        }
+        ackEl.innerHTML = html;
+      }
+    }
+  }
+
+  function setStatsCells(simId, dm, chan, ack) {
+    const dmEl = document.getElementById('stat-dm-' + simId);
+    const chEl = document.getElementById('stat-chan-' + simId);
+    const ackEl = document.getElementById('stat-acks-' + simId);
+    if (dmEl) dmEl.innerHTML = '<span class="stat-dim">' + dm + '</span>';
+    if (chEl) chEl.innerHTML = '<span class="stat-dim">' + chan + '</span>';
+    if (ackEl) ackEl.innerHTML = '<span class="stat-dim">' + ack + '</span>';
   }
 
   // ── Delete flow ──────────────────────────────────

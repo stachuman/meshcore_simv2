@@ -26,6 +26,7 @@
   "expect": [
     { "type": "cmd_reply_contains", "node": "alice", "command": "msga bob first", "value": "flood, ack tracked" },
     { "type": "cmd_reply_contains", "node": "alice", "command": "msga bob second", "value": "direct, ack tracked" },
-    { "type": "cmd_reply_contains", "node": "alice", "command": "stats", "value": "acks: 2/2" }
+    { "type": "cmd_reply_contains", "node": "alice", "command": "stats", "value": "flood_acks: 1/1" },
+    { "type": "cmd_reply_contains", "node": "alice", "command": "stats", "value": "path_acks: 1/1" }
   ]
 }

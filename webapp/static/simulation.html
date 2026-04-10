@@ -58,6 +58,38 @@
   .results-card h2 { margin-bottom: 12px; }
   .result-links { display: flex; gap: 8px; flex-wrap: wrap; }
 
+  /* Stats summary card */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .stat-box {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
+  }
+  .stat-box .stat-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+  .stat-box .stat-value {
+    font-size: 18px;
+    font-weight: 600;
+  }
+  .stat-box .stat-detail {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+  .stat-good { color: #16a34a; }
+  .stat-warn { color: #ea580c; }
+  .stat-bad  { color: #dc2626; }
+  .stat-dim  { color: var(--text-dim); }
+
   /* Log / messages area */
   .log-area {
     background: #f0f0f4;
@@ -169,6 +201,12 @@
         <div class="results-card" id="results-card" style="display:none">
           <h2>Results</h2>
           <div class="result-links" id="result-links"></div>
+        </div>
+
+        <!-- Stats summary (shown on completion) -->
+        <div class="results-card" id="stats-card" style="display:none">
+          <h2>Statistics</h2>
+          <div class="stats-grid" id="stats-grid"></div>
         </div>
 
         <!-- Log output -->
@@ -287,7 +325,7 @@
       fill.style.background = 'var(--success)';
       status.textContent = 'Completed';
       pct.textContent = '100%';
-      showResultLinks();
+      showResultLinks();  // also triggers loadStats()
       addLogLine('Simulation completed.', 'pass');
     } else if (data.status === 'failed') {
       fill.style.width = (data.progress || 0) + '%';
@@ -318,11 +356,25 @@
       function onMessage(data) {
         if (typeof data !== 'object') return;
 
+        // Phase updates (init, hot-start, warmup, running)
+        if (data.phase) {
+          const phaseLabels = {
+            'init': 'Initializing',
+            'hot-start': 'Hot-start',
+            'warmup': 'Warmup',
+            'running': 'Running',
+          };
+          status.textContent = phaseLabels[data.phase] || data.phase;
+          if (data.message) {
+            details.textContent = data.message;
+          }
+        }
+
         if (data.progress != null) {
           const p = Math.round(data.progress * 100);
           fill.style.width = p + '%';
           pct.textContent = p + '%';
-          status.textContent = 'Running';
+          if (!data.phase) status.textContent = 'Running';
         }
 
         if (data.step_ms != null && data.total_ms != null) {
@@ -334,7 +386,8 @@
           addLogLine(data.detail, cls);
         }
 
-        if (data.message) {
+        // message without phase = time info from progress %
+        if (data.message && !data.phase) {
           details.textContent = data.message;
         }
 
@@ -404,12 +457,129 @@
     links.innerHTML =
       '<a href="/static/visualize.html?sim=' + encodeURIComponent(simId) + '" class="btn btn-primary">View Timeline</a>' +
       '<a href="/static/map_view.html?sim=' + encodeURIComponent(simId) + '" class="btn">View Map</a>';
+    loadStats();
+  }
+
+  async function loadStats() {
+    try {
+      const meta = await fetchJSON('/api/sims/' + encodeURIComponent(simId) + '/meta');
+      const stats = meta.stats || [];
+      if (stats.length === 0) return;
+      renderStatsCard(stats);
+    } catch (_) { /* stats not available yet */ }
+  }
+
+  function renderStatsCard(stats) {
+    const card = document.getElementById('stats-card');
+    const grid = document.getElementById('stats-grid');
+    card.style.display = '';
+
+    // Aggregate across all companion nodes
+    let sentFlood = 0, sentDirect = 0, sentGroup = 0;
+    let recvDirect = 0, recvGroup = 0;
+    let acksFloodPending = 0, acksFloodRecv = 0;
+    let acksDirectPending = 0, acksDirectRecv = 0;
+    let acksTotalPending = 0, acksTotalRecv = 0;
+
+    for (const s of stats) {
+      sentFlood += s.sent_flood || 0;
+      sentDirect += s.sent_direct || 0;
+      sentGroup += s.sent_group || 0;
+      recvDirect += s.recv_direct || 0;
+      recvGroup += s.recv_group || 0;
+      acksFloodPending += s.acks_flood_pending || 0;
+      acksFloodRecv += s.acks_flood_received || 0;
+      acksDirectPending += s.acks_direct_pending || 0;
+      acksDirectRecv += s.acks_direct_received || 0;
+      acksTotalPending += s.acks_pending || 0;
+      acksTotalRecv += s.acks_received || 0;
+    }
+
+    const dmSent = sentFlood + sentDirect;
+    // Use split totals if available, fall back to legacy acks_pending/acks_received
+    const hasSplit = acksFloodPending > 0 || acksDirectPending > 0;
+    const acksPending = hasSplit ? (acksFloodPending + acksDirectPending) : acksTotalPending;
+    const acksRecv = hasSplit ? (acksFloodRecv + acksDirectRecv) : acksTotalRecv;
+
+    let html = '';
+
+    // DM Delivery (total)
+    if (dmSent > 0) {
+      const pct = Math.round(recvDirect / dmSent * 100);
+      html += statBox('DM Delivery', pct + '%', colorClass(pct),
+        recvDirect + '/' + dmSent + ' received');
+    }
+
+    // Flood delivery
+    if (sentFlood > 0) {
+      // Count flood deliveries from per-sender recv data vs sent_flood_to
+      // Simpler: use ack data as proxy, or show sent count
+      html += statBox('Flood Sent', sentFlood + '', '',
+        'Messages sent via flood routing');
+    }
+
+    // Path delivery
+    if (sentDirect > 0) {
+      html += statBox('Path Sent', sentDirect + '', '',
+        'Messages sent via path routing');
+    }
+
+    // Acks total
+    if (acksPending > 0) {
+      const pct = Math.round(acksRecv / acksPending * 100);
+      html += statBox('Acks (total)', pct + '%', colorClass(pct),
+        acksRecv + '/' + acksPending + ' received');
+    }
+
+    // Acks flood (only when split data available)
+    if (hasSplit && acksFloodPending > 0) {
+      const pct = Math.round(acksFloodRecv / acksFloodPending * 100);
+      html += statBox('Acks (flood)', pct + '%', colorClass(pct),
+        acksFloodRecv + '/' + acksFloodPending + ' received');
+    }
+
+    // Acks path (only when split data available)
+    if (hasSplit && acksDirectPending > 0) {
+      const pct = Math.round(acksDirectRecv / acksDirectPending * 100);
+      html += statBox('Acks (path)', pct + '%', colorClass(pct),
+        acksDirectRecv + '/' + acksDirectPending + ' received');
+    }
+
+    // Channel
+    if (sentGroup > 0) {
+      html += statBox('Channel', recvGroup + ' rx', '',
+        sentGroup + ' messages sent');
+    }
+
+    grid.innerHTML = html;
+  }
+
+  function statBox(label, value, cls, detail) {
+    return '<div class="stat-box">' +
+      '<div class="stat-label">' + escapeHtml(label) + '</div>' +
+      '<div class="stat-value ' + (cls || '') + '">' + escapeHtml(value) + '</div>' +
+      (detail ? '<div class="stat-detail">' + escapeHtml(detail) + '</div>' : '') +
+      '</div>';
+  }
+
+  function colorClass(pct) {
+    if (pct >= 90) return 'stat-good';
+    if (pct >= 50) return 'stat-warn';
+    return 'stat-bad';
   }
 
   // Log helpers
   function classifyLine(text) {
     if (/=== Simulation Summary/i.test(text)) return 'summary';
-    if (/Delivery:/i.test(text)) return 'summary';
+    if (/^Delivery/i.test(text)) return 'summary';
+    if (/^Acks/i.test(text)) return 'summary';
+    if (/^Channel:/i.test(text)) return 'summary';
+    if (/^Radio:/i.test(text)) return 'summary';
+    if (/^Message fate/i.test(text)) return 'summary';
+    if (/Per delivered message/i.test(text)) return 'summary';
+    if (/Per lost message/i.test(text)) return 'summary';
+    if (/ASSERTIONS:.*passed/i.test(text)) return 'pass';
+    if (/ASSERTIONS:.*failed/i.test(text)) return 'fail';
     if (/PASS/i.test(text)) return 'pass';
     if (/FAIL/i.test(text)) return 'fail';
     if (/error/i.test(text)) return 'error';

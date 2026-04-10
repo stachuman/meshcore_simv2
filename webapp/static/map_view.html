@@ -1162,6 +1162,16 @@ function renderTrace(trace, msg) {
 function drawLeafletTrace(hops) {
     traceLayer.clearLayers();
 
+    // Count hops per undirected link for spreading
+    const linkCounts = {};
+    const linkIndex = {};
+    for (const hop of hops) {
+        if (!hop.from || !hop.to) continue;
+        const key = [hop.from, hop.to].sort().join('|');
+        linkCounts[key] = (linkCounts[key] || 0) + 1;
+        linkIndex[key] = 0;
+    }
+
     let lineNum = 0;
     for (const hop of hops) {
         if (!hop.from || !hop.to) continue;
@@ -1184,15 +1194,36 @@ function drawLeafletTrace(hops) {
             color = '#6b7280'; weight = 2; dashArray = null;
         }
 
-        const line = L.polyline(
-            [[fromPos.lat, fromPos.lon], [toPos.lat, toPos.lon]],
-            { color, weight, opacity: 0.85, dashArray }
-        );
+        // Compute perpendicular offset to spread overlapping hops
+        const key = [hop.from, hop.to].sort().join('|');
+        const total = linkCounts[key];
+        const idx = linkIndex[key]++;
+        const pts = offsetLatLng(fromPos, toPos, total, idx);
+
+        const line = L.polyline(pts, { color, weight, opacity: 0.85, dashArray });
         traceLayer.addLayer(line);
 
-        // Hop number at midpoint
-        const midLat = (fromPos.lat + toPos.lat) / 2;
-        const midLon = (fromPos.lon + toPos.lon) / 2;
+        // Arrowhead at ~70% along the line (toward destination)
+        const arrowPos = 0.7;
+        const aLat = pts[0][0] + (pts[1][0] - pts[0][0]) * arrowPos;
+        const aLon = pts[0][1] + (pts[1][1] - pts[0][1]) * arrowPos;
+        const dx = pts[1][1] - pts[0][1];
+        const dy = pts[1][0] - pts[0][0];
+        const angle = Math.atan2(dx, dy) * (180 / Math.PI);
+        const arrowMarker = L.marker([aLat, aLon], {
+            icon: L.divIcon({
+                className: '',
+                html: `<div style="transform:rotate(${angle}deg);color:${color};font-size:16px;font-weight:bold;line-height:1;text-shadow:0 0 2px rgba(255,255,255,0.8)">&#9654;</div>`,
+                iconSize: [16, 16],
+                iconAnchor: [8, 8],
+            }),
+            interactive: false,
+        });
+        traceLayer.addLayer(arrowMarker);
+
+        // Hop number at midpoint of offset line
+        const midLat = (pts[0][0] + pts[1][0]) / 2;
+        const midLon = (pts[0][1] + pts[1][1]) / 2;
         lineNum++;
         const numMarker = L.marker([midLat, midLon], {
             icon: L.divIcon({
@@ -1207,10 +1238,43 @@ function drawLeafletTrace(hops) {
     }
 }
 
+// Offset a line between two geo points perpendicular to its direction.
+// When multiple hops share the same link, they fan out evenly.
+function offsetLatLng(fromPos, toPos, total, idx) {
+    const SPREAD = 0.00012; // ~13m at mid-latitudes, visually clear at city zoom
+    if (total <= 1) return [[fromPos.lat, fromPos.lon], [toPos.lat, toPos.lon]];
+
+    // Perpendicular unit vector in lat/lon space
+    const dlat = toPos.lat - fromPos.lat;
+    const dlon = toPos.lon - fromPos.lon;
+    const len = Math.sqrt(dlat * dlat + dlon * dlon) || 1e-9;
+    const px = -dlon / len; // perpendicular x (lat component)
+    const py = dlat / len;  // perpendicular y (lon component)
+
+    // Center the fan: offsets go from -(total-1)/2 to +(total-1)/2
+    const shift = (idx - (total - 1) / 2) * SPREAD;
+    return [
+        [fromPos.lat + px * shift, fromPos.lon + py * shift],
+        [toPos.lat + px * shift, toPos.lon + py * shift],
+    ];
+}
+
 function drawForceTrace() {
     if (!traceForceData || !forceCtx) return;
     const nodeMap = {};
     forceNodes.forEach(n => nodeMap[n.name] = n);
+
+    // Count hops per undirected link for spreading
+    const linkCounts = {};
+    const linkIndex = {};
+    for (const hop of traceForceData) {
+        if (!hop.from || !hop.to) continue;
+        const key = [hop.from, hop.to].sort().join('|');
+        linkCounts[key] = (linkCounts[key] || 0) + 1;
+        linkIndex[key] = 0;
+    }
+
+    const SPREAD_PX = 8; // pixels between parallel lines
 
     let lineNum = 0;
     for (const hop of traceForceData) {
@@ -1226,6 +1290,17 @@ function drawForceTrace() {
         else if (hop.type === 'drop') color = '#be185d';
         else color = '#6b7280';
 
+        // Compute perpendicular offset for spreading
+        const key = [hop.from, hop.to].sort().join('|');
+        const total = linkCounts[key];
+        const idx = linkIndex[key]++;
+        const shift = (idx - (total - 1) / 2) * SPREAD_PX;
+        const dx = t.x - s.x, dy = t.y - s.y;
+        const len = Math.sqrt(dx * dx + dy * dy) || 1;
+        const px = -dy / len, py = dx / len; // perpendicular
+        const x0 = s.x + px * shift, y0 = s.y + py * shift;
+        const x1 = t.x + px * shift, y1 = t.y + py * shift;
+
         forceCtx.save();
         forceCtx.strokeStyle = color;
         forceCtx.lineWidth = hop.type === 'tx' ? 4 : 3;
@@ -1234,14 +1309,29 @@ function drawForceTrace() {
             forceCtx.setLineDash([6, 4]);
         }
         forceCtx.beginPath();
-        forceCtx.moveTo(s.x, s.y);
-        forceCtx.lineTo(t.x, t.y);
+        forceCtx.moveTo(x0, y0);
+        forceCtx.lineTo(x1, y1);
         forceCtx.stroke();
         forceCtx.restore();
 
-        // Hop number
+        // Arrowhead at ~70% along the line
+        const ax = x0 + (x1 - x0) * 0.7, ay = y0 + (y1 - y0) * 0.7;
+        const angle = Math.atan2(y1 - y0, x1 - x0);
+        const aSize = 8;
+        forceCtx.save();
+        forceCtx.fillStyle = color;
+        forceCtx.globalAlpha = 0.9;
+        forceCtx.beginPath();
+        forceCtx.moveTo(ax + Math.cos(angle) * aSize, ay + Math.sin(angle) * aSize);
+        forceCtx.lineTo(ax + Math.cos(angle + 2.5) * aSize * 0.6, ay + Math.sin(angle + 2.5) * aSize * 0.6);
+        forceCtx.lineTo(ax + Math.cos(angle - 2.5) * aSize * 0.6, ay + Math.sin(angle - 2.5) * aSize * 0.6);
+        forceCtx.closePath();
+        forceCtx.fill();
+        forceCtx.restore();
+
+        // Hop number at midpoint
         lineNum++;
-        const mx = (s.x + t.x) / 2, my = (s.y + t.y) / 2;
+        const mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
         forceCtx.save();
         forceCtx.fillStyle = color;
         forceCtx.beginPath();

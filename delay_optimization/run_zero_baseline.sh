@@ -114,6 +114,7 @@ chan_pct = int(cm.group(1)) if cm else -1
 
 fate_tracked = fate_delivered = fate_lost = 0
 lost_col = lost_drop = 0.0
+del_ack_copies = 0.0
 
 fm = re.search(r'Message fate \((\d+) tracked, (\d+) delivered, (\d+) lost\)', stderr)
 if fm:
@@ -121,15 +122,19 @@ if fm:
     fate_delivered = int(fm.group(2))
     fate_lost = int(fm.group(3))
 
+dam = re.search(r'Per delivered message: mean tx=[\d.]+\s+rx=[\d.]+\s+collision=[\d.]+\s+drop=[\d.]+\s+ack_copies=([\d.]+)', stderr)
+if dam:
+    del_ack_copies = float(dam.group(1))
+
 lm = re.search(r'Per lost message:\s+mean tx=[\d.]+\s+rx=[\d.]+\s+collision=([\d.]+)\s+drop=([\d.]+)', stderr)
 if lm:
     lost_col = float(lm.group(1))
     lost_drop = float(lm.group(2))
 
-print(f'{delivered},{sent},{pct},{ack_pct},{chan_pct},{fate_tracked},{fate_delivered},{fate_lost},{lost_col},{lost_drop}')
+print(f'{delivered},{sent},{pct},{ack_pct},{chan_pct},{fate_tracked},{fate_delivered},{fate_lost},{lost_col},{lost_drop},{del_ack_copies}')
 "
     else
-        echo "0,0,0,-1,-1,0,0,0,0.0,0.0"
+        echo "0,0,0,-1,-1,0,0,0,0.0,0.0,0.0"
     fi
 
     rm -f "$tmp_config" "$stderr_file"
@@ -149,7 +154,7 @@ for density in sparse medium dense; do
     echo "--- $density (zero delays, $NUM_SEEDS seeds) ---"
 
     all_pct="" all_ack="" all_chan=""
-    all_col="" all_drop=""
+    all_col="" all_drop="" all_ack_copies=""
     total_del=0 total_sent=0
     fate_tracked_sum=0 fate_delivered_sum=0 fate_lost_sum=0
 
@@ -158,10 +163,10 @@ for density in sparse medium dense; do
         printf "  seed %d ... " "$seed"
 
         result=$(run_one "$test_file" "$seed")
-        IFS=',' read -r del sent pct ack chan ft fd fl fc fdrop <<< "$result"
+        IFS=',' read -r del sent pct ack chan ft fd fl fc fdrop fack <<< "$result"
 
-        printf "del=%d%% ack=%d%% chan=%d%% col=%.1f drp=%.1f\n" \
-            "$pct" "$ack" "$chan" "$fc" "$fdrop"
+        printf "del=%d%% ack=%d%% chan=%d%% col=%.1f drp=%.1f ack_copies=%.1f\n" \
+            "$pct" "$ack" "$chan" "$fc" "$fdrop" "$fack"
 
         total_del=$((total_del + del))
         total_sent=$((total_sent + sent))
@@ -170,6 +175,7 @@ for density in sparse medium dense; do
         all_chan="$all_chan $chan"
         all_col="$all_col $fc"
         all_drop="$all_drop $fdrop"
+        all_ack_copies="$all_ack_copies $fack"
         fate_tracked_sum=$((fate_tracked_sum + ft))
         fate_delivered_sum=$((fate_delivered_sum + fd))
         fate_lost_sum=$((fate_lost_sum + fl))
@@ -184,6 +190,7 @@ acks = [float(x) for x in '$all_ack'.split()]
 chans = [float(x) for x in '$all_chan'.split()]
 cols = [float(x) for x in '$all_col'.split()]
 drops = [float(x) for x in '$all_drop'.split()]
+ack_copies = [float(x) for x in '$all_ack_copies'.split()]
 
 mean_pct = statistics.mean(pcts)
 std_pct = statistics.stdev(pcts) if len(pcts) > 1 else 0
@@ -195,6 +202,8 @@ lost_cols = [c for c in cols if c > 0]
 lost_drops = [d for d in drops if d > 0]
 mean_col = statistics.mean(lost_cols) if lost_cols else 0.0
 mean_drop = statistics.mean(lost_drops) if lost_drops else 0.0
+ack_copies_nonzero = [a for a in ack_copies if a > 0]
+mean_ack_copies = statistics.mean(ack_copies_nonzero) if ack_copies_nonzero else 0.0
 
 # Print summary
 print()
@@ -202,7 +211,7 @@ print(f'  $density ZERO-DELAY:')
 print(f'    Delivery:  {mean_pct:.1f}% +/- {std_pct:.1f}%  (min={min_pct}% max={max_pct}%)  {$total_del}/{$total_sent}')
 print(f'    Ack:       {mean_ack:.1f}%')
 print(f'    Channel:   {mean_chan:.1f}%')
-print(f'    Col/lost:  {mean_col:.1f}   Drp/lost: {mean_drop:.1f}')
+print(f'    Col/lost:  {mean_col:.1f}   Drp/lost: {mean_drop:.1f}  Ack_copies/del: {mean_ack_copies:.1f}')
 print(f'    Fate:      {$fate_tracked_sum} tracked, {$fate_delivered_sum} delivered, {$fate_lost_sum} lost')
 
 # Append to CSV (matching optimize_tuning.py format)
@@ -216,7 +225,8 @@ with open(csv_path, 'a', newline='') as f:
                          'mean_delivery_pct','std_pct','min_pct','max_pct',
                          'total_delivered','total_sent','mean_ack_pct','mean_chan_pct','n_seeds',
                          'fate_tracked','fate_delivered','fate_lost',
-                         'lost_mean_collision','lost_mean_drop'])
+                         'lost_mean_collision','lost_mean_drop',
+                         'del_mean_ack_copies'])
     writer.writerow([
         0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
         round(mean_pct, 1), round(std_pct, 1),
@@ -227,6 +237,7 @@ with open(csv_path, 'a', newline='') as f:
         len(pcts),
         $fate_tracked_sum, $fate_delivered_sum, $fate_lost_sum,
         round(mean_col, 1), round(mean_drop, 1),
+        round(mean_ack_copies, 1),
     ])
 print(f'  Appended zero-baseline row to {csv_path}')
 "

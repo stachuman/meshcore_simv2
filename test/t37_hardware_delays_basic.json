@@ -1,0 +1,35 @@
+{
+  "_name": "t37_hardware_delays_basic",
+  "_desc": "Basic test with explicit hardware delays: message delivery through repeater with rx_to_tx_delay=1ms and tx_to_rx_delay=5ms",
+  "simulation": {
+    "duration_ms": 10000,
+    "step_ms": 1,
+    "hot_start": true,
+    "radio": {
+      "sf": 8,
+      "bw": 62500,
+      "cr": 4,
+      "hardware": {
+        "rx_to_tx_delay_ms": 1.0,
+        "tx_to_rx_delay_ms": 5.0
+      }
+    }
+  },
+  "nodes": [
+    {"name": "alice", "role": "companion"},
+    {"name": "relay", "role": "repeater"},
+    {"name": "bob", "role": "companion"}
+  ],
+  "topology": {
+    "links": [
+      {"from": "alice", "to": "relay", "snr": 10.0, "rssi": -70.0, "bidir": true},
+      {"from": "relay", "to": "bob", "snr": 10.0, "rssi": -70.0, "bidir": true}
+    ]
+  },
+  "commands": [
+    {"at_ms": 1000, "node": "alice", "command": "msg bob hello"}
+  ],
+  "expect": [
+    {"type": "cmd_reply_contains", "node": "alice", "command": "msg bob", "value": "msg sent"}
+  ]
+}

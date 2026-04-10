@@ -1,0 +1,39 @@
+{
+  "_name": "t38_stats_flood_path_split",
+  "_desc": "Verify flood/path split in message stats. First msga goes flood (no path known), second msga goes direct (path learned from first ACK). Third msg (no ack) also goes direct. Stats command and node_stats JSON must show correct per-type counts.",
+  "simulation": {
+    "duration_ms": 120000,
+    "step_ms": 5,
+    "warmup_ms": 5000,
+    "hot_start": true
+  },
+  "nodes": [
+    { "name": "alice", "role": "companion" },
+    { "name": "relay1", "role": "repeater" },
+    { "name": "bob", "role": "companion" }
+  ],
+  "topology": {
+    "links": [
+      { "from": "alice", "to": "relay1", "snr": 10.0, "rssi": -75.0, "bidir": true },
+      { "from": "relay1", "to": "bob", "snr": 10.0, "rssi": -75.0, "bidir": true }
+    ]
+  },
+  "commands": [
+    { "at_ms": 6000, "node": "alice", "command": "msga bob msg1 flood ack" },
+    { "at_ms": 40000, "node": "alice", "command": "msga bob msg2 direct ack" },
+    { "at_ms": 70000, "node": "alice", "command": "msg bob msg3 direct noack" },
+    { "at_ms": 100000, "node": "alice", "command": "stats" },
+    { "at_ms": 100000, "node": "bob", "command": "stats" }
+  ],
+  "expect": [
+    { "type": "cmd_reply_contains", "node": "alice", "command": "msga bob msg1", "value": "flood, ack tracked" },
+    { "type": "cmd_reply_contains", "node": "alice", "command": "msga bob msg2", "value": "direct, ack tracked" },
+    { "type": "cmd_reply_contains", "node": "alice", "command": "msg bob msg3", "value": "(direct)" },
+
+    { "type": "cmd_reply_contains", "node": "alice", "command": "stats", "value": "sent: 1 flood, 2 direct, 0 group" },
+    { "type": "cmd_reply_contains", "node": "alice", "command": "stats", "value": "flood_acks: 1/1" },
+    { "type": "cmd_reply_contains", "node": "alice", "command": "stats", "value": "path_acks: 1/1" },
+
+    { "type": "cmd_reply_contains", "node": "bob", "command": "stats", "value": "recv: 3 direct" }
+  ]
+}

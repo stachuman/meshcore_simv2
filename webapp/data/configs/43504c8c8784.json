@@ -1,0 +1,89 @@
+{
+  "id": "43504c8c8784",
+  "name": "Gdansk test",
+  "created_at": 1775763450.315146,
+  "updated_at": 1775764312.081123,
+  "config": {
+    "simulation": {
+      "duration_ms": 60000,
+      "warmup_ms": 5000,
+      "step_ms": 1,
+      "hot_start": true
+    },
+    "topology_id": "d319c9956b73",
+    "commands": [
+      {
+        "at_ms": 10000,
+        "node": "@repeaters",
+        "command": "set rxdelay 0"
+      },
+      {
+        "at_ms": 10000,
+        "node": "@repeaters",
+        "command": "set txdelay 0"
+      },
+      {
+        "at_ms": 10000,
+        "node": "@repeaters",
+        "command": "set direct.txdelay 0"
+      }
+    ],
+    "message_schedule": [
+      {
+        "from": "dave",
+        "to": "bob",
+        "start_ms": 10000,
+        "interval_ms": 20000,
+        "count": 2,
+        "message": "test msg {n}",
+        "command_prefix": "msga"
+      },
+      {
+        "from": "bob",
+        "to": "alice",
+        "start_ms": 12000,
+        "interval_ms": 20000,
+        "count": 2,
+        "message": "test msg {n}",
+        "command_prefix": "msg"
+      },
+      {
+        "from": "bob",
+        "to": "dave",
+        "start_ms": 14000,
+        "interval_ms": 20000,
+        "message": "test msg {n}",
+        "command_prefix": "msga"
+      },
+      {
+        "from": "dave",
+        "to": "carol",
+        "start_ms": 16000,
+        "interval_ms": 20000,
+        "count": 2,
+        "message": "test msg {n}",
+        "command_prefix": "msg"
+      },
+      {
+        "from": "carol",
+        "to": "dave",
+        "start_ms": 18000,
+        "interval_ms": 20000,
+        "count": 2,
+        "message": "test msg {n}",
+        "command_prefix": "msg"
+      },
+      {
+        "from": "alice",
+        "to": "bob",
+        "start_ms": 20000,
+        "interval_ms": 20000,
+        "count": 2,
+        "message": "test msg {n}",
+        "command_prefix": "msg"
+      }
+    ],
+    "expect": []
+  },
+  "topology_id": "d319c9956b73"
+}

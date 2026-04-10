@@ -432,6 +432,21 @@ def _validate_sim_radio(radio: Any, result: ValidationResult) -> None:
                 f"simulation.radio.snr_coherence_ms must be >= 0, got {v}"
             )
 
+    if "hardware" in radio:
+        hw = radio["hardware"]
+        if not isinstance(hw, dict):
+            result._error("simulation.radio.hardware must be an object")
+        else:
+            for field in ("rx_to_tx_delay_ms", "tx_to_rx_delay_ms"):
+                if field in hw:
+                    v = hw[field]
+                    if not isinstance(v, (int, float)):
+                        result._error(f"simulation.radio.hardware.{field} must be a number")
+                    elif v < 0:
+                        result._error(
+                            f"simulation.radio.hardware.{field} must be >= 0, got {v}"
+                        )
+
 
 def _validate_commands(
     commands: Any,

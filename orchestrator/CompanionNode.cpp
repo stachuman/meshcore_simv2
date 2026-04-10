@@ -5,7 +5,7 @@
 #include <vector>
 #include <memory>
 #include <cstring>
-#include <set>
+#include <map>
 
 #include "NodeContext.h"
 
@@ -41,7 +41,7 @@ static int hex_to_bytes(uint8_t* out, const char* hex, size_t hex_len) {
 class InstrumentedMesh : public CompanionMyMesh {
 public:
     MsgStats* _stats = nullptr;   // set after construction
-    std::set<uint32_t> _pending_acks;  // expected_ack CRCs we're waiting for
+    std::map<uint32_t, bool> _pending_acks;  // expected_ack CRC → true if flood, false if direct
 
     using CompanionMyMesh::CompanionMyMesh;  // inherit constructors
 
@@ -66,8 +66,13 @@ public:
     }
 
     void onAckRecv(mesh::Packet* packet, uint32_t ack_crc) override {
-        if (_stats && _pending_acks.erase(ack_crc) > 0) {
-            _stats->acks_received++;
+        if (_stats) {
+            auto it = _pending_acks.find(ack_crc);
+            if (it != _pending_acks.end()) {
+                if (it->second) _stats->acks_flood_received++;
+                else _stats->acks_direct_received++;
+                _pending_acks.erase(it);
+            }
         }
         CompanionMyMesh::onAckRecv(packet, ack_crc);
     }
@@ -79,8 +84,11 @@ public:
         if (_stats && extra_type == PAYLOAD_TYPE_ACK && extra_len >= 4) {
             uint32_t ack_crc;
             memcpy(&ack_crc, extra, 4);
-            if (_pending_acks.erase(ack_crc) > 0) {
-                _stats->acks_received++;
+            auto it = _pending_acks.find(ack_crc);
+            if (it != _pending_acks.end()) {
+                if (it->second) _stats->acks_flood_received++;
+                else _stats->acks_direct_received++;
+                _pending_acks.erase(it);
             }
         }
         return CompanionMyMesh::onContactPathRecv(from, in_path, in_path_len,
@@ -88,8 +96,8 @@ public:
                                                    extra_type, extra, extra_len);
     }
 
-    void trackAck(uint32_t expected_ack) {
-        _pending_acks.insert(expected_ack);
+    void trackAck(uint32_t expected_ack, bool is_flood) {
+        _pending_acks[expected_ack] = is_flood;
     }
 };
 
@@ -174,15 +182,15 @@ public:
             int rc = _mesh.sendMessage(*contact, timestamp, 0, text, expected_ack, est_timeout);
             if (rc == MSG_SEND_SENT_FLOOD) {
                 msg_stats.sent_flood++;
-                msg_stats.sent_to[contact->name]++;
-                _mesh.trackAck(expected_ack);
-                msg_stats.acks_pending++;
+                msg_stats.sent_flood_to[contact->name]++;
+                _mesh.trackAck(expected_ack, true);
+                msg_stats.acks_flood_pending++;
                 return "msg sent to " + std::string(contact->name) + " (flood, ack tracked)";
             } else if (rc == MSG_SEND_SENT_DIRECT) {
                 msg_stats.sent_direct++;
-                msg_stats.sent_to[contact->name]++;
-                _mesh.trackAck(expected_ack);
-                msg_stats.acks_pending++;
+                msg_stats.sent_direct_to[contact->name]++;
+                _mesh.trackAck(expected_ack, false);
+                msg_stats.acks_direct_pending++;
                 return "msg sent to " + std::string(contact->name) + " (direct, ack tracked)";
             }
             return "ERROR: sendMessage failed (rc=" + std::to_string(rc) + ")";
@@ -200,11 +208,11 @@ public:
             int rc = _mesh.sendMessage(*contact, timestamp, 0, text, expected_ack, est_timeout);
             if (rc == MSG_SEND_SENT_FLOOD) {
                 msg_stats.sent_flood++;
-                msg_stats.sent_to[contact->name]++;
+                msg_stats.sent_flood_to[contact->name]++;
                 return "msg sent to " + std::string(contact->name) + " (flood)";
             } else if (rc == MSG_SEND_SENT_DIRECT) {
                 msg_stats.sent_direct++;
-                msg_stats.sent_to[contact->name]++;
+                msg_stats.sent_direct_to[contact->name]++;
                 return "msg sent to " + std::string(contact->name) + " (direct)";
             }
             return "ERROR: sendMessage failed (rc=" + std::to_string(rc) + ")";
@@ -247,9 +255,13 @@ public:
                 r += ")";
             }
             r += ", " + std::to_string(msg_stats.recv_group) + " group";
-            if (msg_stats.acks_pending > 0) {
-                r += "; acks: " + std::to_string(msg_stats.acks_received)
-                   + "/" + std::to_string(msg_stats.acks_pending);
+            if (msg_stats.acks_flood_pending > 0) {
+                r += "; flood_acks: " + std::to_string(msg_stats.acks_flood_received)
+                   + "/" + std::to_string(msg_stats.acks_flood_pending);
+            }
+            if (msg_stats.acks_direct_pending > 0) {
+                r += "; path_acks: " + std::to_string(msg_stats.acks_direct_received)
+                   + "/" + std::to_string(msg_stats.acks_direct_pending);
             }
             return r;
         }
