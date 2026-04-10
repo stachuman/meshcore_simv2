@@ -2,7 +2,7 @@
   "id": "43504c8c8784",
   "name": "Gdansk test",
   "created_at": 1775763450.315146,
-  "updated_at": 1775764312.081123,
+  "updated_at": 1775849276.3294644,
   "config": {
     "simulation": {
       "duration_ms": 60000,
@@ -20,12 +20,12 @@
       {
         "at_ms": 10000,
         "node": "@repeaters",
-        "command": "set txdelay 0"
+        "command": "set txdelay 2"
       },
       {
         "at_ms": 10000,
         "node": "@repeaters",
-        "command": "set direct.txdelay 0"
+        "command": "set direct.txdelay 1"
       }
     ],
     "message_schedule": [

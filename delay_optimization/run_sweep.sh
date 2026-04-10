@@ -96,12 +96,12 @@ echo "--- Step 1: Generate topology ---"
 python3 -m topology_generator \
     --region 53.7,17.3,54.8,19.5 \
     --api-cache /tmp/meshcore_nodes_cache.json \
-    --freq-mhz 869.618 \
+    --freq-mhz 915 \
     --tx-power-dbm 20.0 \
     --antenna-height 5.0 \
-    --sf 8 --bw 62500 --cr 4 \
+    --sf 10 --bw 250000 --cr 1 \
     --max-distance-km 40 \
-    --min-snr -10.0 \
+    --min-snr -16.0 \
     --max-edges-per-node "$MAX_EDGES" \
     --max-good-links "$MAX_GOOD" \
     --link-survival "$LINK_SURVIVAL" \

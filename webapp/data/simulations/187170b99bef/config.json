@@ -4875,25 +4875,76 @@
       }
     ]
   },
-  "commands": [],
+  "commands": [
+    {
+      "at_ms": 10000,
+      "node": "@repeaters",
+      "command": "set rxdelay 0"
+    },
+    {
+      "at_ms": 10000,
+      "node": "@repeaters",
+      "command": "set txdelay 2"
+    },
+    {
+      "at_ms": 10000,
+      "node": "@repeaters",
+      "command": "set direct.txdelay 1"
+    }
+  ],
   "expect": [],
   "message_schedule": [
     {
-      "from": "alice",
+      "from": "dave",
       "to": "bob",
-      "start_ms": 30000,
+      "start_ms": 10000,
       "interval_ms": 20000,
-      "count": 5,
-      "message": "test message 1",
+      "count": 2,
+      "message": "test msg {n}",
       "command_prefix": "msga"
     },
     {
       "from": "bob",
-      "to": "carol",
-      "start_ms": 30000,
+      "to": "alice",
+      "start_ms": 12000,
       "interval_ms": 20000,
-      "count": 5,
-      "message": "test message 2 i nic wi\u0119cej",
+      "count": 2,
+      "message": "test msg {n}",
+      "command_prefix": "msg"
+    },
+    {
+      "from": "bob",
+      "to": "dave",
+      "start_ms": 14000,
+      "interval_ms": 20000,
+      "message": "test msg {n}",
+      "command_prefix": "msga"
+    },
+    {
+      "from": "dave",
+      "to": "carol",
+      "start_ms": 16000,
+      "interval_ms": 20000,
+      "count": 2,
+      "message": "test msg {n}",
+      "command_prefix": "msg"
+    },
+    {
+      "from": "carol",
+      "to": "dave",
+      "start_ms": 18000,
+      "interval_ms": 20000,
+      "count": 2,
+      "message": "test msg {n}",
+      "command_prefix": "msg"
+    },
+    {
+      "from": "alice",
+      "to": "bob",
+      "start_ms": 20000,
+      "interval_ms": 20000,
+      "count": 2,
+      "message": "test msg {n}",
       "command_prefix": "msg"
     }
   ]

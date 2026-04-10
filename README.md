@@ -263,6 +263,62 @@ python3 tools/gen_grid_test.py --rows 5 --cols 5 -n 4 -o test/t_custom_grid.json
 
 Creates a repeater grid with companion nodes at the corners, auto-generates cross-grid messaging commands and discovery assertions.
 
+## Web App & Docker
+
+A browser-based UI for managing simulations, editing configs, and viewing results.
+
+### Run locally (development)
+
+```bash
+cd webapp
+pip install -r requirements.txt
+uvicorn server.main:app --port 8000
+```
+
+Open http://localhost:8000
+
+### Docker image
+
+Build requires the Release orchestrator binary first:
+
+```bash
+# 1. Build the optimized orchestrator
+cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release
+cmake --build build-release --target orchestrator -j$(nproc)
+
+# 2. Build the Docker image
+cd webapp
+docker compose build
+```
+
+Run locally:
+
+```bash
+docker compose up
+```
+
+### Deploy to another machine (e.g. NAS)
+
+```bash
+# On the build machine — save image to a tarball
+docker save meshcore-sim-simulator:latest | gzip > meshcore-sim.tar.gz
+
+# Copy to target
+scp meshcore-sim.tar.gz user@nas-ip:/share/docker/
+
+# On the target machine — load and run
+docker load < meshcore-sim.tar.gz
+docker run -d --name meshcore-sim \
+    -p 8000:8000 \
+    -v meshcore-data:/app/data \
+    --restart unless-stopped \
+    meshcore-sim-simulator:latest
+```
+
+The `-v meshcore-data:/app/data` volume persists simulation data across container restarts.
+
+**Note:** The image is x86_64. The target machine must have an Intel/AMD CPU (most QNAP/Synology NAS models do).
+
 ## Project Structure
 
 ```
@@ -281,5 +337,6 @@ delay_optimization/  Delay parameter sweep scripts and results
 test/                Test configs (t*.json) and runner
 tools/               Injection, generation, analysis, and run scripts
 visualization/       Interactive event visualizer
+webapp/              Web UI (FastAPI + vanilla JS, Docker-ready)
 docs/                Config format and model documentation
 ```
