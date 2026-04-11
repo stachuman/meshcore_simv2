@@ -63,6 +63,15 @@ If you already cloned without `--recursive`, initialize the MeshCore submodule:
 git submodule update --init
 ```
 
+To update MeshCore to the latest upstream version:
+
+```bash
+cd MeshCore
+git pull origin main
+cd ..
+cmake --build build
+```
+
 The Python venv must be active when running visualization or topology tools (`source venv/bin/activate`).
 
 This produces three binaries:

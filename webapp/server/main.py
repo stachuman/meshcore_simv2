@@ -24,7 +24,7 @@ async def lifespan(app: FastAPI):
         orchestrator_path=str(settings.ORCHESTRATOR_PATH),
         max_concurrent=settings.MAX_CONCURRENT_SIMS,
     )
-    app.state.event_cache = EventIndexCache(max_size=3)
+    app.state.event_cache = EventIndexCache(max_size=5)
 
     yield
 

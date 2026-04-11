@@ -28,6 +28,7 @@ class EventIndex:
         self.cmd_replies: list[int] = []     # indices of cmd_reply events
         self.stats: list[dict] = []          # companion node_stats events
         self.repeater_stats: list[dict] = []  # repeater node_stats (with stats_type)
+        self.summary: dict = {}              # sim_summary event (radio, delivery, acks, fate)
 
         self._load(path)
 
@@ -83,6 +84,9 @@ class EventIndex:
             self.node_set[ev["node"]] = meta
             self.nodes.append(meta)
             # Don't store as regular event — metadata only
+            return
+        if etype == "sim_summary":
+            self.summary = ev
             return
         if etype == "node_stats":
             if "stats_type" in ev:
@@ -250,7 +254,14 @@ class EventIndex:
 
         relay_from: this hop is a relay (repeater forwarded the parent packet)
         response_from: this hop is a response (companion reacted to the parent)
+
+        Results are cached per pkt hash since trace data is immutable.
         """
+        if not hasattr(self, "_deep_trace_cache"):
+            self._deep_trace_cache: dict[str, dict] = {}
+        if pkt in self._deep_trace_cache:
+            return self._deep_trace_cache[pkt]
+
         visited_pkts: set[str] = set()
         hops: list[dict] = []
         # Queue: (pkt_hash, parent_pkt, is_response)
@@ -297,7 +308,9 @@ class EventIndex:
                     if relay_tx and relay_tx["pkt"] not in visited_pkts:
                         queue.append((relay_tx["pkt"], current_pkt, False))
 
-        return {"root_pkt": pkt, "hops": hops}
+        result = {"root_pkt": pkt, "hops": hops}
+        self._deep_trace_cache[pkt] = result
+        return result
 
     def get_meta(self) -> dict:
         return {
@@ -308,6 +321,7 @@ class EventIndex:
             "sim": self.sim_info,
             "stats": self.stats,
             "repeater_stats": self.repeater_stats,
+            "summary": self.summary,
         }
 
 
@@ -468,42 +482,55 @@ class EventIndexCache:
     The EventIndex is memory-intensive (~50MB per 100k events), so this
     cache limits the number of concurrently loaded indexes by evicting
     the least-recently-used entry when the cache is full.
+
+    Uses per-sim_id locks to prevent duplicate concurrent loads of the
+    same simulation file.
     """
 
-    def __init__(self, max_size: int = 3):
+    def __init__(self, max_size: int = 5):
         self._max_size = max_size
         self._cache: OrderedDict[str, EventIndex] = OrderedDict()
         self._lock = threading.Lock()
+        self._loading: dict[str, threading.Lock] = {}  # per-sim load locks
 
     def get(self, sim_id: str, events_path: str) -> EventIndex:
         """Get an EventIndex for a simulation, loading it if necessary.
 
         Moves the accessed entry to the end (most-recently-used position).
         If the cache is full and a new entry must be loaded, the
-        least-recently-used entry is evicted first.
+        least-recently-used entry is evicted first.  Per-sim_id locks
+        prevent duplicate concurrent loads of the same file.
         """
         with self._lock:
             if sim_id in self._cache:
                 self._cache.move_to_end(sim_id)
                 return self._cache[sim_id]
+            # Get or create a per-sim load lock
+            if sim_id not in self._loading:
+                self._loading[sim_id] = threading.Lock()
+            load_lock = self._loading[sim_id]
 
-        # Load outside the lock — this can take a while for large files
-        logger.info("EventIndexCache: loading sim_id=%s from %s", sim_id, events_path)
-        index = EventIndex(events_path)
+        # Serialize loads of the same sim_id (but allow different sims in parallel)
+        with load_lock:
+            # Re-check after acquiring load lock — another thread may have loaded it
+            with self._lock:
+                if sim_id in self._cache:
+                    self._cache.move_to_end(sim_id)
+                    self._loading.pop(sim_id, None)
+                    return self._cache[sim_id]
 
-        with self._lock:
-            # Check again in case another thread loaded it while we were loading
-            if sim_id in self._cache:
-                self._cache.move_to_end(sim_id)
-                return self._cache[sim_id]
+            logger.info("EventIndexCache: loading sim_id=%s from %s", sim_id, events_path)
+            index = EventIndex(events_path)
 
-            # Evict LRU entries if at capacity
-            while len(self._cache) >= self._max_size:
-                evicted_id, _ = self._cache.popitem(last=False)
-                logger.info("EventIndexCache: evicted sim_id=%s", evicted_id)
+            with self._lock:
+                # Evict LRU entries if at capacity
+                while len(self._cache) >= self._max_size:
+                    evicted_id, _ = self._cache.popitem(last=False)
+                    logger.info("EventIndexCache: evicted sim_id=%s", evicted_id)
 
-            self._cache[sim_id] = index
-            return index
+                self._cache[sim_id] = index
+                self._loading.pop(sim_id, None)
+                return index
 
     def evict(self, sim_id: str) -> None:
         """Remove a specific simulation's index from the cache."""

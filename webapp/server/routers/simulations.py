@@ -6,10 +6,11 @@ Connects the frontend to SimManager (subprocess lifecycle) and EventIndex
 
 import json
 import logging
+import os
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 from server.config import Settings
@@ -52,6 +53,18 @@ def _get_sim_or_404(sim_id: str, request: Request):
     return sim
 
 
+def _events_etag(events_path) -> str:
+    """Compute a lightweight ETag from file mtime and size."""
+    st = os.stat(str(events_path))
+    return f'"{st.st_mtime_ns:x}-{st.st_size:x}"'
+
+
+def _check_not_modified(request: Request, etag: str) -> bool:
+    """Return True if the client's If-None-Match header matches our ETag."""
+    client_etag = request.headers.get("if-none-match", "")
+    return client_etag == etag
+
+
 def _get_index(sim_id: str, request: Request) -> EventIndex:
     """Load (or retrieve from cache) the EventIndex for a completed sim.
 
@@ -74,6 +87,24 @@ def _get_index(sim_id: str, request: Request) -> EventIndex:
         )
 
     return event_cache.get(sim_id, str(events_path))
+
+
+def _cached_json_response(request: Request, sim_id: str, data) -> JSONResponse:
+    """Return a JSONResponse with ETag / 304 Not Modified support.
+
+    For completed simulations, event data never changes, so aggressive
+    caching is safe.
+    """
+    sim_manager: SimManager = request.app.state.sim_manager
+    events_path = sim_manager.get_events_path(sim_id)
+    if events_path:
+        etag = _events_etag(events_path)
+        if _check_not_modified(request, etag):
+            return JSONResponse(status_code=304, content=None,
+                                headers={"ETag": etag})
+        return JSONResponse(content=data,
+                            headers={"ETag": etag, "Cache-Control": "private, max-age=3600"})
+    return JSONResponse(content=data)
 
 
 # ---------------------------------------------------------------------------
@@ -173,7 +204,7 @@ async def delete_sim(sim_id: str, request: Request):
 async def sim_meta(sim_id: str, request: Request):
     """Return node list, time range, event count, and stats."""
     index = _get_index(sim_id, request)
-    return index.get_meta()
+    return _cached_json_response(request, sim_id, index.get_meta())
 
 
 @router.get("/{sim_id}/events")
@@ -186,7 +217,8 @@ async def sim_events(
     """Return events in a time window [from, to] (milliseconds)."""
     index = _get_index(sim_id, request)
     events = index.query_time_range(from_ms, to_ms)
-    return {"events": events, "count": len(events)}
+    return _cached_json_response(request, sim_id,
+                                 {"events": events, "count": len(events)})
 
 
 @router.get("/{sim_id}/density")
@@ -199,21 +231,23 @@ async def sim_density(
 ):
     """Return per-node event density heatmap in time buckets."""
     index = _get_index(sim_id, request)
-    return index.density(from_ms, to_ms, bucket_ms)
+    return _cached_json_response(request, sim_id,
+                                 index.density(from_ms, to_ms, bucket_ms))
 
 
 @router.get("/{sim_id}/trace/{pkt}")
 async def sim_trace(sim_id: str, pkt: str, request: Request):
     """Return all events for a single packet fingerprint."""
     index = _get_index(sim_id, request)
-    return {"pkt": pkt, "events": index.query_pkt(pkt)}
+    return _cached_json_response(request, sim_id,
+                                 {"pkt": pkt, "events": index.query_pkt(pkt)})
 
 
 @router.get("/{sim_id}/deep_trace/{pkt}")
 async def sim_deep_trace(sim_id: str, pkt: str, request: Request):
     """Follow relay chain across packet hash boundaries."""
     index = _get_index(sim_id, request)
-    return index.deep_trace(pkt)
+    return _cached_json_response(request, sim_id, index.deep_trace(pkt))
 
 
 @router.get("/{sim_id}/topology")
@@ -226,21 +260,21 @@ async def sim_topology(sim_id: str, request: Request):
     if config_path is None:
         raise HTTPException(status_code=404, detail="Config file not found")
 
-    return load_topology(str(config_path))
+    return _cached_json_response(request, sim_id, load_topology(str(config_path)))
 
 
 @router.get("/{sim_id}/stats")
 async def sim_stats(sim_id: str, request: Request):
     """Return per-node and per-link map statistics."""
     index = _get_index(sim_id, request)
-    return compute_map_stats(index)
+    return _cached_json_response(request, sim_id, compute_map_stats(index))
 
 
 @router.get("/{sim_id}/messages")
 async def sim_messages(sim_id: str, request: Request):
     """Return list of sent messages extracted from cmd_reply events."""
     index = _get_index(sim_id, request)
-    return get_messages(index)
+    return _cached_json_response(request, sim_id, get_messages(index))
 
 
 @router.get("/{sim_id}/msg_tx/{node}")

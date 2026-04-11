@@ -31,13 +31,33 @@ logger = logging.getLogger(__name__)
 # Module-level function for ProcessPoolExecutor (must be picklable)
 # ---------------------------------------------------------------------------
 
+def _safe_pct(num: int, den: int) -> int:
+    """Compute integer percentage, returning -1 if denominator is zero."""
+    return int(round(num * 100.0 / den)) if den > 0 else -1
+
+
+def _parse_sim_summary(stdout: str) -> dict | None:
+    """Find and parse the sim_summary JSON line from NDJSON stdout."""
+    for line in stdout.splitlines():
+        line = line.strip()
+        if not line or not line.startswith("{"):
+            continue
+        try:
+            obj = json.loads(line)
+            if obj.get("type") == "sim_summary":
+                return obj
+        except json.JSONDecodeError:
+            continue
+    return None
+
+
 def _run_single(orchestrator_path: str, config: dict, rxd: float, txd: float,
                 dtxd: float, seed: int, run_id: int) -> dict:
     """Run one orchestrator invocation with a specific seed.
 
     This is a module-level function so it can be pickled and sent to a
-    worker process via ProcessPoolExecutor.  Closely mirrors the
-    ``run_single`` function from tools/optimize_delays.py.
+    worker process via ProcessPoolExecutor.  Parses the sim_summary JSON
+    event from stdout for structured metrics.
     """
     cfg = copy.deepcopy(config)
     cfg.setdefault("simulation", {})["seed"] = seed
@@ -54,6 +74,13 @@ def _run_single(orchestrator_path: str, config: dict, rxd: float, txd: float,
     cfg["commands"] = set_cmds + cfg.get("commands", [])
     cfg.pop("expect", None)
 
+    error_result = {
+        "rxd": rxd, "txd": txd, "dtxd": dtxd, "seed": seed,
+        "delivered": 0, "sent": 0, "pct": 0,
+        "ack_pct": -1, "chan_pct": -1,
+        "summary": "", "returncode": -1,
+    }
+
     tmp_path = os.path.join(tempfile.gettempdir(), f"sweep_{run_id}_{seed}.json")
     try:
         with open(tmp_path, "w") as f:
@@ -65,45 +92,32 @@ def _run_single(orchestrator_path: str, config: dict, rxd: float, txd: float,
         )
 
         stderr = result.stderr
-
-        m = re.search(r"Delivery:\s+(\d+)/(\d+)\s+messages\s+\((\d+)%\)", stderr)
-        if m:
-            delivered = int(m.group(1))
-            sent = int(m.group(2))
-            pct = int(m.group(3))
-        else:
-            delivered, sent, pct = 0, 0, 0
-
-        ack_m = re.search(r"Acks:\s+(\d+)/(\d+)\s+received\s+\((\d+)%\)", stderr)
-        ack_pct = int(ack_m.group(3)) if ack_m else -1
-
-        chan_m = re.search(r"Channel:\s+(\d+)/(\d+)\s+receptions\s+\((\d+)%\)", stderr)
-        chan_pct = int(chan_m.group(3)) if chan_m else -1
-
         summary_match = re.search(r"(=== Simulation Summary.*)", stderr, re.DOTALL)
         summary = summary_match.group(1).strip() if summary_match else ""
 
+        s = _parse_sim_summary(result.stdout)
+        if not s:
+            return {**error_result, "summary": summary or "NO SUMMARY",
+                    "returncode": result.returncode}
+
+        d = s.get("delivery", {})
+        a = s.get("acks", {})
+        ch = s.get("channel", {})
+
         return {
             "rxd": rxd, "txd": txd, "dtxd": dtxd, "seed": seed,
-            "delivered": delivered, "sent": sent, "pct": pct,
-            "ack_pct": ack_pct, "chan_pct": chan_pct,
+            "delivered": d.get("received", 0),
+            "sent": d.get("sent", 0),
+            "pct": _safe_pct(d.get("received", 0), d.get("sent", 0)),
+            "ack_pct": _safe_pct(a.get("received", 0), a.get("pending", 0)),
+            "chan_pct": _safe_pct(ch.get("received", 0), ch.get("expected", 0)),
             "summary": summary, "returncode": result.returncode,
         }
 
     except subprocess.TimeoutExpired:
-        return {
-            "rxd": rxd, "txd": txd, "dtxd": dtxd, "seed": seed,
-            "delivered": 0, "sent": 0, "pct": 0,
-            "ack_pct": -1, "chan_pct": -1,
-            "summary": "TIMEOUT", "returncode": -1,
-        }
+        return {**error_result, "summary": "TIMEOUT"}
     except Exception as e:
-        return {
-            "rxd": rxd, "txd": txd, "dtxd": dtxd, "seed": seed,
-            "delivered": 0, "sent": 0, "pct": 0,
-            "ack_pct": -1, "chan_pct": -1,
-            "summary": f"ERROR: {e}", "returncode": -1,
-        }
+        return {**error_result, "summary": f"ERROR: {e}"}
     finally:
         if os.path.exists(tmp_path):
             os.unlink(tmp_path)

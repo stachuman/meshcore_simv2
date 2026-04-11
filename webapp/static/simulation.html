@@ -463,95 +463,136 @@
   async function loadStats() {
     try {
       const meta = await fetchJSON('/api/sims/' + encodeURIComponent(simId) + '/meta');
+      const summary = meta.summary || {};
       const stats = meta.stats || [];
-      if (stats.length === 0) return;
-      renderStatsCard(stats);
+      renderStatsCard(summary, stats);
     } catch (_) { /* stats not available yet */ }
   }
 
-  function renderStatsCard(stats) {
+  function pctStr(num, den) {
+    if (!den) return '--';
+    return Math.round(num / den * 100) + '%';
+  }
+
+  function renderStatsCard(summary, stats) {
     const card = document.getElementById('stats-card');
     const grid = document.getElementById('stats-grid');
     card.style.display = '';
+    let html = '';
 
-    // Aggregate across all companion nodes
+    // --- Radio layer ---
+    const r = summary.radio;
+    if (r) {
+      html += statBox('Radio RX Efficiency', r.rx_efficiency.toFixed(1) + '%',
+        colorClass(r.rx_efficiency),
+        r.rx + ' RX / ' + (r.rx + r.collision + r.drop) + ' opportunities');
+      html += statBox('Radio TX / RX', r.tx + ' / ' + r.rx, '',
+        r.collision + ' collision, ' + r.drop + ' drop');
+    }
+    const ap = summary.ackpath_radio;
+    if (ap && (ap.tx > 0 || ap.rx > 0)) {
+      html += statBox('ACK/PATH RX Eff.', ap.rx_efficiency.toFixed(1) + '%',
+        colorClass(ap.rx_efficiency),
+        ap.rx + ' RX, ' + ap.collision + ' collision, ' + ap.drop + ' drop');
+    }
+
+    // --- Delivery ---
+    const d = summary.delivery;
+    if (d && d.sent > 0) {
+      const pct = Math.round(d.received / d.sent * 100);
+      html += statBox('DM Delivery', pct + '%', colorClass(pct),
+        d.received + '/' + d.sent + ' received');
+      if (d.flood && d.flood.sent > 0) {
+        html += statBox('Flood Delivery', pctStr(d.flood.received, d.flood.sent),
+          colorClass(d.flood.received / d.flood.sent * 100),
+          d.flood.received + '/' + d.flood.sent);
+      }
+      if (d.path && d.path.sent > 0) {
+        html += statBox('Path Delivery', pctStr(d.path.received, d.path.sent),
+          colorClass(d.path.received / d.path.sent * 100),
+          d.path.received + '/' + d.path.sent);
+      }
+    }
+
+    // --- Channel ---
+    const ch = summary.channel;
+    if (ch && ch.expected > 0) {
+      const pct = Math.round(ch.received / ch.expected * 100);
+      html += statBox('Channel Delivery', pct + '%', colorClass(pct),
+        ch.received + '/' + ch.expected + ' receptions');
+    }
+
+    // --- Acks ---
+    const a = summary.acks;
+    if (a && a.pending > 0) {
+      const pct = Math.round(a.received / a.pending * 100);
+      html += statBox('Acks (total)', pct + '%', colorClass(pct),
+        a.received + '/' + a.pending + ' received');
+      if (a.flood && a.flood.pending > 0)
+        html += statBox('Acks (flood)', pctStr(a.flood.received, a.flood.pending),
+          colorClass(a.flood.received / a.flood.pending * 100),
+          a.flood.received + '/' + a.flood.pending);
+      if (a.path && a.path.pending > 0)
+        html += statBox('Acks (path)', pctStr(a.path.received, a.path.pending),
+          colorClass(a.path.received / a.path.pending * 100),
+          a.path.received + '/' + a.path.pending);
+    }
+
+    // --- Message fate ---
+    const f = summary.fate;
+    if (f && f.tracked > 0) {
+      html += statBox('Messages Tracked', f.tracked + '',
+        f.lost > 0 ? 'stat-warn' : 'stat-good',
+        f.delivered + ' delivered, ' + f.lost + ' lost');
+      if (f.delivered_mean) {
+        const m = f.delivered_mean;
+        html += statBox('Per Delivered Msg', m.tx.toFixed(1) + ' tx, ' + m.rx.toFixed(1) + ' rx', '',
+          m.collision.toFixed(1) + ' collision, ' + m.drop.toFixed(1) + ' drop, ' + m.ack_copies.toFixed(1) + ' ack copies');
+      }
+      if (f.lost_mean) {
+        const m = f.lost_mean;
+        html += statBox('Per Lost Msg', m.tx.toFixed(1) + ' tx, ' + m.rx.toFixed(1) + ' rx', 'stat-bad',
+          m.collision.toFixed(1) + ' collision, ' + m.drop.toFixed(1) + ' drop');
+      }
+    }
+
+    // Fallback: if no summary but stats exist, show basic node_stats
+    if (!summary.radio && stats.length > 0) {
+      html += renderLegacyStats(stats);
+    }
+
+    grid.innerHTML = html;
+  }
+
+  function renderLegacyStats(stats) {
     let sentFlood = 0, sentDirect = 0, sentGroup = 0;
     let recvDirect = 0, recvGroup = 0;
-    let acksFloodPending = 0, acksFloodRecv = 0;
-    let acksDirectPending = 0, acksDirectRecv = 0;
-    let acksTotalPending = 0, acksTotalRecv = 0;
-
+    let acksPending = 0, acksRecv = 0;
     for (const s of stats) {
       sentFlood += s.sent_flood || 0;
       sentDirect += s.sent_direct || 0;
       sentGroup += s.sent_group || 0;
       recvDirect += s.recv_direct || 0;
       recvGroup += s.recv_group || 0;
-      acksFloodPending += s.acks_flood_pending || 0;
-      acksFloodRecv += s.acks_flood_received || 0;
-      acksDirectPending += s.acks_direct_pending || 0;
-      acksDirectRecv += s.acks_direct_received || 0;
-      acksTotalPending += s.acks_pending || 0;
-      acksTotalRecv += s.acks_received || 0;
+      acksPending += s.acks_pending || 0;
+      acksRecv += s.acks_received || 0;
     }
-
-    const dmSent = sentFlood + sentDirect;
-    // Use split totals if available, fall back to legacy acks_pending/acks_received
-    const hasSplit = acksFloodPending > 0 || acksDirectPending > 0;
-    const acksPending = hasSplit ? (acksFloodPending + acksDirectPending) : acksTotalPending;
-    const acksRecv = hasSplit ? (acksFloodRecv + acksDirectRecv) : acksTotalRecv;
-
     let html = '';
-
-    // DM Delivery (total)
+    const dmSent = sentFlood + sentDirect;
     if (dmSent > 0) {
       const pct = Math.round(recvDirect / dmSent * 100);
       html += statBox('DM Delivery', pct + '%', colorClass(pct),
         recvDirect + '/' + dmSent + ' received');
     }
-
-    // Flood delivery
-    if (sentFlood > 0) {
-      // Count flood deliveries from per-sender recv data vs sent_flood_to
-      // Simpler: use ack data as proxy, or show sent count
-      html += statBox('Flood Sent', sentFlood + '', '',
-        'Messages sent via flood routing');
-    }
-
-    // Path delivery
-    if (sentDirect > 0) {
-      html += statBox('Path Sent', sentDirect + '', '',
-        'Messages sent via path routing');
-    }
-
-    // Acks total
     if (acksPending > 0) {
       const pct = Math.round(acksRecv / acksPending * 100);
-      html += statBox('Acks (total)', pct + '%', colorClass(pct),
+      html += statBox('Acks', pct + '%', colorClass(pct),
         acksRecv + '/' + acksPending + ' received');
     }
-
-    // Acks flood (only when split data available)
-    if (hasSplit && acksFloodPending > 0) {
-      const pct = Math.round(acksFloodRecv / acksFloodPending * 100);
-      html += statBox('Acks (flood)', pct + '%', colorClass(pct),
-        acksFloodRecv + '/' + acksFloodPending + ' received');
-    }
-
-    // Acks path (only when split data available)
-    if (hasSplit && acksDirectPending > 0) {
-      const pct = Math.round(acksDirectRecv / acksDirectPending * 100);
-      html += statBox('Acks (path)', pct + '%', colorClass(pct),
-        acksDirectRecv + '/' + acksDirectPending + ' received');
-    }
-
-    // Channel
     if (sentGroup > 0) {
-      html += statBox('Channel', recvGroup + ' rx', '',
-        sentGroup + ' messages sent');
+      html += statBox('Channel', recvGroup + ' rx', '', sentGroup + ' sent');
     }
-
-    grid.innerHTML = html;
+    return html;
   }
 
   function statBox(label, value, cls, detail) {

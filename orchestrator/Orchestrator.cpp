@@ -1216,21 +1216,19 @@ bool Orchestrator::run() {
 
     // Summary to stderr (always visible)
     fprintf(stderr, "\n=== Simulation Summary (%.1fs) ===\n", current_ms / 1000.0);
-    {
-        int ec_rx = _event_counts.count("rx") ? _event_counts["rx"] : 0;
-        int ec_col = _event_counts.count("collision") ? _event_counts["collision"] : 0;
-        int ec_dh = _event_counts.count("drop_halfduplex") ? _event_counts["drop_halfduplex"] : 0;
-        int ec_dl = _event_counts.count("drop_loss") ? _event_counts["drop_loss"] : 0;
-        int rx_opps = ec_rx + ec_col + ec_dh + ec_dl;
-        double radio_eff = rx_opps > 0 ? (ec_rx * 100.0 / rx_opps) : 100.0;
-        fprintf(stderr, "Radio: %d TX, %d RX, %d collision, %d drop (%.1f%% rx efficiency)\n",
-                _tx_count, _rx_count, ec_col, ec_dh + ec_dl, radio_eff);
+    int ec_rx = _event_counts.count("rx") ? _event_counts["rx"] : 0;
+    int ec_col = _event_counts.count("collision") ? _event_counts["collision"] : 0;
+    int ec_dh = _event_counts.count("drop_halfduplex") ? _event_counts["drop_halfduplex"] : 0;
+    int ec_dl = _event_counts.count("drop_loss") ? _event_counts["drop_loss"] : 0;
+    int rx_opps = ec_rx + ec_col + ec_dh + ec_dl;
+    double radio_eff = rx_opps > 0 ? (ec_rx * 100.0 / rx_opps) : 100.0;
+    fprintf(stderr, "Radio: %d TX, %d RX, %d collision, %d drop (%.1f%% rx efficiency)\n",
+            _tx_count, _rx_count, ec_col, ec_dh + ec_dl, radio_eff);
 
-        int ap_opps = _ackpath_rx + _ackpath_collision + _ackpath_drop;
-        double ap_eff = ap_opps > 0 ? (_ackpath_rx * 100.0 / ap_opps) : 100.0;
-        fprintf(stderr, "ACK+path radio: %d TX, %d RX, %d collision, %d drop (%.1f%% rx efficiency)\n\n",
-                _ackpath_tx, _ackpath_rx, _ackpath_collision, _ackpath_drop, ap_eff);
-    }
+    int ap_opps = _ackpath_rx + _ackpath_collision + _ackpath_drop;
+    double ap_eff = ap_opps > 0 ? (_ackpath_rx * 100.0 / ap_opps) : 100.0;
+    fprintf(stderr, "ACK+path radio: %d TX, %d RX, %d collision, %d drop (%.1f%% rx efficiency)\n\n",
+            _ackpath_tx, _ackpath_rx, _ackpath_collision, _ackpath_drop, ap_eff);
 
     // Per-companion sent with per-destination breakdown and delivery
     fprintf(stderr, "Sent messages:\n");
@@ -1291,21 +1289,20 @@ bool Orchestrator::run() {
     if (total_direct_recv + total_group_recv == 0) fprintf(stderr, "  (none)\n");
 
     // Delivery summary — direct messages (combined + split by routing type)
+    int flood_sent = 0, flood_delivered = 0, path_sent = 0, path_delivered = 0;
+    for (auto& f : _message_fates) {
+        if (f.sent_as_flood) {
+            flood_sent++;
+            if (f.delivered) flood_delivered++;
+        } else {
+            path_sent++;
+            if (f.delivered) path_delivered++;
+        }
+    }
     if (total_direct_sent > 0) {
         fprintf(stderr, "\nDelivery: %d/%d messages (%.0f%%)\n",
                 total_direct_recv, total_direct_sent,
                 total_direct_recv * 100.0 / total_direct_sent);
-        // Split by routing type using message fates
-        int flood_sent = 0, flood_delivered = 0, path_sent = 0, path_delivered = 0;
-        for (auto& f : _message_fates) {
-            if (f.sent_as_flood) {
-                flood_sent++;
-                if (f.delivered) flood_delivered++;
-            } else {
-                path_sent++;
-                if (f.delivered) path_delivered++;
-            }
-        }
         if (flood_sent > 0)
             fprintf(stderr, "Delivery (flood): %d/%d (%.0f%%)\n",
                     flood_delivered, flood_sent, flood_delivered * 100.0 / flood_sent);
@@ -1317,11 +1314,12 @@ bool Orchestrator::run() {
     }
 
     // Channel delivery — each sent msg should reach (num_companions - 1) others
-    if (total_group_sent > 0 && num_companions > 1) {
-        int expected_receptions = total_group_sent * (num_companions - 1);
+    int chan_expected = (total_group_sent > 0 && num_companions > 1)
+        ? total_group_sent * (num_companions - 1) : 0;
+    if (chan_expected > 0) {
         fprintf(stderr, "Channel: %d/%d receptions (%.0f%%)\n",
-                total_group_recv, expected_receptions,
-                total_group_recv * 100.0 / expected_receptions);
+                total_group_recv, chan_expected,
+                total_group_recv * 100.0 / chan_expected);
     }
 
     // Ack summary (combined + split by routing type)
@@ -1352,28 +1350,28 @@ bool Orchestrator::run() {
     }
 
     // Message fate summary — per-message collision/drop breakdown
-    if (!_message_fates.empty()) {
-        int n_tracked = (int)_message_fates.size();
-        int n_delivered = 0, n_lost = 0;
-        double del_tx = 0, del_rx = 0, del_col = 0, del_drop = 0, del_ack = 0;
-        double lost_tx = 0, lost_rx = 0, lost_col = 0, lost_drop = 0, lost_ack = 0;
-        for (auto& f : _message_fates) {
-            if (f.delivered) {
-                n_delivered++;
-                del_tx += f.tx_count;
-                del_rx += f.rx_count;
-                del_col += f.collisions;
-                del_drop += f.drops;
-                del_ack += f.ackpath_rx_at_sender;
-            } else {
-                n_lost++;
-                lost_tx += f.tx_count;
-                lost_rx += f.rx_count;
-                lost_col += f.collisions;
-                lost_drop += f.drops;
-                lost_ack += f.ackpath_rx_at_sender;
-            }
+    int n_tracked = (int)_message_fates.size();
+    int n_delivered = 0, n_lost = 0;
+    double del_tx = 0, del_rx = 0, del_col = 0, del_drop = 0, del_ack = 0;
+    double lost_tx = 0, lost_rx = 0, lost_col = 0, lost_drop = 0, lost_ack = 0;
+    for (auto& f : _message_fates) {
+        if (f.delivered) {
+            n_delivered++;
+            del_tx += f.tx_count;
+            del_rx += f.rx_count;
+            del_col += f.collisions;
+            del_drop += f.drops;
+            del_ack += f.ackpath_rx_at_sender;
+        } else {
+            n_lost++;
+            lost_tx += f.tx_count;
+            lost_rx += f.rx_count;
+            lost_col += f.collisions;
+            lost_drop += f.drops;
+            lost_ack += f.ackpath_rx_at_sender;
         }
+    }
+    if (n_tracked > 0) {
         fprintf(stderr, "\nMessage fate (%d tracked, %d delivered, %d lost):\n",
                 n_tracked, n_delivered, n_lost);
         if (n_delivered > 0) {
@@ -1389,6 +1387,42 @@ bool Orchestrator::run() {
                     lost_ack / n_lost);
         }
     }
+
+    // Emit sim_summary JSON event to stdout (for webapp consumption)
+    printf("{\"type\":\"sim_summary\",\"time_ms\":%lu", (unsigned long)current_ms);
+    // Radio
+    printf(",\"radio\":{\"tx\":%d,\"rx\":%d,\"collision\":%d,\"drop\":%d,\"rx_efficiency\":%.1f}",
+           _tx_count, _rx_count, ec_col, ec_dh + ec_dl, radio_eff);
+    printf(",\"ackpath_radio\":{\"tx\":%d,\"rx\":%d,\"collision\":%d,\"drop\":%d,\"rx_efficiency\":%.1f}",
+           _ackpath_tx, _ackpath_rx, _ackpath_collision, _ackpath_drop, ap_eff);
+    // Delivery
+    printf(",\"delivery\":{\"sent\":%d,\"received\":%d", total_direct_sent, total_direct_recv);
+    printf(",\"flood\":{\"sent\":%d,\"received\":%d}", flood_sent, flood_delivered);
+    printf(",\"path\":{\"sent\":%d,\"received\":%d}}", path_sent, path_delivered);
+    // Channel
+    printf(",\"channel\":{\"sent\":%d,\"expected\":%d,\"received\":%d}",
+           total_group_sent, chan_expected, total_group_recv);
+    // Acks
+    printf(",\"acks\":{\"pending\":%d,\"received\":%d",
+           total_ack_pending, total_ack_received);
+    printf(",\"flood\":{\"pending\":%d,\"received\":%d}", total_ack_flood_p, total_ack_flood_r);
+    printf(",\"path\":{\"pending\":%d,\"received\":%d}}", total_ack_direct_p, total_ack_direct_r);
+    // Message fate
+    if (n_tracked > 0) {
+        printf(",\"fate\":{\"tracked\":%d,\"delivered\":%d,\"lost\":%d", n_tracked, n_delivered, n_lost);
+        if (n_delivered > 0)
+            printf(",\"delivered_mean\":{\"tx\":%.1f,\"rx\":%.1f,\"collision\":%.1f,\"drop\":%.1f,\"ack_copies\":%.1f}",
+                   del_tx / n_delivered, del_rx / n_delivered,
+                   del_col / n_delivered, del_drop / n_delivered,
+                   del_ack / n_delivered);
+        if (n_lost > 0)
+            printf(",\"lost_mean\":{\"tx\":%.1f,\"rx\":%.1f,\"collision\":%.1f,\"drop\":%.1f,\"ack_copies\":%.1f}",
+                   lost_tx / n_lost, lost_rx / n_lost,
+                   lost_col / n_lost, lost_drop / n_lost,
+                   lost_ack / n_lost);
+        printf("}");
+    }
+    printf("}\n");
 
     return checkAssertions();
 }

@@ -311,7 +311,7 @@ function xToMs(x) {
 
 function nodeToY(name) {
     const idx = S.nodeIndex[name];
-    if (idx === undefined) return -1;
+    if (idx === undefined) return null;
     return S.headerH + idx * S.laneH - S.scrollY;
 }
 
@@ -521,7 +521,7 @@ function drawDensity() {
 
     for (const [nodeName, cats] of Object.entries(d.nodes)) {
         const y = nodeToY(nodeName);
-        if (y < 0) continue;
+        if (y === null || y + S.laneH < 0 || y > canvas.height) continue;
 
         for (const [cat, buckets] of Object.entries(cats)) {
             const color = COLORS[cat] || '#999';
@@ -567,7 +567,7 @@ function drawEvents() {
 
         if (etype === 'tx') {
             const y = nodeToY(ev.node);
-            if (y < 0) continue;
+            if (y === null || y + S.laneH < 0 || y > canvas.height) continue;
             const airtime = ev.airtime_ms || 50;
             const x2 = msToX(t + airtime);
             const boxW = Math.max(2, x2 - x);
@@ -626,7 +626,7 @@ function drawEvents() {
             }
         } else if (etype === 'rx') {
             const y = nodeToY(ev.to);
-            if (y < 0) continue;
+            if (y === null || y + S.laneH < 0 || y > canvas.height) continue;
             const isTraced = S.tracePkts && S.tracePkts.has(ev.pkt);
             const airtime = ev.airtime_ms || 50;
             const x2 = msToX(t + airtime);
@@ -659,7 +659,7 @@ function drawEvents() {
             // Draw arrow from sender to receiver if both visible
             if (isTraced) {
                 const yFrom = nodeToY(ev.from);
-                if (yFrom >= 0) {
+                if (yFrom !== null) {
                     ctx.strokeStyle = '#a1620766';
                     ctx.setLineDash([3, 3]);
                     ctx.beginPath();
@@ -671,7 +671,7 @@ function drawEvents() {
             }
         } else if (etype === 'collision') {
             const y = nodeToY(ev.to);
-            if (y < 0) continue;
+            if (y === null || y + S.laneH < 0 || y > canvas.height) continue;
             const isTraced = S.tracePkts && S.tracePkts.has(ev.pkt);
             const sz = isTraced ? 8 : 5;
             const cy = y + S.laneH / 2 + 2;
@@ -717,7 +717,7 @@ function drawEvents() {
             }
         } else if (etype === 'drop_halfduplex') {
             const y = nodeToY(ev.to);
-            if (y < 0) continue;
+            if (y === null || y + S.laneH < 0 || y > canvas.height) continue;
             const isTraced = S.tracePkts && S.tracePkts.has(ev.pkt);
             const airtime = ev.airtime_ms || 50;
             const x2 = msToX(t + airtime);
@@ -750,7 +750,7 @@ function drawEvents() {
             ctx.lineWidth = 1;
         } else if (etype === 'drop_weak' || etype === 'drop_loss') {
             const y = nodeToY(ev.to);
-            if (y < 0) continue;
+            if (y === null || y + S.laneH < 0 || y > canvas.height) continue;
             const isTraced = S.tracePkts && S.tracePkts.has(ev.pkt);
             if (isTraced) {
                 ctx.fillStyle = (COLORS[etype] || '#78552b') + '44';
@@ -767,7 +767,7 @@ function drawEvents() {
             }
         } else if (etype === 'cmd_reply') {
             const y = nodeToY(ev.node);
-            if (y < 0) continue;
+            if (y === null || y + S.laneH < 0 || y > canvas.height) continue;
             ctx.fillStyle = COLORS.cmd_reply;
             ctx.globalAlpha = 0.8;
             // Diamond
@@ -813,7 +813,7 @@ function drawTrace() {
         const x2 = msToX(rx.time_ms);
         const y2 = nodeToY(rx.to);
 
-        if (y1 < 0 || y2 < 0) continue;
+        if (y1 === null || y2 === null) continue;
 
         const cy1 = y1 + S.laneH / 4;
         const cy2 = y2 + S.laneH / 2;
@@ -857,7 +857,7 @@ function drawTrace() {
         const x1 = msToX(triggerRx.time_ms + rxAirtime);
         const y = nodeToY(relayTx.node);
         const x2 = msToX(relayTx.time_ms);
-        if (y < 0) continue;
+        if (y === null) continue;
 
         // Orange arrow within lane: RX end → relay TX start
         const cy1 = y + S.laneH * 3 / 4;  // bottom half (RX area)
@@ -901,7 +901,7 @@ function drawTrace() {
         const x1 = msToX(triggerRx.time_ms);
         const y = nodeToY(respTx.node);
         const x2 = msToX(respTx.time_ms);
-        if (y < 0) continue;
+        if (y === null) continue;
 
         const cy = y + S.laneH / 2;
         ctx.strokeStyle = '#16a34a66';

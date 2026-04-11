@@ -109,12 +109,35 @@ def inject_delay_tuning(config_json_str, tx_b, tx_s, dtx_b, dtx_s, rx_b, rx_s,
     return json.dumps(cfg)
 
 
+def _safe_pct(num, den):
+    """Compute integer percentage, returning -1 if denominator is zero."""
+    return int(round(num * 100.0 / den)) if den > 0 else -1
+
+
+def _parse_sim_summary(stdout):
+    """Find and parse the sim_summary JSON line from NDJSON stdout."""
+    for line in stdout.splitlines():
+        line = line.strip()
+        if not line or not line.startswith("{"):
+            continue
+        try:
+            obj = json.loads(line)
+            if obj.get("type") == "sim_summary":
+                return obj
+        except json.JSONDecodeError:
+            continue
+    return None
+
+
 def run_single(orchestrator_path, config_json_str, seed, run_id):
     """Run one orchestrator invocation with a specific seed."""
     cfg = json.loads(config_json_str)
     cfg.setdefault("simulation", {})["seed"] = seed
 
     tmp_path = os.path.join(tempfile.gettempdir(), f"opt_tuning_{run_id}.json")
+    empty_fate = {"tracked": 0, "delivered": 0, "lost": 0,
+                  "del_collision": 0.0, "del_drop": 0.0, "del_ack_copies": 0.0,
+                  "lost_collision": 0.0, "lost_drop": 0.0, "lost_ack_copies": 0.0}
     try:
         with open(tmp_path, "w") as f:
             json.dump(cfg, f)
@@ -125,74 +148,69 @@ def run_single(orchestrator_path, config_json_str, seed, run_id):
         )
 
         stderr = result.stderr
-        m = re.search(r"Delivery:\s+(\d+)/(\d+)\s+messages\s+\((\d+)%\)", stderr)
-        if m:
-            delivered = int(m.group(1))
-            sent = int(m.group(2))
-            pct = int(m.group(3))
-        else:
-            delivered, sent, pct = 0, 0, 0
-            print(f"WARNING: run_id={run_id} seed={seed} — Delivery regex did not match",
-                  file=sys.stderr)
-
-        ack_m = re.search(r"Acks:\s+(\d+)/(\d+)\s+received\s+\((\d+)%\)", stderr)
-        ack_pct = int(ack_m.group(3)) if ack_m else -1
-
-        chan_m = re.search(r"Channel:\s+(\d+)/(\d+)\s+receptions\s+\((\d+)%\)", stderr)
-        chan_pct = int(chan_m.group(3)) if chan_m else -1
-
-        # Split delivery/ack by routing type (flood vs path)
-        flood_del_m = re.search(r"Delivery \(flood\):\s+(\d+)/(\d+)\s+\((\d+)%\)", stderr)
-        flood_delivery_pct = int(flood_del_m.group(3)) if flood_del_m else -1
-        path_del_m = re.search(r"Delivery \(path\):\s+(\d+)/(\d+)\s+\((\d+)%\)", stderr)
-        path_delivery_pct = int(path_del_m.group(3)) if path_del_m else -1
-        flood_ack_m = re.search(r"Acks \(flood\):\s+(\d+)/(\d+)\s+\((\d+)%\)", stderr)
-        flood_ack_pct = int(flood_ack_m.group(3)) if flood_ack_m else -1
-        path_ack_m = re.search(r"Acks \(path\):\s+(\d+)/(\d+)\s+\((\d+)%\)", stderr)
-        path_ack_pct = int(path_ack_m.group(3)) if path_ack_m else -1
-
-        # Message fate stats
-        fate = {"tracked": 0, "delivered": 0, "lost": 0,
-                "del_collision": 0.0, "del_drop": 0.0, "del_ack_copies": 0.0,
-                "lost_collision": 0.0, "lost_drop": 0.0, "lost_ack_copies": 0.0}
-        fate_m = re.search(r"Message fate \((\d+) tracked, (\d+) delivered, (\d+) lost\)", stderr)
-        if fate_m:
-            fate["tracked"] = int(fate_m.group(1))
-            fate["delivered"] = int(fate_m.group(2))
-            fate["lost"] = int(fate_m.group(3))
-        del_m = re.search(r"Per delivered message: mean tx=[\d.]+\s+rx=[\d.]+\s+collision=([\d.]+)\s+drop=([\d.]+)\s+ack_copies=([\d.]+)", stderr)
-        if del_m:
-            fate["del_collision"] = float(del_m.group(1))
-            fate["del_drop"] = float(del_m.group(2))
-            fate["del_ack_copies"] = float(del_m.group(3))
-        lost_m = re.search(r"Per lost message:\s+mean tx=[\d.]+\s+rx=[\d.]+\s+collision=([\d.]+)\s+drop=([\d.]+)\s+ack_copies=([\d.]+)", stderr)
-        if lost_m:
-            fate["lost_collision"] = float(lost_m.group(1))
-            fate["lost_drop"] = float(lost_m.group(2))
-            fate["lost_ack_copies"] = float(lost_m.group(3))
-
-        # Radio efficiency metrics
-        radio_eff_m = re.search(r"Radio:.*\(([\d.]+)% rx efficiency\)", stderr)
-        radio_eff_pct = float(radio_eff_m.group(1)) if radio_eff_m else -1.0
-        ackpath_eff_m = re.search(r"ACK\+path radio:.*\(([\d.]+)% rx efficiency\)", stderr)
-        ackpath_eff_pct = float(ackpath_eff_m.group(1)) if ackpath_eff_m else -1.0
-
         summary_match = re.search(r"(=== Simulation Summary.*)", stderr, re.DOTALL)
         summary = summary_match.group(1).strip() if summary_match else ""
+
+        s = _parse_sim_summary(result.stdout)
+        if not s:
+            print(f"WARNING: run_id={run_id} seed={seed} — no sim_summary in stdout",
+                  file=sys.stderr)
+            return (seed, 0, 0, 0, -1, -1, -1, -1, -1, -1,
+                    empty_fate, -1.0, -1.0, summary or "NO SUMMARY")
+
+        # Delivery
+        d = s.get("delivery", {})
+        delivered = d.get("received", 0)
+        sent = d.get("sent", 0)
+        pct = _safe_pct(delivered, sent)
+
+        # Acks
+        a = s.get("acks", {})
+        ack_pct = _safe_pct(a.get("received", 0), a.get("pending", 0))
+
+        # Channel
+        ch = s.get("channel", {})
+        chan_pct = _safe_pct(ch.get("received", 0), ch.get("expected", 0))
+
+        # Flood / path split
+        df = d.get("flood", {})
+        dp = d.get("path", {})
+        flood_delivery_pct = _safe_pct(df.get("received", 0), df.get("sent", 0))
+        path_delivery_pct = _safe_pct(dp.get("received", 0), dp.get("sent", 0))
+        af = a.get("flood", {})
+        ap = a.get("path", {})
+        flood_ack_pct = _safe_pct(af.get("received", 0), af.get("pending", 0))
+        path_ack_pct = _safe_pct(ap.get("received", 0), ap.get("pending", 0))
+
+        # Radio efficiency
+        r = s.get("radio", {})
+        radio_eff_pct = r.get("rx_efficiency", -1.0)
+        apr = s.get("ackpath_radio", {})
+        ackpath_eff_pct = apr.get("rx_efficiency", -1.0)
+
+        # Message fate
+        fate = dict(empty_fate)
+        f = s.get("fate", {})
+        if f:
+            fate["tracked"] = f.get("tracked", 0)
+            fate["delivered"] = f.get("delivered", 0)
+            fate["lost"] = f.get("lost", 0)
+            dm = f.get("delivered_mean", {})
+            fate["del_collision"] = dm.get("collision", 0.0)
+            fate["del_drop"] = dm.get("drop", 0.0)
+            fate["del_ack_copies"] = dm.get("ack_copies", 0.0)
+            lm = f.get("lost_mean", {})
+            fate["lost_collision"] = lm.get("collision", 0.0)
+            fate["lost_drop"] = lm.get("drop", 0.0)
+            fate["lost_ack_copies"] = lm.get("ack_copies", 0.0)
 
         return (seed, delivered, sent, pct, ack_pct, chan_pct,
                 flood_delivery_pct, path_delivery_pct, flood_ack_pct, path_ack_pct,
                 fate, radio_eff_pct, ackpath_eff_pct, summary)
 
     except subprocess.TimeoutExpired:
-        empty_fate = {"tracked": 0, "delivered": 0, "lost": 0,
-                      "del_collision": 0.0, "del_drop": 0.0, "del_ack_copies": 0.0,
-                      "lost_collision": 0.0, "lost_drop": 0.0, "lost_ack_copies": 0.0}
         return (seed, 0, 0, 0, -1, -1, -1, -1, -1, -1, empty_fate, -1.0, -1.0, "TIMEOUT")
     except Exception as e:
-        empty_fate = {"tracked": 0, "delivered": 0, "lost": 0,
-                      "del_collision": 0.0, "del_drop": 0.0, "del_ack_copies": 0.0,
-                      "lost_collision": 0.0, "lost_drop": 0.0, "lost_ack_copies": 0.0}
         return (seed, 0, 0, 0, -1, -1, -1, -1, -1, -1, empty_fate, -1.0, -1.0, f"ERROR: {e}")
     finally:
         if os.path.exists(tmp_path):
