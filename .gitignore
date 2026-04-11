@@ -5,6 +5,9 @@ __pycache__/
 *.o
 *.a
 *.obsidian
+.claude/
+.obsidian/
+superpowers/
 
 # Generated simulation outputs
 simulation/real_network.json
