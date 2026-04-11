@@ -173,11 +173,14 @@ async function loadTopologies() {
     let html = '';
     for (const t of topos) {
       const geo = t.has_geo ? '<span class="badge badge-info" style="font-size:10px;margin-left:6px;">GEO</span>' : '';
+      const radio = t.radio || {};
+      const radioText = radio.sf ? 'SF' + radio.sf + '/' + (radio.bw ? (radio.bw/1000) + 'kHz' : '?') + (radio.cr ? '/CR4/' + (radio.cr+4) : '') : '';
+      const radioBadge = radioText ? '<span class="badge" style="font-size:10px;margin-left:6px;background:var(--bg-primary);color:var(--text-muted)">' + radioText + '</span>' : '';
       const desc = t.description ? '<div class="desc">' + escapeHtml(t.description) + '</div>' : '';
       html += `
         <div class="topo-card">
           <div class="topo-info">
-            <h3>${escapeHtml(t.name)}${geo}</h3>
+            <h3>${escapeHtml(t.name)}${geo}${radioBadge}</h3>
             ${desc}
             <div class="meta">${t.node_count} nodes &middot; ${t.link_count} links &middot; Updated ${formatDate(t.updated_at)} &middot; ID: ${t.id}</div>
           </div>

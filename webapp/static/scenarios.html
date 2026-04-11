@@ -118,20 +118,27 @@ async function uploadFile(file) {
   }
 }
 
-// Cache topology names by ID
-let topoNameCache = {};
+// Cache topology info by ID
+let topoCache = {};
 
 function formatDate(ts) {
   if (!ts) return '-';
   return new Date(ts * 1000).toLocaleString();
 }
 
+function radioLabel(radio) {
+  if (!radio || !radio.sf) return '';
+  const bwKhz = radio.bw ? (radio.bw / 1000) : '?';
+  const cr = radio.cr ? ('4/' + (radio.cr + 4)) : '';
+  return 'SF' + radio.sf + ' / ' + bwKhz + 'kHz' + (cr ? ' / ' + cr : '');
+}
+
 async function loadTopoNames() {
   try {
     const topos = await fetchJSON('/api/topologies/');
-    topoNameCache = {};
+    topoCache = {};
     for (const t of topos) {
-      topoNameCache[t.id] = t.name;
+      topoCache[t.id] = { name: t.name, radio: t.radio || {} };
     }
   } catch (_) {}
 }
@@ -159,17 +166,22 @@ async function loadScenarios() {
 
     let html = '';
     for (const s of scenarios) {
-      const topoName = topoNameCache[s.topology_id] || s.topology_id;
+      const topo = topoCache[s.topology_id] || {};
+      const topoName = topo.name || s.topology_id;
+      const radioText = radioLabel(topo.radio);
       const cmdBadge = s.command_count
         ? `<span class="badge badge-info" style="font-size:10px;margin-left:6px;">${s.command_count} cmd${s.command_count !== 1 ? 's' : ''}</span>`
         : '';
       const assertBadge = s.assertion_count
         ? `<span class="badge badge-success" style="font-size:10px;margin-left:6px;">${s.assertion_count} assert${s.assertion_count !== 1 ? 's' : ''}</span>`
         : '';
+      const radioBadge = radioText
+        ? `<span class="badge" style="font-size:10px;margin-left:6px;background:var(--bg-primary);color:var(--text-muted)">${radioText}</span>`
+        : '';
       html += `
         <div class="scenario-card">
           <div class="scenario-info">
-            <h3>${escapeHtml(s.name)}${cmdBadge}${assertBadge}</h3>
+            <h3>${escapeHtml(s.name)}${cmdBadge}${assertBadge}${radioBadge}</h3>
             <div class="meta">
               Topology: ${escapeHtml(topoName)}
               &middot; Updated ${formatDate(s.updated_at)}

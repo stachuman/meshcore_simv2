@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <cstdint>
 #include <string>
+#include <functional>
 
 // NDJSON event logger — writes one JSON object per line to stdout.
 namespace EventLog {
@@ -44,5 +45,9 @@ void adversarialCorrupt(unsigned long time_ms, const char* node, const uint8_t* 
                         int bits_flipped);
 void adversarialReplay(unsigned long time_ms, const char* node, const uint8_t* data, int len,
                        unsigned long delay_ms);
+
+// Event hook: if set, called with the raw NDJSON line for every event.
+using EventHook = std::function<void(const std::string&)>;
+void setEventHook(EventHook hook);
 
 } // namespace EventLog

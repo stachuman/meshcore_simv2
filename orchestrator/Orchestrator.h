@@ -4,6 +4,7 @@
 #include <vector>
 #include <memory>
 #include <random>
+#include <functional>
 #include <map>
 #include <set>
 #include <unordered_map>
@@ -96,6 +97,11 @@ struct OrchestratorConfig {
 };
 
 class Orchestrator {
+public:
+    // Event hook type: called for every NDJSON event string emitted.
+    using EventHook = std::function<void(const std::string&)>;
+
+private:
     struct ScheduledCommand {
         unsigned long at_ms;
         int node_index;
@@ -119,6 +125,7 @@ class Orchestrator {
     std::mt19937 _rng_cad;         // CAD miss probability
     std::mt19937 _rng_stagger;     // clock stagger
     std::mt19937 _rng_adversarial; // adversarial mode rolls
+    EventHook _event_hook;
 
     // Radio physics parameters
     float _capture_locked_db = 3.0f;
@@ -200,9 +207,24 @@ class Orchestrator {
     void processCommands(unsigned long current_ms);
     void injectReplays(unsigned long current_ms);
     void hotStart();
-    bool checkAssertions();
 
 public:
     void configure(const OrchestratorConfig& cfg);
     bool run();  // returns true if all assertions pass (or none defined)
+
+    // --- Interactive mode support ---
+    unsigned long initSimulation();
+    unsigned long executeStep(unsigned long current_ms);
+    void emitSummary(unsigned long current_ms);
+    bool checkAssertions();  // moved from private to public
+
+    // Accessors for SimController
+    unsigned long durationMs() const { return _duration_ms; }
+    int stepMs() const { return _step_ms; }
+    unsigned long warmupMs() const { return _warmup_ms; }
+    size_t nodeCount() const { return _nodes.size(); }
+    NodeContext* nodeAt(size_t i) { return _nodes[i].get(); }
+    int findNodeByName(const std::string& name) const { return findNode(name); }
+
+    void setEventHook(EventHook hook) { _event_hook = std::move(hook); }
 };

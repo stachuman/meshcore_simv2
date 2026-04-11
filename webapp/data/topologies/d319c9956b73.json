@@ -3,7 +3,7 @@
   "name": "gdansk_test",
   "description": "",
   "created_at": 1775763316.98608,
-  "updated_at": 1775763370.3997965,
+  "updated_at": 1775911452.8584993,
   "nodes": [
     {
       "name": "GTC_JednosciNarodu_R",
@@ -4868,8 +4868,8 @@
     }
   ],
   "radio": {
-    "sf": 8,
-    "bw": 62500,
-    "cr": 4
+    "sf": 10,
+    "bw": 125000,
+    "cr": 1
   }
 }

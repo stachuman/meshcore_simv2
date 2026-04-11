@@ -138,6 +138,23 @@ public:
         return std::vector<uint8_t>(buf, buf + len);
     }
 
+    int getContactCount() const override {
+        return const_cast<InstrumentedMesh&>(_mesh).getNumContacts();
+    }
+
+    bool getContact(int idx, ContactData& out) const override {
+        ContactInfo ci;
+        if (!const_cast<InstrumentedMesh&>(_mesh).getContactByIdx((uint32_t)idx, ci))
+            return false;
+        memcpy(out.name, ci.name, sizeof(out.name));
+        out.type = ci.type;
+        memcpy(out.pubkey, ci.id.pub_key, sizeof(out.pubkey));
+        out.out_path_len = ci.out_path_len;
+        uint32_t now = const_cast<InstrumentedMesh&>(_mesh).getRTCClock()->getCurrentTime();
+        out.last_seen_s = (ci.lastmod > 0 && now >= ci.lastmod) ? (now - ci.lastmod) : 0;
+        return true;
+    }
+
     std::string handleCommand(uint32_t timestamp, const char* cmd) override {
         if (strncmp(cmd, "advert.zerohop", 14) == 0) {
             mesh::Packet* pkt = _mesh.createSelfAdvert(_mesh.getNodeName());
@@ -226,6 +243,29 @@ public:
             bool ok = _mesh.importContact(buf, (uint8_t)n);
             return ok ? "contact imported" : "ERROR: importContact failed";
         }
+        if (strncmp(cmd, "list", 4) == 0) {
+            int last_n = 0;
+            if (cmd[4] == ' ') last_n = atoi(&cmd[5]);
+            int count = _mesh.getNumContacts();
+            if (count == 0) return "no contacts";
+            // Use scanRecentContacts for sorted output
+            struct Visitor : public ContactVisitor {
+                std::string result;
+                uint32_t now;
+                void onContactVisit(const ContactInfo& c) override {
+                    if (!result.empty()) result += "\n";
+                    result += c.name;
+                    result += " - ";
+                    int32_t secs = (int32_t)c.last_advert_timestamp - (int32_t)now;
+                    char tmp[40];
+                    AdvertTimeHelper::formatRelativeTimeDiff(tmp, secs, false);
+                    result += tmp;
+                }
+            } visitor;
+            visitor.now = _mesh.getRTCClock()->getCurrentTime();
+            _mesh.scanRecentContacts(last_n, &visitor);
+            return visitor.result;
+        }
         if (strncmp(cmd, "neighbors", 9) == 0) {
             int count = _mesh.getNumContacts();
             if (count == 0) return "no contacts";
@@ -265,12 +305,65 @@ public:
             }
             return r;
         }
-        if (strncmp(cmd, "reset_path ", 11) == 0) {
+        if (strncmp(cmd, "reset_path ", 11) == 0 ||
+            strncmp(cmd, "reset path ", 11) == 0) {
             const char* prefix = cmd + 11;
             ContactInfo* contact = _mesh.searchContactsByPrefix(prefix);
             if (!contact) return "ERROR: contact not found: " + std::string(prefix);
             _mesh.resetPathTo(*contact);
             return "path reset for " + std::string(contact->name);
+        }
+        if (strncmp(cmd, "path ", 5) == 0) {
+            const char* prefix = cmd + 5;
+            ContactInfo* contact = _mesh.searchContactsByPrefix(prefix);
+            if (!contact) return "ERROR: contact not found: " + std::string(prefix);
+            std::string r = std::string(contact->name) + ": ";
+            if (contact->out_path_len == OUT_PATH_UNKNOWN) {
+                r += "flood (no direct path)";
+            } else if (contact->out_path_len == 0) {
+                r += "direct (0 hops)";
+            } else {
+                r += "direct (" + std::to_string(contact->out_path_len) + " hops, path:";
+                for (int i = 0; i < contact->out_path_len; i++) {
+                    char hex[3];
+                    snprintf(hex, sizeof(hex), "%02X", contact->out_path[i]);
+                    r += " ";
+                    r += hex;
+                }
+                r += ")";
+            }
+            return r;
+        }
+        if (strncmp(cmd, "disc_path ", 10) == 0) {
+            const char* prefix = cmd + 10;
+            ContactInfo* contact = _mesh.searchContactsByPrefix(prefix);
+            if (!contact) return "ERROR: contact not found: " + std::string(prefix);
+            // Path discovery: send a telemetry request as flood
+            uint8_t req_data[9];
+            req_data[0] = 0x03;  // REQ_TYPE_GET_TELEMETRY_DATA
+            req_data[1] = ~(0x01);  // inverse permissions mask (BASE only)
+            memset(&req_data[2], 0, 3);
+            _mesh.getRNG()->random(&req_data[5], 4);
+            auto save = contact->out_path_len;
+            contact->out_path_len = OUT_PATH_UNKNOWN;  // force flood
+            uint32_t tag, est_timeout;
+            int result = _mesh.sendRequest(*contact, req_data, sizeof(req_data), tag, est_timeout);
+            contact->out_path_len = save;
+            if (result == MSG_SEND_FAILED)
+                return "ERROR: send failed (table full)";
+            return "path discovery sent to " + std::string(contact->name)
+                   + " (" + (result == MSG_SEND_SENT_FLOOD ? "flood" : "direct") + ")";
+        }
+        if (strncmp(cmd, "clock", 5) == 0) {
+            uint32_t now = _mesh.getRTCClock()->getCurrentTime();
+            DateTime dt = DateTime(now);
+            char buf[64];
+            snprintf(buf, sizeof(buf), "%02d:%02d - %d/%d/%d UTC (epoch: %u)",
+                     dt.hour(), dt.minute(), dt.day(), dt.month(), dt.year(), now);
+            return buf;
+        }
+        if (strncmp(cmd, "ver", 3) == 0) {
+            return "sim-companion v1.0 (MeshCore simulator)";
         }
         return "ERROR: unknown command: " + std::string(cmd);
     }

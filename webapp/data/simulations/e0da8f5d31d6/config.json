@@ -5,9 +5,9 @@
     "step_ms": 1,
     "hot_start": true,
     "radio": {
-      "sf": 8,
-      "bw": 62500,
-      "cr": 4
+      "sf": 10,
+      "bw": 125000,
+      "cr": 1
     }
   },
   "nodes": [
@@ -4884,12 +4884,12 @@
     {
       "at_ms": 10000,
       "node": "@repeaters",
-      "command": "set txdelay 0"
+      "command": "set txdelay 2"
     },
     {
       "at_ms": 10000,
       "node": "@repeaters",
-      "command": "set direct.txdelay 0"
+      "command": "set direct.txdelay 1"
     }
   ],
   "expect": [],

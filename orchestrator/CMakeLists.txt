@@ -32,6 +32,8 @@ target_compile_definitions(companion_mesh_obj PRIVATE ${COMMON_DEFS} ORCHESTRATO
 add_executable(orchestrator
     main.cpp
     Orchestrator.cpp
+    SimController.cpp
+    InteractiveRepl.cpp
     NodeContext.cpp
     LinkModel.cpp
     EventLog.cpp

@@ -758,8 +758,8 @@ void Orchestrator::processCommands(unsigned long current_ms) {
         const auto& cmd = _commands[_next_cmd];
         auto& node = _nodes[cmd.node_index];
         node->activate();
-        uint32_t ts = node->own_clock.getCurrentTime();
-        std::string reply = node->mesh->handleCommand(ts, cmd.command.c_str());
+        // timestamp=0 = local/serial origin, unlocks stats-* commands in MeshCore
+        std::string reply = node->mesh->handleCommand(0, cmd.command.c_str());
         _reply_log.push_back({node->name, cmd.command, reply});
         EventLog::cmdReply(current_ms, node->name.c_str(),
                           cmd.command.c_str(), reply.c_str());
@@ -968,7 +968,7 @@ void Orchestrator::hotStart() {
     }
 }
 
-bool Orchestrator::run() {
+unsigned long Orchestrator::initSimulation() {
     sim_clock_set_global(&_clock);
 
     int n = (int)_nodes.size();
@@ -1039,79 +1039,57 @@ bool Orchestrator::run() {
         }
     }
 
-    // Main simulation loop
-    unsigned long current_ms = 0;
-    unsigned long next_progress_ms = 0;
-    // Report progress every ~2% of duration (at least every 5s of sim time)
-    unsigned long progress_interval_ms = _duration_ms / 50;
-    if (progress_interval_ms < 5000) progress_interval_ms = 5000;
-    bool warmup_logged = false;
-    bool running_logged = false;
+    return 0;
+}
 
-    if (_warmup_ms > 0) {
-        fprintf(stderr, "[PROGRESS] warmup: instant delivery for %.1fs\n",
-                _warmup_ms / 1000.0);
+unsigned long Orchestrator::executeStep(unsigned long current_ms) {
+    bool in_warmup = (current_ms < _warmup_ms);
+
+    processCommands(current_ms);
+
+    if (!in_warmup) {
+        deliverReceptions(current_ms);
     }
 
-    while (current_ms < _duration_ms) {
-        bool in_warmup = (current_ms < _warmup_ms);
-
-        // Log phase transition from warmup to running
-        if (!in_warmup && !running_logged) {
-            running_logged = true;
-            fprintf(stderr, "[PROGRESS] running: physics simulation started\n");
-        }
-
-        // Periodic progress: emit sim time / percentage
-        if (current_ms >= next_progress_ms) {
-            int pct = (int)((uint64_t)current_ms * 100 / _duration_ms);
-            fprintf(stderr, "[PROGRESS] %d%% (%.1fs / %.1fs)\n",
-                    pct, current_ms / 1000.0, _duration_ms / 1000.0);
-            next_progress_ms = current_ms + progress_interval_ms;
-        }
-
-        processCommands(current_ms);
-
-        if (!in_warmup) {
-            deliverReceptions(current_ms);
-        }
-
-        for (size_t i = 0; i < _nodes.size(); i++) {
-            auto& node = _nodes[i];
-            node->activate();
-            uint32_t fail_before = node->radio.getTxFailCount();
-            node->mesh->loop();
-            uint32_t new_fails = node->radio.getTxFailCount() - fail_before;
-            if (new_fails > 0) {
-                _event_counts["tx_fail"] += new_fails;
-                _event_counts[_node_event_keys[i].tx_fail] += new_fails;
-                if (_verbose) {
-                    fprintf(stderr, "[%8.3fs] TX-FAIL %s (%u failures)\n",
-                            current_ms / 1000.0, node->name.c_str(), (unsigned)new_fails);
-                }
-                EventLog::txFail(current_ms, node->name.c_str(), new_fails);
+    for (size_t i = 0; i < _nodes.size(); i++) {
+        auto& node = _nodes[i];
+        node->activate();
+        uint32_t fail_before = node->radio.getTxFailCount();
+        node->mesh->loop();
+        uint32_t new_fails = node->radio.getTxFailCount() - fail_before;
+        if (new_fails > 0) {
+            _event_counts["tx_fail"] += new_fails;
+            _event_counts[_node_event_keys[i].tx_fail] += new_fails;
+            if (_verbose) {
+                fprintf(stderr, "[%8.3fs] TX-FAIL %s (%u failures)\n",
+                        current_ms / 1000.0, node->name.c_str(), (unsigned)new_fails);
             }
-        }
-
-        if (in_warmup) {
-            routePackets(current_ms);
-        } else {
-            injectReplays(current_ms);
-            registerTransmissions(current_ms);
-        }
-
-        // Clear per-step pending message fates (initial TX is same-step)
-        _pending_msg_fates.clear();
-        // Note: _step_rx_fates is NOT cleared per-step — Dispatcher may
-        // delay relay TX by many steps. Cleared on consumption instead.
-
-        current_ms += _step_ms;
-        _clock.advanceMillis(_step_ms);
-        for (auto& node : _nodes) {
-            node->own_clock.advanceMillis(_step_ms);
+            EventLog::txFail(current_ms, node->name.c_str(), new_fails);
         }
     }
 
+    if (in_warmup) {
+        routePackets(current_ms);
+    } else {
+        injectReplays(current_ms);
+        registerTransmissions(current_ms);
+    }
+
+    // Clear per-step pending message fates (initial TX is same-step)
+    _pending_msg_fates.clear();
+    // Note: _step_rx_fates is NOT cleared per-step — Dispatcher may
+    // delay relay TX by many steps. Cleared on consumption instead.
+
+    current_ms += _step_ms;
+    _clock.advanceMillis(_step_ms);
+    for (auto& node : _nodes) {
+        node->own_clock.advanceMillis(_step_ms);
+    }
+
+    return current_ms;
+}
+
+void Orchestrator::emitSummary(unsigned long current_ms) {
     fprintf(stderr, "[PROGRESS] 100%% (%.1fs / %.1fs)\n",
             current_ms / 1000.0, _duration_ms / 1000.0);
 
@@ -1423,7 +1401,44 @@ bool Orchestrator::run() {
         printf("}");
     }
     printf("}\n");
+}
 
+bool Orchestrator::run() {
+    unsigned long current_ms = initSimulation();
+
+    // Main simulation loop — batch mode with progress logging
+    unsigned long next_progress_ms = 0;
+    // Report progress every ~2% of duration (at least every 5s of sim time)
+    unsigned long progress_interval_ms = _duration_ms / 50;
+    if (progress_interval_ms < 5000) progress_interval_ms = 5000;
+    bool running_logged = false;
+
+    if (_warmup_ms > 0) {
+        fprintf(stderr, "[PROGRESS] warmup: instant delivery for %.1fs\n",
+                _warmup_ms / 1000.0);
+    }
+
+    while (current_ms < _duration_ms) {
+        bool in_warmup = (current_ms < _warmup_ms);
+
+        // Log phase transition from warmup to running
+        if (!in_warmup && !running_logged) {
+            running_logged = true;
+            fprintf(stderr, "[PROGRESS] running: physics simulation started\n");
+        }
+
+        // Periodic progress: emit sim time / percentage
+        if (current_ms >= next_progress_ms) {
+            int pct = (int)((uint64_t)current_ms * 100 / _duration_ms);
+            fprintf(stderr, "[PROGRESS] %d%% (%.1fs / %.1fs)\n",
+                    pct, current_ms / 1000.0, _duration_ms / 1000.0);
+            next_progress_ms = current_ms + progress_interval_ms;
+        }
+
+        current_ms = executeStep(current_ms);
+    }
+
+    emitSummary(current_ms);
     return checkAssertions();
 }
 

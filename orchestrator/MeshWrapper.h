@@ -44,4 +44,15 @@ struct MeshWrapper {
     virtual std::string handleCommand(uint32_t timestamp, const char* cmd) = 0;
     // Serialize self-advert packet bytes (for hot-start injection). Empty = not supported.
     virtual std::vector<uint8_t> exportSelfAdvert() { return {}; }
+
+    // Structured contact access for companions (returns -1 / false for repeaters)
+    virtual int getContactCount() const { return -1; }
+    struct ContactData {
+        char name[32];
+        uint8_t type;          // ADV_TYPE_*
+        uint8_t pubkey[32];
+        uint8_t out_path_len;  // 0xFF = unknown
+        uint32_t last_seen_s;  // seconds since last advert (by our clock)
+    };
+    virtual bool getContact(int idx, ContactData& out) const { return false; }
 };

@@ -3,7 +3,7 @@
 //    or: orchestrator [-v] --json '<json string>'
 //    or: cat config.json | orchestrator [-v] -
 
-// Include STL headers BEFORE anything that pulls in Arduino.h min/max macros
+// Include STL headers and json-dependent headers BEFORE anything that pulls in Arduino.h min/max macros
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -13,6 +13,9 @@
 #include <iostream>
 #include <stdexcept>
 
+#include "SimController.h"
+#include "InteractiveRepl.h"
+
 #include "Orchestrator.h"
 #include "JsonConfig.h"
 
@@ -20,23 +23,27 @@
 #undef max
 
 static void usage(const char* prog) {
-    fprintf(stderr, "Usage: %s [-v|--verbose] <config.json>\n", prog);
+    fprintf(stderr, "Usage: %s [-v|--verbose] [-i|--interactive] <config.json>\n", prog);
     fprintf(stderr, "   or: %s [-v|--verbose] --json '<json string>'\n", prog);
     fprintf(stderr, "   or: cat config.json | %s [-v|--verbose] -\n", prog);
     fprintf(stderr, "\nOptions:\n");
-    fprintf(stderr, "  -v, --verbose   Human-readable progress output to stderr\n");
+    fprintf(stderr, "  -v, --verbose       Human-readable progress output to stderr\n");
+    fprintf(stderr, "  -i, --interactive   Step-on-demand REPL mode\n");
 }
 
 int main(int argc, char* argv[]) {
     setvbuf(stdout, NULL, _IOLBF, 0);
 
     bool verbose = false;
+    bool interactive = false;
 
     // Collect non-flag arguments
     std::vector<const char*> args;
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--verbose") == 0) {
             verbose = true;
+        } else if (strcmp(argv[i], "-i") == 0 || strcmp(argv[i], "--interactive") == 0) {
+            interactive = true;
         } else {
             args.push_back(argv[i]);
         }
@@ -72,7 +79,13 @@ int main(int argc, char* argv[]) {
 
     Orchestrator orch;
     orch.configure(cfg);
-    bool ok = orch.run();
 
+    if (interactive) {
+        SimController ctrl(orch);
+        InteractiveRepl repl(ctrl);
+        return repl.run();
+    }
+
+    bool ok = orch.run();
     return ok ? 0 : 1;
 }

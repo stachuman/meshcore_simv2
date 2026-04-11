@@ -638,9 +638,11 @@
         const topo = await fetchJSON('/api/topologies/' + selectedTopoId);
         topoData = topo;
         topoNodeNames = (topo.nodes || []).map(n => n.name).filter(Boolean);
+        const radio = topo.radio || {};
+        const radioInfo = radio.sf ? ' | SF' + radio.sf + '/' + (radio.bw ? (radio.bw/1000) + 'kHz' : '?') + (radio.cr ? '/CR4/' + (radio.cr+4) : '') : '';
         document.getElementById('topo-info').textContent =
           topoNodeNames.length + ' nodes: ' + topoNodeNames.slice(0, 5).join(', ') +
-          (topoNodeNames.length > 5 ? '...' : '');
+          (topoNodeNames.length > 5 ? '...' : '') + radioInfo;
         addStatus('info', 'Topology loaded: ' + topo.name + ' (' + topoNodeNames.length + ' nodes)');
         updateMap();
       } catch (e) {

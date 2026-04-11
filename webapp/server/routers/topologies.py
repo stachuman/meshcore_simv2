@@ -45,6 +45,7 @@ class TopologySummary(BaseModel):
     node_count: int = 0
     link_count: int = 0
     has_geo: bool = False
+    radio: dict = Field(default_factory=dict)
 
 
 class TopologyEntry(BaseModel):
@@ -95,6 +96,7 @@ def _extract_summary(entry: dict) -> dict:
         "node_count": node_count,
         "link_count": link_count,
         "has_geo": has_geo,
+        "radio": entry.get("radio", {}),
     }
 
 

@@ -246,6 +246,48 @@ class EventIndex:
                 results.append(ev)
         return results
 
+    def _find_parent_pkt(self, pkt: str) -> str | None:
+        """Walk backward: find the RX that triggered this pkt's TX (relay/response)."""
+        indices = self.by_pkt.get(pkt, [])
+        tx_ev = None
+        for i in indices:
+            ev = self.events[i]
+            if ev["type"] == "tx":
+                tx_ev = ev
+                break
+        if tx_ev is None:
+            return None
+
+        tx_node = tx_ev["node"]
+        tx_time = tx_ev["time_ms"]
+
+        # Find the most recent RX on the same node within 3s before the TX
+        node_indices = self.by_node.get(tx_node, [])
+        best_rx_pkt = None
+        for i in node_indices:
+            t = self.times[i]
+            if t > tx_time:
+                break
+            if t < tx_time - 3000:
+                continue
+            ev = self.events[i]
+            if ev["type"] == "rx" and ev.get("to") == tx_node and ev.get("pkt") != pkt:
+                best_rx_pkt = ev["pkt"]
+
+        return best_rx_pkt
+
+    def _find_root_pkt(self, pkt: str, max_depth: int = 30) -> str:
+        """Walk backward through relay chain to find the originating packet."""
+        current = pkt
+        visited = {current}
+        for _ in range(max_depth):
+            parent = self._find_parent_pkt(current)
+            if parent is None or parent in visited:
+                break
+            visited.add(parent)
+            current = parent
+        return current
+
     def deep_trace(self, pkt: str, max_hops: int = 30) -> dict:
         """Follow relay chain across packet hash boundaries.
 
@@ -255,6 +297,7 @@ class EventIndex:
         relay_from: this hop is a relay (repeater forwarded the parent packet)
         response_from: this hop is a response (companion reacted to the parent)
 
+        Walks backward first to find the root packet, then traces forward.
         Results are cached per pkt hash since trace data is immutable.
         """
         if not hasattr(self, "_deep_trace_cache"):
@@ -262,10 +305,13 @@ class EventIndex:
         if pkt in self._deep_trace_cache:
             return self._deep_trace_cache[pkt]
 
+        # Walk backward to find the root of the relay chain
+        root_pkt = self._find_root_pkt(pkt)
+
         visited_pkts: set[str] = set()
         hops: list[dict] = []
         # Queue: (pkt_hash, parent_pkt, is_response)
-        queue: list[tuple[str, str | None, bool]] = [(pkt, None, False)]
+        queue: list[tuple[str, str | None, bool]] = [(root_pkt, None, False)]
 
         while queue and len(hops) < max_hops:
             current_pkt, parent_pkt, is_response = queue.pop(0)
@@ -308,7 +354,7 @@ class EventIndex:
                     if relay_tx and relay_tx["pkt"] not in visited_pkts:
                         queue.append((relay_tx["pkt"], current_pkt, False))
 
-        result = {"root_pkt": pkt, "hops": hops}
+        result = {"root_pkt": root_pkt, "hops": hops}
         self._deep_trace_cache[pkt] = result
         return result
 

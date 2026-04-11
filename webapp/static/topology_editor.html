@@ -859,6 +859,20 @@
     if (radio.cr) document.getElementById('radio-cr').value = normalizeCR(radio.cr);
   }
 
+  // -- Radio defaults change ------------------------------------------
+  document.querySelectorAll('#radio-sf, #radio-bw, #radio-cr').forEach(el => {
+    el.addEventListener('change', () => {
+      markDirty();
+      // BW affects noise floor → RSSI estimates on links
+      if (el.id === 'radio-bw') {
+        links.forEach(l => {
+          if (l.snr != null) l.rssi = rssiFromSnr(l.snr);
+        });
+        renderLinks();
+      }
+    });
+  });
+
   // -- Map labels toggle ---------------------------------------------
   document.getElementById('map-labels').addEventListener('change', () => updateMap());
 
