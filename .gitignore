@@ -8,6 +8,7 @@ __pycache__/
 .claude/
 .obsidian/
 superpowers/
+*.tar.gz
 
 # Generated simulation outputs
 simulation/real_network.json
