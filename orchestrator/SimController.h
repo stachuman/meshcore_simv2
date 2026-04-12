@@ -27,6 +27,10 @@ class SimController {
     std::deque<std::string> _event_buffer;
     static constexpr size_t MAX_EVENT_BUFFER = 1000;
 
+    // Incremental event drain tracking
+    size_t _total_events_received = 0;
+    size_t _drain_offset = 0;
+
     // Pubkey-to-name lookup (built during init from node pubkeys)
     std::unordered_map<std::string, std::string> _pubkey_to_name;
 
@@ -57,6 +61,12 @@ public:
 
     // --- Command injection ---
     nlohmann::json injectCommand(const std::string& node_name, const std::string& command);
+
+    // --- Message statistics ---
+    nlohmann::json queryMessageStats(const std::string& node_name) const;
+
+    // --- Event drain (for Lua scripting) ---
+    std::vector<std::string> drainNewEvents();
 
     // --- Finalization ---
     bool finalize();

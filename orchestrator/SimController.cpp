@@ -19,6 +19,7 @@ SimController::SimController(Orchestrator& orch)
 
 void SimController::onEvent(const std::string& line) {
     _event_buffer.push_back(line);
+    _total_events_received++;
     if (_event_buffer.size() > MAX_EVENT_BUFFER) {
         _event_buffer.pop_front();
     }
@@ -280,6 +281,65 @@ json SimController::injectCommand(const std::string& node_name, const std::strin
         {"reply", reply},
         {"time_ms", _current_ms}
     };
+}
+
+json SimController::queryMessageStats(const std::string& node_name) const {
+    int idx = _orch.findNodeByName(node_name);
+    if (idx < 0) {
+        return {{"error", "node not found: " + node_name}};
+    }
+
+    auto* node = _orch.nodeAt(idx);
+    const auto& s = node->mesh->msg_stats;
+
+    json sent_flood_to = json::object();
+    for (auto& [k, v] : s.sent_flood_to) sent_flood_to[k] = v;
+
+    json sent_direct_to = json::object();
+    for (auto& [k, v] : s.sent_direct_to) sent_direct_to[k] = v;
+
+    json recv_direct = json::object();
+    for (auto& [k, v] : s.recv_direct) recv_direct[k] = v;
+
+    json recv_group_by_sender = json::object();
+    for (auto& [k, v] : s.recv_group_by_sender) recv_group_by_sender[k] = v;
+
+    return {
+        {"node", node_name},
+        {"sent_flood", s.sent_flood},
+        {"sent_direct", s.sent_direct},
+        {"sent_group", s.sent_group},
+        {"total_sent", s.totalSent()},
+        {"acks_flood_pending", s.acks_flood_pending},
+        {"acks_flood_received", s.acks_flood_received},
+        {"acks_direct_pending", s.acks_direct_pending},
+        {"acks_direct_received", s.acks_direct_received},
+        {"acks_pending", s.acksPending()},
+        {"acks_received", s.acksReceived()},
+        {"sent_flood_to", sent_flood_to},
+        {"sent_direct_to", sent_direct_to},
+        {"recv_direct", recv_direct},
+        {"total_recv_direct", s.totalRecvDirect()},
+        {"recv_group", s.recv_group},
+        {"recv_group_by_sender", recv_group_by_sender}
+    };
+}
+
+std::vector<std::string> SimController::drainNewEvents() {
+    std::vector<std::string> result;
+    size_t new_count = _total_events_received - _drain_offset;
+    size_t buf_size = _event_buffer.size();
+    // If more events arrived than fit in the ring buffer, some were lost
+    if (new_count > buf_size) {
+        fprintf(stderr, "[warn] Event ring buffer overflow: %zu events lost (buffer=%zu). "
+                "Lua event callbacks may have missed events.\n",
+                new_count - buf_size, MAX_EVENT_BUFFER);
+    }
+    size_t start = (new_count <= buf_size) ? (buf_size - new_count) : 0;
+    for (size_t i = start; i < buf_size; i++)
+        result.push_back(_event_buffer[i]);
+    _drain_offset = _total_events_received;
+    return result;
 }
 
 bool SimController::finalize() {

@@ -275,4 +275,13 @@ void adversarialReplay(unsigned long time_ms, const char* node, const uint8_t* d
     emitLine(buf);
 }
 
+void luaCallback(unsigned long time_ms, const char* fn_name) {
+    char fn_esc[256];
+    json_escape(fn_esc, sizeof(fn_esc), fn_name);
+    char buf[512];
+    snprintf(buf, sizeof(buf), "{\"type\":\"lua_callback\",\"time_ms\":%lu,\"function\":\"%s\"}\n",
+            time_ms, fn_esc);
+    emitLine(buf);
+}
+
 } // namespace EventLog

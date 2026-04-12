@@ -172,12 +172,17 @@ void Orchestrator::configure(const OrchestratorConfig& cfg) {
 
     // Build scheduled commands (sorted by time)
     for (const auto& cd : cfg.commands) {
+        if (!cd.lua_fn.empty()) {
+            // Lua-only command: no node lookup needed
+            _commands.push_back({cd.at_ms, -1, "", cd.lua_fn});
+            continue;
+        }
         int idx = findNode(cd.node);
         if (idx < 0) {
             fprintf(stderr, "Warning: command references unknown node: %s\n", cd.node.c_str());
             continue;
         }
-        _commands.push_back({cd.at_ms, idx, cd.command});
+        _commands.push_back({cd.at_ms, idx, cd.command, ""});
     }
     std::sort(_commands.begin(), _commands.end(),
               [](const ScheduledCommand& a, const ScheduledCommand& b) {
@@ -756,6 +761,21 @@ void Orchestrator::deliverReceptions(unsigned long current_ms) {
 void Orchestrator::processCommands(unsigned long current_ms) {
     while (_next_cmd < _commands.size() && _commands[_next_cmd].at_ms <= current_ms) {
         const auto& cmd = _commands[_next_cmd];
+
+        // Lua-only command: fire callback, skip node handling
+        if (!cmd.lua_fn.empty()) {
+            if (_lua_callback) {
+                _lua_callback(cmd.lua_fn);
+            }
+            EventLog::luaCallback(current_ms, cmd.lua_fn.c_str());
+            if (_verbose) {
+                fprintf(stderr, "[%8.3fs] LUA callback: %s\n",
+                        current_ms / 1000.0, cmd.lua_fn.c_str());
+            }
+            _next_cmd++;
+            continue;
+        }
+
         auto& node = _nodes[cmd.node_index];
         node->activate();
         // timestamp=0 = local/serial origin, unlocks stats-* commands in MeshCore

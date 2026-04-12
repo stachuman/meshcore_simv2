@@ -59,3 +59,12 @@ target_link_libraries(orchestrator PRIVATE
     repeater_mesh_obj
     companion_mesh_obj
 )
+
+# ---- Optional Lua scripting support ----
+if(ENABLE_LUA)
+    find_package(Lua 5.4 REQUIRED)
+    target_sources(orchestrator PRIVATE LuaEngine.cpp)
+    target_include_directories(orchestrator PRIVATE ${LUA_INCLUDE_DIR})
+    target_link_libraries(orchestrator PRIVATE ${LUA_LIBRARIES})
+    target_compile_definitions(orchestrator PRIVATE ENABLE_LUA)
+endif()

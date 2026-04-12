@@ -158,6 +158,15 @@ One-shot commands executed at specific simulation times. Sorted by `at_ms` at ru
 | `at_ms` | int | Simulation time to execute (ms) |
 | `node` | string | Target node name, or `@repeaters`, `@companions`, `@all` (see below) |
 | `command` | string | CLI command string (see below) |
+| `lua` | string | Lua function name to call (mutually exclusive with `node`/`command`) |
+
+**Lua scheduled calls**: Instead of `node`/`command`, use `lua` to call a named function from the loaded Lua script at the specified time. Requires `--lua <script>` on the command line.
+
+```json
+{ "at_ms": 5000, "lua": "on_checkpoint" }
+```
+
+See [docs/LUA_SCRIPTING.md](../docs/LUA_SCRIPTING.md) for details.
 
 **Group targeting**: The `node` field accepts special `@` prefixes that expand to one command per matching node at parse time:
 

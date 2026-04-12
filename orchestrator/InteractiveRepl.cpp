@@ -1,5 +1,9 @@
 #include "InteractiveRepl.h"
 
+#ifdef ENABLE_LUA
+#include "LuaEngine.h"
+#endif
+
 #include <iostream>
 #include <string>
 #include <cstdio>
@@ -16,6 +20,12 @@ using json = nlohmann::json;
 
 InteractiveRepl::InteractiveRepl(SimController& ctrl)
     : _ctrl(ctrl), _tty(isatty(fileno(stdin))) {}
+
+#ifdef ENABLE_LUA
+InteractiveRepl::InteractiveRepl(SimController& ctrl, LuaEngine* lua)
+    : _ctrl(ctrl), _tty(isatty(fileno(stdin))), _lua(lua)
+{}
+#endif
 
 void InteractiveRepl::printPrompt() {
     if (_tty) {
@@ -48,6 +58,9 @@ void InteractiveRepl::handleStep(const std::string& args) {
         return;
     }
     auto result = _ctrl.step(delta_ms);
+#ifdef ENABLE_LUA
+    if (_lua) _lua->collectAndDispatchEvents();
+#endif
     printResponse(json{
         {"stepped_to_ms", result.end_ms},
         {"events", result.events_generated},
@@ -61,6 +74,9 @@ void InteractiveRepl::handleNext() {
         return;
     }
     auto result = _ctrl.runToNextCommand();
+#ifdef ENABLE_LUA
+    if (_lua) _lua->collectAndDispatchEvents();
+#endif
     printResponse(json{
         {"stepped_to_ms", result.end_ms},
         {"events", result.events_generated},
@@ -114,8 +130,25 @@ void InteractiveRepl::handleSummary() {
     printResponse(_ctrl.querySummary());
 }
 
+#ifdef ENABLE_LUA
+void InteractiveRepl::handleLua(const std::string& args) {
+    if (!_lua) {
+        printResponse(std::string("ERROR: Lua not available (rebuild with -DENABLE_LUA=ON)"));
+        return;
+    }
+    if (args.empty()) {
+        printResponse(std::string("ERROR: usage: lua <code>"));
+        return;
+    }
+    std::string result = _lua->eval(args);
+    if (!result.empty()) {
+        printResponse(result);
+    }
+}
+#endif
+
 void InteractiveRepl::handleHelp() {
-    printResponse(std::string(
+    std::string help =
         "Commands:\n"
         "  step [N]            Advance N ms (default: 1000)\n"
         "  next                Run to next scheduled command\n"
@@ -125,6 +158,9 @@ void InteractiveRepl::handleHelp() {
         "  cmd <node> <cmd>    Inject CLI command (see below)\n"
         "  events [N]          Show last N events (default 10)\n"
         "  summary             Show simulation summary\n"
+#ifdef ENABLE_LUA
+        "  lua <code>          Evaluate Lua expression\n"
+#endif
         "  help                Show this help\n"
         "  quit / exit         End simulation\n"
         "\n"
@@ -157,8 +193,8 @@ void InteractiveRepl::handleHelp() {
         "  clock               Show node clock\n"
         "  ver                 Show version\n"
         "  advert              Send flood advertisement\n"
-        "  advert.zerohop      Send zero-hop advertisement"
-    ));
+        "  advert.zerohop      Send zero-hop advertisement";
+    printResponse(help);
 }
 
 int InteractiveRepl::run() {
@@ -194,6 +230,9 @@ int InteractiveRepl::run() {
         else if (cmd == "events") handleEvents(args);
         else if (cmd == "summary") handleSummary();
         else if (cmd == "help") handleHelp();
+#ifdef ENABLE_LUA
+        else if (cmd == "lua") handleLua(args);
+#endif
         else printResponse(std::string("ERROR: unknown command: ") + cmd + ". Type 'help' for usage.");
 
         printPrompt();

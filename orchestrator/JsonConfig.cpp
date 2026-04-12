@@ -132,6 +132,16 @@ static OrchestratorConfig parseJson(const json& j) {
     if (j.contains("commands")) {
         for (auto& cd : j["commands"]) {
             unsigned long at_ms = cd["at_ms"].get<unsigned long>();
+
+            // Lua-only command: {"at_ms": N, "lua": "function_name"}
+            if (cd.contains("lua")) {
+                OrchestratorConfig::CmdDef def;
+                def.at_ms = at_ms;
+                def.lua_fn = cd["lua"].get<std::string>();
+                cfg.commands.push_back(std::move(def));
+                continue;
+            }
+
             std::string node    = cd["node"].get<std::string>();
             std::string command = cd["command"].get<std::string>();
 
@@ -335,8 +345,9 @@ static void validateConfig(const OrchestratorConfig& cfg) {
                              ": loss must be [0.0, 1.0] (got " + std::to_string(lk.loss) + ")");
     }
 
-    // Command cross-validation
+    // Command cross-validation (skip lua-only commands)
     for (const auto& cd : cfg.commands) {
+        if (!cd.lua_fn.empty()) continue;  // lua commands don't reference nodes
         if (node_names.find(cd.node) == node_names.end())
             errors.push_back("command at " + std::to_string(cd.at_ms) +
                              "ms references unknown node \"" + cd.node + "\"");

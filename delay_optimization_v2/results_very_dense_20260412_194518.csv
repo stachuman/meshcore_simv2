@@ -1,0 +1,2 @@
+tx_base,tx_slope,tx_pow,dtx_base,dtx_slope,dtx_pow,rx_base,rx_slope,rx_pow,mean_delivery_pct,std_pct,min_pct,max_pct,total_delivered,total_sent,mean_ack_pct,mean_chan_pct,mean_flood_delivery_pct,mean_path_delivery_pct,mean_flood_ack_pct,mean_path_ack_pct,n_seeds,fate_tracked,fate_delivered,fate_lost,lost_mean_collision,lost_mean_drop,mean_radio_eff_pct,mean_ackpath_eff_pct,del_mean_ack_copies,lost_mean_ack_copies
+0.0,0.0,1.0,0.0,0.0,1.0,0.0,0.0,1.0,59.3,7.2,52,70,178,300,40.7,72.0,52.3,60.0,32.7,46.2,6,300,170,130,46.3,28.5,34.9,32.1,0.9,0.0

@@ -10,10 +10,10 @@
 
 FROM python:3.11-slim
 
-# Runtime deps for the orchestrator binary (libcrypto, libstdc++)
+# Runtime deps for the orchestrator binary (libcrypto, libstdc++, liblua5.4)
 # binutils only needed during build for strip, removed afterwards
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        libssl3 libstdc++6 binutils \
+        libssl3 libstdc++6 liblua5.4-0 binutils \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

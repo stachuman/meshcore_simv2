@@ -46,6 +46,9 @@ void adversarialCorrupt(unsigned long time_ms, const char* node, const uint8_t* 
 void adversarialReplay(unsigned long time_ms, const char* node, const uint8_t* data, int len,
                        unsigned long delay_ms);
 
+// Lua callback event
+void luaCallback(unsigned long time_ms, const char* fn_name);
+
 // Event hook: if set, called with the raw NDJSON line for every event.
 using EventHook = std::function<void(const std::string&)>;
 void setEventHook(EventHook hook);

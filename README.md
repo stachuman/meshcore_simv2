@@ -8,13 +8,13 @@ A single-process network simulator for [MeshCore](https://github.com/ripplebiz/M
 
 ## Building
 
-Requires CMake 3.16+, a C++17 compiler, OpenSSL development libraries, and Python 3.10+.
+Requires CMake 3.16+, a C++17 compiler, OpenSSL development libraries, Python 3.10+, and liblua5.4-dev (for Lua scripting, enabled by default).
 
 ### Quick Start (Unoptimized Development Build)
 
 ```bash
 # Install system dependencies (Debian/Ubuntu)
-sudo apt install build-essential cmake libssl-dev python3 python3-venv
+sudo apt install build-essential cmake libssl-dev liblua5.4-dev python3 python3-venv
 
 # Clone the repo
 git clone --recursive https://github.com/stachuman/meshcore_simv2.git
@@ -74,6 +74,16 @@ cmake --build build
 
 The Python venv must be active when running visualization or topology tools (`source venv/bin/activate`).
 
+### Lua Scripting
+
+Lua scripting is enabled by default (`-DENABLE_LUA=ON`). To disable it (removes the `liblua5.4-dev` dependency):
+
+```bash
+cmake -S . -B build -DENABLE_LUA=OFF
+```
+
+See [docs/LUA_SCRIPTING.md](docs/LUA_SCRIPTING.md) for the full API reference, examples, and usage guide.
+
 This produces three binaries:
 - `build/orchestrator/orchestrator` -- the multi-node simulator (main tool)
 - `build/simple_repeater/simple_repeater` -- standalone single-repeater binary
@@ -104,6 +114,33 @@ bash test/run_tests.sh
 ```
 
 Discovers all `test/t*.json` files and reports pass/fail.
+
+### Interactive mode
+
+Step through the simulation manually and use Lua for ad-hoc queries:
+
+```bash
+build/orchestrator/orchestrator -i test/t01_hot_start_neighbors.json
+```
+
+```
+[   0.000s] > step 6000
+> {"events":0,"finished":false,"stepped_to_ms":6000}
+[   6.000s] > lua sim:for_each_repeater(function(n,s) log(n..": "..s.neighbor_count.." neighbors") end)
+[lua] relay1: 2 neighbors
+[   6.000s] > lua local s = sim:msg_stats("alice"); log("sent="..s.total_sent)
+[lua] sent=0
+```
+
+### Lua script mode
+
+Drive the simulation entirely from a Lua script:
+
+```bash
+build/orchestrator/orchestrator --lua test/lua/test_basic.lua test/t01_hot_start_neighbors.json
+```
+
+See [docs/LUA_SCRIPTING.md](docs/LUA_SCRIPTING.md) for the full Lua API.
 
 ## Simulation Config
 
@@ -336,6 +373,7 @@ shims/               Platform shim layer (Arduino, FS, crypto, radio)
 orchestrator/        Multi-node simulator engine
   Orchestrator.cpp   Main simulation loop, physics, collision detection
   JsonConfig.cpp     Config parser
+  LuaEngine.cpp      Lua scripting bindings and event dispatch
   CompanionNode.cpp  Companion mesh node factory
   RepeaterNode.cpp   Repeater mesh node factory
 simple_repeater/     Standalone single-repeater binary
@@ -343,9 +381,9 @@ companion_radio/     Standalone single-companion binary
 topology_generator/  ITM-based topology generation from live network data
 simulation/          Real-world topology data and generated configs
 delay_optimization/  Delay parameter sweep scripts and results
-test/                Test configs (t*.json) and runner
+test/                Test configs (t*.json), runner, and Lua integration tests
 tools/               Injection, generation, analysis, and run scripts
 visualization/       Interactive event visualizer
 webapp/              Web UI (FastAPI + vanilla JS, Docker-ready)
-docs/                Config format and model documentation
+docs/                Config format, model, and Lua scripting documentation
 ```

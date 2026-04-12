@@ -33,6 +33,10 @@ endif()
 # vary delay parameters via JSON config without rebuilding.
 option(DELAY_TUNING_RUNTIME "Enable runtime delay tuning override for sweep builds" OFF)
 
+# Lua scripting — when ON, the orchestrator gains --lua and --lua-var flags
+# and an interactive 'lua' command. Requires liblua5.4-dev (apt install liblua5.4-dev).
+option(ENABLE_LUA "Enable Lua scripting in orchestrator (requires liblua5.4-dev)" ON)
+
 # Find OpenSSL
 find_package(OpenSSL REQUIRED)
 

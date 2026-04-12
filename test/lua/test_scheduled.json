@@ -1,0 +1,26 @@
+{
+  "_name": "test_scheduled_lua",
+  "_desc": "Test config-scheduled Lua function calls",
+  "simulation": {
+    "duration_ms": 15000,
+    "step_ms": 1,
+    "warmup_ms": 5000,
+    "hot_start": true
+  },
+  "nodes": [
+    { "name": "alice", "role": "companion" },
+    { "name": "relay1", "role": "repeater" },
+    { "name": "bob", "role": "companion" }
+  ],
+  "topology": {
+    "links": [
+      { "from": "alice", "to": "relay1", "snr": 8.0, "rssi": -80.0, "bidir": true },
+      { "from": "relay1", "to": "bob", "snr": 8.0, "rssi": -80.0, "bidir": true }
+    ]
+  },
+  "commands": [
+    { "at_ms": 6000, "lua": "on_early" },
+    { "at_ms": 10000, "lua": "on_midpoint" },
+    { "at_ms": 14000, "lua": "on_late" }
+  ]
+}

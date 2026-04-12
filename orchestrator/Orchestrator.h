@@ -78,8 +78,9 @@ struct OrchestratorConfig {
 
     struct CmdDef {
         unsigned long at_ms;
-        std::string node;
-        std::string command;
+        std::string node;      // empty for lua-only commands
+        std::string command;   // empty for lua-only commands
+        std::string lua_fn;    // non-empty = call named Lua function instead
     };
     std::vector<CmdDef> commands;
 
@@ -104,8 +105,9 @@ public:
 private:
     struct ScheduledCommand {
         unsigned long at_ms;
-        int node_index;
+        int node_index;        // -1 for lua-only commands
         std::string command;
+        std::string lua_fn;    // non-empty = call Lua function
     };
 
     VirtualClock _clock;
@@ -126,6 +128,10 @@ private:
     std::mt19937 _rng_stagger;     // clock stagger
     std::mt19937 _rng_adversarial; // adversarial mode rolls
     EventHook _event_hook;
+
+    // Lua callback hook: called when a scheduled {"lua": "fn_name"} fires
+    using LuaCallbackHook = std::function<bool(const std::string&)>;
+    LuaCallbackHook _lua_callback;
 
     // Radio physics parameters
     float _capture_locked_db = 3.0f;
@@ -227,4 +233,5 @@ public:
     int findNodeByName(const std::string& name) const { return findNode(name); }
 
     void setEventHook(EventHook hook) { _event_hook = std::move(hook); }
+    void setLuaCallback(LuaCallbackHook hook) { _lua_callback = std::move(hook); }
 };
