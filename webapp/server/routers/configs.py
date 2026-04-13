@@ -11,7 +11,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from server.config import Settings
+from server.config import Settings, validate_safe_id
 from server.services.config_validator import validate_config
 
 router = APIRouter(prefix="/configs", tags=["configs"])
@@ -73,6 +73,7 @@ def _configs_dir() -> Path:
 
 
 def _config_path(config_id: str) -> Path:
+    validate_safe_id(config_id, "config ID")
     return _configs_dir() / f"{config_id}.json"
 
 

@@ -2,3 +2,6 @@ fastapi
 uvicorn[standard]
 python-multipart
 aiofiles
+itmlogic>=1.2
+SRTM.py>=0.3.7
+requests>=2.28

@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topology Creator - MeshCore Simulator</title>
+<link rel="stylesheet" href="/static/css/common.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<style>
+  .tc-layout {
+    display: grid;
+    grid-template-columns: 400px 1fr;
+    gap: 16px;
+    align-items: start;
+  }
+  @media (max-width: 960px) {
+    .tc-layout { grid-template-columns: 1fr; }
+  }
+
+  .tc-panel {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+  }
+
+  /* Region map */
+  #region-map { height: 220px; border-radius: var(--radius); margin-bottom: 12px; }
+
+  .preset-row {
+    display: flex; gap: 8px; align-items: center; margin-bottom: 12px;
+  }
+  .preset-row select { flex: 1; }
+
+  .bbox-display {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    padding: 6px 8px;
+    background: var(--bg-primary);
+    border-radius: var(--radius);
+  }
+
+  /* Param cards */
+  details.param-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 8px;
+  }
+  details.param-card summary {
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--text-muted);
+    user-select: none;
+  }
+  details.param-card summary:hover { color: var(--text-primary); }
+  details.param-card .card-body {
+    padding: 8px 12px 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  .param-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .param-grid.three-col { grid-template-columns: 1fr 1fr 1fr; }
+  .param-grid label {
+    font-size: 10px;
+    color: var(--text-dim);
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  .survival-row {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .survival-row input[type="range"] { flex: 1; }
+  .survival-row .val {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    min-width: 32px;
+    text-align: right;
+  }
+
+  /* Progress */
+  .progress-area {
+    margin-top: 12px;
+  }
+  .progress-text {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  /* Preview map */
+  #preview-map { height: 400px; border-radius: var(--radius); margin-bottom: 12px; }
+
+  /* Stats card */
+  .stats-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 16px;
+    font-size: 12px;
+  }
+  .stats-grid dt { color: var(--text-muted); }
+  .stats-grid dd {
+    margin: 0;
+    font-family: var(--font-mono);
+    text-align: right;
+  }
+
+  /* Save section */
+  .save-section {
+    display: flex; gap: 8px; align-items: center; margin-bottom: 16px;
+  }
+  .save-section input { flex: 1; }
+
+  /* Past generations table */
+  .gen-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .gen-table th {
+    text-align: left; padding: 6px 8px;
+    color: var(--text-muted); border-bottom: 1px solid var(--border);
+    font-weight: 600;
+  }
+  .gen-table td {
+    padding: 5px 8px; border-bottom: 1px solid var(--border);
+  }
+  .gen-table tr:hover td { background: rgba(37,99,235,0.06); }
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <span class="brand">MeshCore Sim</span>
+  <ul class="nav-links">
+    <li><a href="/static/index.html">Dashboard</a></li>
+    <li><a href="/static/simulations.html">Simulations</a></li>
+    <li><a href="/static/topologies.html" class="active">Topologies</a></li>
+    <li><a href="/static/scenarios.html">Scenarios</a></li>
+  </ul>
+  <span class="spacer"></span>
+</nav>
+
+<div class="page-wide">
+  <div class="flex items-center justify-between mb-16">
+    <h1 style="margin-bottom:0">Topology Creator</h1>
+    <a href="/static/topologies.html" class="btn">Back to Topologies</a>
+  </div>
+
+  <div class="tc-layout">
+    <!-- Left column: controls -->
+    <div>
+      <div class="tc-panel">
+        <h3 style="margin:0 0 8px;font-size:13px;">Region Selection</h3>
+        <div id="region-map"></div>
+
+        <div class="preset-row">
+          <label style="font-size:11px;white-space:nowrap;">Preset:</label>
+          <select id="preset-select" class="form-select" onchange="applyPreset()">
+            <option value="">Custom</option>
+            <option value="54.2,18.3,54.6,18.9">Gdansk</option>
+            <option value="52.1,20.8,52.35,21.2">Warsaw</option>
+            <option value="49.0,14.0,55.0,24.2">Poland</option>
+            <option value="47.2,5.8,55.1,15.1">Germany</option>
+            <option value="50.7,3.3,53.6,7.3">Netherlands</option>
+          </select>
+        </div>
+
+        <div class="bbox-display" id="bbox-display">
+          No region selected. Draw a rectangle or pick a preset.
+        </div>
+
+        <!-- Radio Preset -->
+        <div class="preset-row">
+          <label style="font-size:11px;white-space:nowrap;">Radio:</label>
+          <select id="radio-preset" class="form-select" onchange="applyRadioPreset()">
+            <option value="">Custom</option>
+            <option value="eu_narrow" selected>EU/UK (Narrow)</option>
+            <option value="us_canada">USA/Canada</option>
+            <option value="au_narrow">Australia (Narrow)</option>
+            <option value="au_wide">Australia (Wide)</option>
+          </select>
+        </div>
+
+        <!-- RF Parameters -->
+        <details class="param-card" open>
+          <summary>RF Parameters</summary>
+          <div class="card-body">
+            <div class="param-grid">
+              <div>
+                <label>Frequency (MHz)</label>
+                <input id="p-freq" class="form-input" type="number" value="869.618" step="0.001" oninput="$('#radio-preset').value=''">
+              </div>
+              <div>
+                <label>TX Power (dBm)</label>
+                <input id="p-tx-power" class="form-input" type="number" value="22" step="1">
+              </div>
+              <div>
+                <label>Antenna Height (m)</label>
+                <input id="p-height" class="form-input" type="number" value="5" step="1">
+              </div>
+              <div>
+                <label>Noise Figure (dB)</label>
+                <input id="p-nf" class="form-input" type="number" value="6" step="0.5">
+              </div>
+            </div>
+            <div class="param-grid three-col" style="margin-top:8px;">
+              <div>
+                <label>SF</label>
+                <select id="p-sf" class="form-select" onchange="$('#radio-preset').value=''">
+                  <option value="7">7</option>
+                  <option value="8" selected>8</option>
+                  <option value="9">9</option>
+                  <option value="10">10</option>
+                  <option value="11">11</option>
+                  <option value="12">12</option>
+                </select>
+              </div>
+              <div>
+                <label>BW (Hz)</label>
+                <select id="p-bw" class="form-select" onchange="$('#radio-preset').value=''">
+                  <option value="31250">31250</option>
+                  <option value="41700">41700</option>
+                  <option value="62500" selected>62500</option>
+                  <option value="125000">125000</option>
+                  <option value="250000">250000</option>
+                  <option value="500000">500000</option>
+                </select>
+              </div>
+              <div>
+                <label>CR</label>
+                <select id="p-cr" class="form-select" onchange="$('#radio-preset').value=''">
+                  <option value="1">4/5</option>
+                  <option value="2">4/6</option>
+                  <option value="3">4/7</option>
+                  <option value="4" selected>4/8</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <!-- ITM Parameters -->
+        <details class="param-card">
+          <summary>ITM Parameters</summary>
+          <div class="card-body">
+            <div class="param-grid">
+              <div>
+                <label>Climate</label>
+                <select id="p-climate" class="form-select">
+                  <option value="1">1 - Equatorial</option>
+                  <option value="2">2 - Continental subtropical</option>
+                  <option value="3">3 - Maritime subtropical</option>
+                  <option value="4">4 - Desert</option>
+                  <option value="5">5 - Continental temperate</option>
+                  <option value="6" selected>6 - Maritime temperate (land)</option>
+                  <option value="7">7 - Maritime temperate (sea)</option>
+                </select>
+              </div>
+              <div>
+                <label>Polarization</label>
+                <select id="p-polar" class="form-select">
+                  <option value="0">Horizontal</option>
+                  <option value="1" selected>Vertical</option>
+                </select>
+              </div>
+              <div>
+                <label>Clutter (dB)</label>
+                <input id="p-clutter" class="form-input" type="number" value="6" step="0.5">
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <!-- Network Density -->
+        <details class="param-card" open>
+          <summary>Network Density</summary>
+          <div class="card-body">
+            <div class="preset-row" style="margin-bottom:8px;">
+              <label style="font-size:11px;white-space:nowrap;">Preset:</label>
+              <select id="density-preset" class="form-select" onchange="applyDensityPreset()">
+                <option value="">Custom</option>
+                <option value="sparse">Sparse (1-2 neighbors)</option>
+                <option value="medium">Medium (3-4 neighbors)</option>
+                <option value="dense" selected>Dense (5-6 neighbors)</option>
+                <option value="full">Full (all viable links)</option>
+              </select>
+            </div>
+            <div class="param-grid">
+              <div>
+                <label>Max Edges/Node</label>
+                <input id="p-max-edges" class="form-input" type="number" value="10" step="1"
+                       oninput="onDensityParamChange()">
+              </div>
+              <div>
+                <label>Max Good Links</label>
+                <input id="p-max-good" class="form-input" type="number" value="5" step="1"
+                       oninput="onDensityParamChange()">
+              </div>
+            </div>
+            <div style="margin-top:8px;">
+              <label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">
+                Link Survival Probability
+              </label>
+              <div class="survival-row">
+                <input type="range" id="p-survival" min="0" max="1" step="0.05" value="0.6"
+                       oninput="document.getElementById('survival-val').textContent = this.value; onDensityParamChange()">
+                <span class="val" id="survival-val">0.6</span>
+              </div>
+            </div>
+            <div style="margin-top:8px;">
+              <label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">
+                Survival SNR Midpoint (dB) — lower = keeps weaker bridge links
+              </label>
+              <div class="survival-row">
+                <input type="range" id="p-snr-mid" min="4" max="20" step="0.5" value="8"
+                       oninput="document.getElementById('snr-mid-val').textContent = this.value; onDensityParamChange()">
+                <span class="val" id="snr-mid-val">8</span>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <!-- Link Filtering -->
+        <details class="param-card">
+          <summary>Link Filtering</summary>
+          <div class="card-body">
+            <div class="param-grid">
+              <div>
+                <label>Max Distance (km)</label>
+                <input id="p-max-dist" class="form-input" type="number" value="30" step="1">
+              </div>
+              <div>
+                <label>Min SNR (dB)</label>
+                <input id="p-min-snr" class="form-input" type="number" value="-10" step="1">
+              </div>
+            </div>
+            <div class="param-grid" style="margin-top:8px;">
+              <div>
+                <label>Survival Seed</label>
+                <input id="p-surv-seed" class="form-input" type="number" value="42" step="1">
+              </div>
+              <div>
+                <label>Workers</label>
+                <input id="p-workers" class="form-input" type="number" value="4" min="1" max="16" step="1">
+              </div>
+            </div>
+            <div style="margin-top:8px;">
+              <label class="checkbox-row" style="font-size:11px;display:flex;align-items:center;gap:6px;cursor:pointer;">
+                <input type="checkbox" id="p-connect-islands">
+                Connect islands — bridge disconnected components with best available links
+              </label>
+            </div>
+          </div>
+        </details>
+
+        <!-- Node Types -->
+        <details class="param-card">
+          <summary>Node Types</summary>
+          <div class="card-body">
+            <label class="checkbox-row" style="font-size:11px;display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:4px;">
+              <input type="checkbox" id="nt-repeater" checked>
+              Repeaters (type 2)
+            </label>
+            <label class="checkbox-row" style="font-size:11px;display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:4px;">
+              <input type="checkbox" id="nt-gateway" checked>
+              Gateways (type 3)
+            </label>
+            <label class="checkbox-row" style="font-size:11px;display:flex;align-items:center;gap:6px;cursor:pointer;">
+              <input type="checkbox" id="nt-companion">
+              Companions (type 1)
+            </label>
+          </div>
+        </details>
+
+        <button id="btn-generate" class="btn btn-primary" style="width:100%;margin-top:8px;"
+                onclick="startGeneration()">
+          Generate Topology
+        </button>
+        <button id="btn-cancel" class="btn btn-danger" style="width:100%;margin-top:6px;display:none;"
+                onclick="cancelGeneration()">
+          Cancel
+        </button>
+
+        <div id="progress-area" class="progress-area" style="display:none;">
+          <div class="progress-bar">
+            <div class="fill" id="progress-fill" style="width:0%"></div>
+          </div>
+          <div class="progress-text" id="progress-text"></div>
+        </div>
+
+        <div id="error-area" style="display:none;margin-top:8px;">
+          <div class="alert alert-error" id="error-msg"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right column: preview + results -->
+    <div>
+      <!-- Preview map (hidden until results) -->
+      <div id="preview-section" style="display:none;">
+        <div class="tc-panel" style="margin-bottom:16px;">
+          <h3 style="margin:0 0 8px;font-size:13px;">Preview</h3>
+          <div id="preview-map"></div>
+        </div>
+
+        <div class="stats-card" id="stats-card"></div>
+
+        <div class="save-section">
+          <input id="save-name" class="form-input" type="text" placeholder="Topology name...">
+          <button class="btn btn-primary" onclick="saveAsTopology()">Save as Topology</button>
+        </div>
+        <div id="save-msg" style="font-size:12px;margin-bottom:16px;"></div>
+      </div>
+
+      <!-- Past generations -->
+      <div class="tc-panel">
+        <h3 style="margin:0 0 8px;font-size:13px;">Past Generations</h3>
+        <div id="gen-list-loading" class="empty-state" style="padding:16px;">
+          <div class="spinner"></div>
+        </div>
+        <div id="gen-list-empty" style="display:none;color:var(--text-muted);font-size:12px;padding:8px;">
+          No past generations.
+        </div>
+        <div id="gen-list" style="display:none;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/api.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+
+// ── State ──
+let regionMap, previewMap;
+let regionRect = null;
+let currentBbox = null;
+let currentGenId = null;
+let currentSSE = null;
+let previewLayers = null;
+
+// ── Region Map ──
+function initRegionMap() {
+  regionMap = L.map('region-map', { zoomControl: true }).setView([52, 18], 5);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 18,
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(regionMap);
+
+  // Draw control
+  const drawnItems = new L.FeatureGroup();
+  regionMap.addLayer(drawnItems);
+
+  const drawControl = new L.Control.Draw({
+    draw: {
+      rectangle: { shapeOptions: { color: '#2563eb', weight: 2, fillOpacity: 0.1 } },
+      polygon: false, circle: false, circlemarker: false,
+      polyline: false, marker: false,
+    },
+    edit: { featureGroup: drawnItems }
+  });
+  regionMap.addControl(drawControl);
+
+  regionMap.on(L.Draw.Event.CREATED, function(e) {
+    drawnItems.clearLayers();
+    if (regionRect) regionMap.removeLayer(regionRect);
+    regionRect = e.layer;
+    drawnItems.addLayer(regionRect);
+    const bounds = regionRect.getBounds();
+    currentBbox = [
+      Math.round(bounds.getSouth() * 1e4) / 1e4,
+      Math.round(bounds.getWest() * 1e4) / 1e4,
+      Math.round(bounds.getNorth() * 1e4) / 1e4,
+      Math.round(bounds.getEast() * 1e4) / 1e4,
+    ];
+    updateBboxDisplay();
+    $('#preset-select').value = '';
+  });
+}
+
+function applyPreset() {
+  const val = $('#preset-select').value;
+  if (!val) return;
+  const parts = val.split(',').map(Number);
+  currentBbox = parts;
+  updateBboxDisplay();
+  drawRect(parts);
+}
+
+// ── Radio Presets (MeshCore community presets) ──
+const RADIO_PRESETS = {
+  eu_narrow:  { freq: 869.618, sf: 8,  bw: 62500,  cr: 4 },
+  us_canada:  { freq: 910.525, sf: 7,  bw: 62500,  cr: 1 },
+  au_narrow:  { freq: 916.575, sf: 7,  bw: 62500,  cr: 4 },
+  au_wide:    { freq: 915.800, sf: 11, bw: 250000, cr: 1 },
+};
+
+function applyRadioPreset() {
+  const key = $('#radio-preset').value;
+  const p = RADIO_PRESETS[key];
+  if (!p) return;
+  $('#p-freq').value = p.freq;
+  $('#p-sf').value = p.sf;
+  $('#p-bw').value = p.bw;
+  $('#p-cr').value = p.cr;
+}
+
+function drawRect(bbox) {
+  if (regionRect) regionMap.removeLayer(regionRect);
+  const bounds = L.latLngBounds(
+    L.latLng(bbox[0], bbox[1]),
+    L.latLng(bbox[2], bbox[3])
+  );
+  regionRect = L.rectangle(bounds, { color: '#2563eb', weight: 2, fillOpacity: 0.1 });
+  regionRect.addTo(regionMap);
+  regionMap.fitBounds(bounds, { padding: [20, 20] });
+}
+
+function updateBboxDisplay() {
+  if (!currentBbox) {
+    $('#bbox-display').textContent = 'No region selected.';
+    return;
+  }
+  const [s, w, n, e] = currentBbox;
+  $('#bbox-display').textContent = `lat: ${s} to ${n} | lon: ${w} to ${e}`;
+}
+
+// ── Density Presets ──
+const DENSITY_PRESETS = {
+  sparse:  { link_survival: 0.2, survival_snr_mid: 12.0, max_good_links: 2, max_edges_per_node: 5 },
+  medium:  { link_survival: 0.4, survival_snr_mid: 10.0, max_good_links: 3, max_edges_per_node: 8 },
+  dense:   { link_survival: 0.6, survival_snr_mid: 8.0,  max_good_links: 5, max_edges_per_node: 10 },
+  full:    { link_survival: 1.0, survival_snr_mid: 10.0, max_good_links: 8, max_edges_per_node: 16 },
+};
+
+function applyDensityPreset() {
+  const key = $('#density-preset').value;
+  const p = DENSITY_PRESETS[key];
+  if (!p) return;
+  $('#p-survival').value = p.link_survival;
+  $('#survival-val').textContent = p.link_survival;
+  $('#p-snr-mid').value = p.survival_snr_mid;
+  $('#snr-mid-val').textContent = p.survival_snr_mid;
+  $('#p-max-good').value = p.max_good_links;
+  $('#p-max-edges').value = p.max_edges_per_node;
+}
+
+function onDensityParamChange() {
+  $('#density-preset').value = '';
+}
+
+// ── Collect params ──
+function collectParams() {
+  if (!currentBbox) {
+    throw new Error('Please select a region first');
+  }
+  const node_types = [];
+  if ($('#nt-companion').checked) node_types.push(1);
+  if ($('#nt-repeater').checked) node_types.push(2);
+  if ($('#nt-gateway').checked) node_types.push(3);
+  if (!node_types.length) {
+    throw new Error('Select at least one node type');
+  }
+  return {
+    bbox: currentBbox,
+    freq_mhz: parseFloat($('#p-freq').value),
+    tx_power_dbm: parseFloat($('#p-tx-power').value),
+    antenna_height: parseFloat($('#p-height').value),
+    noise_figure_db: parseFloat($('#p-nf').value),
+    sf: parseInt($('#p-sf').value),
+    bw: parseInt($('#p-bw').value),
+    cr: parseInt($('#p-cr').value),
+    climate: parseInt($('#p-climate').value),
+    polarization: parseInt($('#p-polar').value),
+    clutter_db: parseFloat($('#p-clutter').value),
+    max_distance_km: parseFloat($('#p-max-dist').value),
+    min_snr: parseFloat($('#p-min-snr').value),
+    max_edges_per_node: parseInt($('#p-max-edges').value),
+    max_good_links: parseInt($('#p-max-good').value),
+    link_survival: parseFloat($('#p-survival').value),
+    survival_seed: parseInt($('#p-surv-seed').value),
+    survival_snr_mid: parseFloat($('#p-snr-mid').value),
+    node_types: node_types,
+    connect_islands: $('#p-connect-islands').checked,
+    workers: parseInt($('#p-workers').value),
+  };
+}
+
+// ── Generation control ──
+async function startGeneration() {
+  let params;
+  try {
+    params = collectParams();
+  } catch (e) {
+    showError(e.message);
+    return;
+  }
+
+  hideError();
+  $('#btn-generate').disabled = true;
+  $('#btn-cancel').style.display = '';
+  $('#progress-area').style.display = '';
+  $('#progress-fill').style.width = '0%';
+  $('#progress-text').textContent = 'Starting...';
+  $('#preview-section').style.display = 'none';
+
+  try {
+    const resp = await postJSON('/api/topo-creator', params);
+    currentGenId = resp.id;
+    connectProgress(resp.id);
+  } catch (e) {
+    showError('Failed to start generation: ' + e.message);
+    resetControls();
+  }
+}
+
+function connectProgress(genId) {
+  if (currentSSE) currentSSE.close();
+
+  currentSSE = connectSSE('/api/topo-creator/' + encodeURIComponent(genId) + '/progress',
+    function onMessage(data) {
+      if (data.done) {
+        if (currentSSE) currentSSE.close();
+        currentSSE = null;
+        onGenerationDone(genId);
+        return;
+      }
+      if (data.status === 'failed') {
+        if (currentSSE) { currentSSE.close(); currentSSE = null; }
+        showError(data.error || 'Generation failed');
+        resetControls();
+        loadGenerations();
+        return;
+      }
+      if (data.status === 'cancelled') {
+        if (currentSSE) { currentSSE.close(); currentSSE = null; }
+        resetControls();
+        loadGenerations();
+        return;
+      }
+      if (data.status === 'completed') {
+        if (currentSSE) { currentSSE.close(); currentSSE = null; }
+        onGenerationDone(genId);
+        return;
+      }
+      // Update progress
+      const pct = data.progress_pct || 0;
+      $('#progress-fill').style.width = pct + '%';
+      $('#progress-text').textContent = data.progress_step || data.detail || '';
+    },
+    function onError() {
+      // SSE connection lost
+    }
+  );
+}
+
+async function onGenerationDone(genId) {
+  resetControls();
+  try {
+    const gen = await fetchJSON('/api/topo-creator/' + encodeURIComponent(genId));
+    if (gen.status === 'completed' && gen.result) {
+      showPreview(gen.result, gen.params, genId);
+    }
+  } catch (e) {
+    showError('Failed to load result: ' + e.message);
+  }
+  loadGenerations();
+}
+
+async function cancelGeneration() {
+  if (!currentGenId) return;
+  try {
+    await deleteJSON('/api/topo-creator/' + encodeURIComponent(currentGenId));
+  } catch (e) { /* ignore */ }
+  if (currentSSE) currentSSE.close();
+  currentSSE = null;
+  currentGenId = null;
+  resetControls();
+  loadGenerations();
+}
+
+function resetControls() {
+  $('#btn-generate').disabled = false;
+  $('#btn-cancel').style.display = 'none';
+  $('#progress-area').style.display = 'none';
+}
+
+function showError(msg) {
+  $('#error-area').style.display = '';
+  $('#error-msg').textContent = msg;
+}
+function hideError() {
+  $('#error-area').style.display = 'none';
+}
+
+// ── Preview Map ──
+function initPreviewMap() {
+  if (previewMap) return;
+  previewMap = L.map('preview-map', {
+    zoomControl: true,
+    preferCanvas: true,
+  }).setView([52, 18], 5);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 18,
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(previewMap);
+  previewLayers = L.featureGroup().addTo(previewMap);
+}
+
+function snrColor(snr) {
+  if (snr < 0) return '#ef4444';
+  if (snr < 5) return '#f59e0b';
+  return '#22c55e';
+}
+
+function showPreview(result, params, genId) {
+  $('#preview-section').style.display = '';
+  initPreviewMap();
+
+  // Clear old layers
+  previewLayers.clearLayers();
+
+  const nodes = result.nodes || [];
+  const links = result.links || [];
+
+  // Build name->node map
+  const nodeMap = {};
+  for (const n of nodes) {
+    nodeMap[n.name] = n;
+  }
+
+  // Draw links
+  for (const link of links) {
+    const a = nodeMap[link.from];
+    const b = nodeMap[link.to];
+    if (!a || !b) continue;
+    const color = snrColor(link.snr);
+    const line = L.polyline(
+      [[a.lat, a.lon], [b.lat, b.lon]],
+      { color, weight: 1.5, opacity: 0.6 }
+    );
+    line.bindTooltip(
+      `${link.from} - ${link.to}<br>SNR: ${link.snr.toFixed(1)} dB`,
+      { sticky: true }
+    );
+    previewLayers.addLayer(line);
+  }
+
+  // Draw nodes
+  for (const n of nodes) {
+    const color = n.role === 'companion' ? '#22c55e' : '#3b82f6';
+    const marker = L.circleMarker([n.lat, n.lon], {
+      radius: 5, fillColor: color, color: '#fff',
+      weight: 1.5, fillOpacity: 0.9,
+    });
+    marker.bindTooltip(n.name, { direction: 'top', offset: [0, -6] });
+    previewLayers.addLayer(marker);
+  }
+
+  // Fit bounds
+  if (nodes.length > 0) {
+    const bounds = previewLayers.getBounds();
+    previewMap.fitBounds(bounds, { padding: [30, 30] });
+  }
+
+  // After map is shown, invalidate size (needed for correct rendering)
+  setTimeout(() => previewMap.invalidateSize(), 100);
+
+  // Stats card
+  const stats = result.stats || {};
+  const snrs = links.map(l => l.snr).filter(s => s != null);
+  const sorted_snrs = [...snrs].sort((a, b) => a - b);
+  const dists_raw = links.map(l => l.dist_km).filter(d => d != null && d > 0);
+  const sorted_dists = [...dists_raw].sort((a, b) => a - b);
+
+  let statsHtml = '<dl class="stats-grid">';
+  statsHtml += `<dt>Nodes</dt><dd>${stats.node_count || nodes.length}</dd>`;
+  statsHtml += `<dt>Links</dt><dd>${stats.link_count || links.length}</dd>`;
+  if (sorted_snrs.length) {
+    statsHtml += `<dt>SNR</dt><dd>${sorted_snrs[0].toFixed(1)} to ${sorted_snrs[sorted_snrs.length-1].toFixed(1)} dB (med: ${sorted_snrs[Math.floor(sorted_snrs.length/2)].toFixed(1)})</dd>`;
+  }
+  if (sorted_dists.length) {
+    statsHtml += `<dt>Distance</dt><dd>${sorted_dists[0].toFixed(1)} to ${sorted_dists[sorted_dists.length-1].toFixed(1)} km (med: ${sorted_dists[Math.floor(sorted_dists.length/2)].toFixed(1)})</dd>`;
+  }
+  statsHtml += `<dt>Components</dt><dd>${stats.components || '?'}</dd>`;
+  if (stats.pruned_nodes > 0) {
+    statsHtml += `<dt>Pruned</dt><dd>${stats.pruned_nodes} nodes</dd>`;
+  }
+  statsHtml += '</dl>';
+  $('#stats-card').innerHTML = statsHtml;
+
+  // Pre-fill save name
+  const bbox = params?.bbox || currentBbox;
+  let regionName = '';
+  if (bbox && bbox.length === 4) {
+    const latMid = ((bbox[0] + bbox[2]) / 2).toFixed(1);
+    const lonMid = ((bbox[1] + bbox[3]) / 2).toFixed(1);
+    regionName = ` (${latMid},${lonMid})`;
+  }
+  $('#save-name').value = `ITM${regionName} (${nodes.length} nodes)`;
+  currentGenId = genId;
+  $('#save-msg').innerHTML = '';
+}
+
+// ── Save as Topology ──
+async function saveAsTopology() {
+  if (!currentGenId) return;
+  const name = $('#save-name').value.trim();
+  try {
+    const resp = await postJSON('/api/topo-creator/' + encodeURIComponent(currentGenId) + '/save', { name: name || null });
+    $('#save-msg').innerHTML =
+      `<span style="color:var(--success)">Saved!</span> ` +
+      `<a href="/static/topology_editor.html?id=${encodeURIComponent(resp.id)}">Open in editor</a>`;
+  } catch (e) {
+    $('#save-msg').innerHTML = `<span style="color:var(--error)">Save failed: ${escapeHtml(e.message)}</span>`;
+  }
+}
+
+// ── Past Generations ──
+async function loadGenerations() {
+  $('#gen-list-loading').style.display = '';
+  $('#gen-list-empty').style.display = 'none';
+  $('#gen-list').style.display = 'none';
+
+  try {
+    const gens = await fetchJSON('/api/topo-creator');
+    $('#gen-list-loading').style.display = 'none';
+
+    if (!gens.length) {
+      $('#gen-list-empty').style.display = '';
+      return;
+    }
+
+    let html = '<table class="gen-table"><thead><tr>' +
+      '<th>Status</th><th>Nodes</th><th>Links</th><th>Region</th><th>Created</th><th>Actions</th>' +
+      '</tr></thead><tbody>';
+
+    for (const g of gens) {
+      const statusBadge = statusToBadge(g.status);
+      const stats = g.stats || {};
+      const bbox = g.params?.bbox;
+      let region = '-';
+      if (bbox && bbox.length === 4) {
+        region = `${bbox[0].toFixed(1)},${bbox[1].toFixed(1)} - ${bbox[2].toFixed(1)},${bbox[3].toFixed(1)}`;
+      }
+      const created = new Date(g.created_at * 1000).toLocaleString();
+      const nodes = stats.node_count != null ? stats.node_count : '-';
+      const links = stats.link_count != null ? stats.link_count : '-';
+
+      const safeId = escapeHtml(g.id);
+      let actions = '';
+      if (g.status === 'completed') {
+        actions += `<button class="btn btn-sm" onclick="viewGeneration('${safeId}')">View</button> `;
+      }
+      actions += `<button class="btn btn-sm btn-danger" onclick="deleteGeneration('${safeId}')">Delete</button>`;
+
+      html += `<tr>
+        <td>${statusBadge}</td>
+        <td>${nodes}</td>
+        <td>${links}</td>
+        <td style="font-family:var(--font-mono);font-size:10px;">${escapeHtml(region)}</td>
+        <td>${escapeHtml(created)}</td>
+        <td>${actions}</td>
+      </tr>`;
+    }
+
+    html += '</tbody></table>';
+    $('#gen-list').innerHTML = html;
+    $('#gen-list').style.display = '';
+  } catch (e) {
+    $('#gen-list-loading').innerHTML = '<p style="color:var(--error)">Failed to load: ' + escapeHtml(e.message) + '</p>';
+  }
+}
+
+function statusToBadge(status) {
+  const colors = {
+    completed: 'badge-success',
+    running: 'badge-info',
+    pending: 'badge-info',
+    failed: 'badge-error',
+    cancelled: 'badge-cancelled',
+  };
+  const cls = colors[status] || '';
+  return `<span class="badge ${cls}">${status}</span>`;
+}
+
+async function viewGeneration(genId) {
+  try {
+    const gen = await fetchJSON('/api/topo-creator/' + encodeURIComponent(genId));
+    if (gen.result) {
+      showPreview(gen.result, gen.params, genId);
+      // Scroll to preview
+      $('#preview-section').scrollIntoView({ behavior: 'smooth' });
+    }
+  } catch (e) {
+    alert('Failed to load: ' + e.message);
+  }
+}
+
+async function deleteGeneration(genId) {
+  if (!confirm('Delete this generation?')) return;
+  try {
+    await deleteJSON('/api/topo-creator/' + encodeURIComponent(genId));
+    loadGenerations();
+  } catch (e) {
+    alert('Delete failed: ' + e.message);
+  }
+}
+
+// ── Init ──
+initRegionMap();
+loadGenerations();
+</script>
+</body>
+</html>

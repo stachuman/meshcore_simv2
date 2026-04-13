@@ -1003,7 +1003,8 @@ unsigned long Orchestrator::initSimulation() {
     // Initialize all nodes
     for (auto& node : _nodes) {
         node->initMesh(_seed);
-        EventLog::nodeReady(0, node->name.c_str(),
+        const char* role_str = (node->role == NodeRole::Companion) ? "companion" : "repeater";
+        EventLog::nodeReady(0, node->name.c_str(), role_str,
                             node->mesh->pubKey(), 32,
                             node->has_location, node->lat, node->lon);
         if (_verbose) {

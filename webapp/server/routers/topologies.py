@@ -11,7 +11,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from server.config import Settings
+from server.config import Settings, validate_safe_id
 
 router = APIRouter(prefix="/topologies", tags=["topologies"])
 
@@ -73,6 +73,7 @@ def _topologies_dir() -> Path:
 
 
 def _topo_path(topo_id: str) -> Path:
+    validate_safe_id(topo_id, "topology ID")
     return _topologies_dir() / f"{topo_id}.json"
 
 
@@ -125,6 +126,8 @@ def _save_entry(entry: dict) -> None:
 @router.post("/", response_model=TopologyEntry, status_code=201)
 async def create_topology(body: TopologyCreateRequest) -> TopologyEntry:
     topo_id = uuid.uuid4().hex[:12]
+    while _topo_path(topo_id).exists():
+        topo_id = uuid.uuid4().hex[:12]
     now = time.time()
     entry = {
         "id": topo_id,
@@ -216,6 +219,8 @@ async def extract_from_config(body: FromConfigRequest) -> TopologyEntry:
         name = f"Topology from config ({len(topo_nodes)} nodes)"
 
     topo_id = uuid.uuid4().hex[:12]
+    while _topo_path(topo_id).exists():
+        topo_id = uuid.uuid4().hex[:12]
     now = time.time()
     entry = {
         "id": topo_id,

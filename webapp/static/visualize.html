@@ -42,6 +42,7 @@ canvas { display: block; }
 #scrollbar button { background: #e5e7eb; color: #374151; border: 1px solid #d1d5db; padding: 2px 8px; font-size: 12px; font-family: inherit; border-radius: 3px; cursor: pointer; min-width: 28px; }
 #scrollbar button:hover { background: #d1d5db; }
 #scrollbar .scroll-time { color: #6b7280; font-size: 11px; min-width: 80px; text-align: center; }
+@keyframes pulse-live { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
 </style>
 </head>
 <body>
@@ -65,6 +66,7 @@ canvas { display: block; }
     <button id="btn-rays" title="Show TX→RX propagation lines">Rays</button>
     <div class="sep"></div>
     <span id="info-text" class="info"></span>
+    <span id="follow-indicator" style="display:none;background:#dc2626;color:#fff;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700;animation:pulse-live 1.5s ease infinite">LIVE</span>
     <span style="flex:1"></span>
     <span id="viewport-info" class="info"></span>
 </div>
@@ -89,9 +91,17 @@ canvas { display: block; }
 </div>
 
 <script>
-// Get sim ID from URL params: visualize.html?sim=abc123
-const SIM_ID = new URLSearchParams(window.location.search).get('sim');
-if (!SIM_ID) {
+// Get sim ID from URL params: visualize.html?sim=abc123 or ?interactive=abc123
+const _params = new URLSearchParams(window.location.search);
+const SIM_ID = _params.get('sim');
+const INTERACTIVE_ID = _params.get('interactive');
+const API_PREFIX = INTERACTIVE_ID
+    ? `/api/interactive/${INTERACTIVE_ID}`
+    : `/api/sims/${SIM_ID}`;
+const IS_IFRAME = window.parent !== window;
+let followMode = !!INTERACTIVE_ID;  // auto-follow in interactive mode
+
+if (!SIM_ID && !INTERACTIVE_ID) {
     document.getElementById('loading').textContent = 'Error: No simulation ID. Use ?sim=ID';
 }
 
@@ -116,8 +126,14 @@ const S = {
     scrollY: 0,          // pixels scrolled down
     maxScrollY: 0,       // computed from node count vs canvas height
 
+    // Rendered viewport snapshot (for hit-testing against what user actually sees)
+    renderedViewFrom: 0,
+    renderedViewTo: 10000,
+    renderedScrollY: 0,
+
     // Interaction
     dragging: false,
+    dragMoved: false,
     dragStartX: 0,
     dragStartY: 0,
     dragViewFrom: 0,
@@ -178,7 +194,7 @@ async function fetchJSON(url) {
 }
 
 async function init() {
-    S.meta = await fetchJSON(`/api/sims/${SIM_ID}/meta`);
+    S.meta = await fetchJSON(`${API_PREFIX}/meta`);
     document.getElementById('info-text').textContent =
         `${S.meta.nodes.length} nodes, ${S.meta.event_count} events, ` +
         `${((S.meta.time_max - S.meta.time_min) / 1000).toFixed(1)}s`;
@@ -196,13 +212,102 @@ async function init() {
     }
     sortNodes();
 
-    S.viewFrom = S.meta.time_min;
-    S.viewTo = Math.min(S.meta.time_min + 30000, S.meta.time_max);
+    if (INTERACTIVE_ID) {
+        // Interactive mode: keep NOW at ~80% from left, 20% future
+        interactiveFollowViewport(S.meta.time_max);
+    } else {
+        S.viewFrom = S.meta.time_min;
+        S.viewTo = Math.min(S.meta.time_min + 30000, S.meta.time_max);
+    }
 
     loading.style.display = 'none';
     resize();
     await loadViewport();
     render();
+
+    // Interactive mode: start polling for new events
+    if (INTERACTIVE_ID) {
+        startInteractivePoll();
+    }
+}
+
+// ── Interactive viewport ─────────────────────────────────────────
+// Position NOW at ~80% from the left, with ~20% future visible.
+// Span stays stable (doesn't grow to fit all data), giving a scrolling-window feel.
+function interactiveFollowViewport(nowMs) {
+    let span = S.viewTo - S.viewFrom;
+    // On first call or zero span, pick a sensible default
+    if (span <= 0) span = 10000;
+    // Keep ~20% of the viewport as future past NOW (never less than 500ms)
+    const futureMs = Math.max(500, span * 0.2);
+    S.viewTo = nowMs + futureMs;
+    S.viewFrom = S.viewTo - span;
+    // Don't scroll before time_min — widen the window instead
+    if (S.viewFrom < S.meta.time_min) {
+        S.viewFrom = S.meta.time_min;
+        S.viewTo = S.viewFrom + span;
+    }
+}
+
+function startInteractivePoll() {
+    setInterval(async () => {
+        try {
+            const m = await fetchJSON(`${API_PREFIX}/meta`);
+            if (m.time_max > S.meta.time_max || m.event_count > S.meta.event_count) {
+                const oldNodes = S.meta.nodes;
+                S.meta = m;
+                // If new nodes appeared, rebuild node list
+                if (m.nodes.length !== oldNodes.length) {
+                    S.nodes = [...m.nodes];
+                    sortNodes();
+                }
+                // Follow mode: keep NOW at ~80% from left
+                if (followMode) {
+                    interactiveFollowViewport(m.time_max);
+                }
+                // Invalidate cache so loadViewport re-fetches
+                S.cachedFrom = -1;
+                S.cachedTo = -1;
+                await loadViewport();
+                render();
+                syncScrollbar();
+                updateFollowIndicator();
+            }
+        } catch (e) {
+            // Ignore polling errors (session may have ended)
+        }
+    }, 2000);
+}
+
+// Listen for parent iframe messages to update immediately (no polling delay)
+if (INTERACTIVE_ID) {
+    window.addEventListener('message', async (e) => {
+        if (!e.data || e.data.type !== 'timeUpdate') return;
+        const newTime = e.data.time_ms;
+        if (newTime > S.meta.time_max) {
+            S.meta.time_max = newTime;
+            S.meta.event_count = (e.data.event_count != null) ? e.data.event_count : S.meta.event_count;
+        }
+        if (followMode) {
+            interactiveFollowViewport(S.meta.time_max);
+        }
+        S.cachedFrom = -1;
+        S.cachedTo = -1;
+        await loadViewport();
+        render();
+        syncScrollbar();
+        updateFollowIndicator();
+        // Auto-refresh trace to pick up new relay hops
+        if (S.tracePkt) {
+            await tracePkt(S.tracePkt);
+        }
+    });
+}
+
+function updateFollowIndicator() {
+    const el = document.getElementById('follow-indicator');
+    if (!el) return;
+    el.style.display = followMode ? '' : 'none';
 }
 
 function sortNodes() {
@@ -274,7 +379,7 @@ async function loadViewport() {
     if (span > 60000) {
         const bucketMs = Math.max(100, Math.round(span / canvas.width));
         S.densityCache = await fetchJSON(
-            `/api/sims/${SIM_ID}/density?from=${Math.floor(S.viewFrom)}&to=${Math.ceil(S.viewTo)}&bucket=${bucketMs}`);
+            `${API_PREFIX}/density?from=${Math.floor(S.viewFrom)}&to=${Math.ceil(S.viewTo)}&bucket=${bucketMs}`);
         S.cachedEvents = [];
     } else {
         S.densityCache = null;
@@ -286,7 +391,7 @@ async function loadViewport() {
         const margin = span * 0.5;
         const from = Math.max(0, Math.floor(S.viewFrom - margin));
         const to = Math.ceil(S.viewTo + margin);
-        const data = await fetchJSON(`/api/sims/${SIM_ID}/events?from=${from}&to=${to}`);
+        const data = await fetchJSON(`${API_PREFIX}/events?from=${from}&to=${to}`);
         S.cachedEvents = data.events;
         S.cachedFrom = from;
         S.cachedTo = to;
@@ -309,6 +414,30 @@ function xToMs(x) {
     return S.viewFrom + (x - S.labelW) / (canvas.width - S.labelW) * (S.viewTo - S.viewFrom);
 }
 
+// Clamp viewport so viewFrom never goes below time_min.
+// When the viewport span exceeds the data range, anchor at time_min.
+// In interactive mode, allow viewTo to extend past time_max (for NOW margin).
+function clampViewport() {
+    const span = S.viewTo - S.viewFrom;
+    const range = S.meta.time_max - S.meta.time_min;
+    if (span >= range) {
+        // Viewport wider than data — just show from time_min
+        S.viewFrom = S.meta.time_min;
+        S.viewTo = S.viewFrom + span;
+    } else {
+        if (S.viewFrom < S.meta.time_min) {
+            S.viewFrom = S.meta.time_min;
+            S.viewTo = S.viewFrom + span;
+        }
+        // In interactive mode, don't clamp viewTo to time_max —
+        // interactiveFollowViewport intentionally extends past it for margin
+        if (!INTERACTIVE_ID && S.viewTo > S.meta.time_max) {
+            S.viewTo = S.meta.time_max;
+            S.viewFrom = S.viewTo - span;
+        }
+    }
+}
+
 function nodeToY(name) {
     const idx = S.nodeIndex[name];
     if (idx === undefined) return null;
@@ -325,6 +454,11 @@ function updateMaxScrollY() {
 function render() {
     const w = canvas.width, h = canvas.height;
     ctx.clearRect(0, 0, w, h);
+
+    // Snapshot viewport state for hit-testing (so clicks match what's drawn)
+    S.renderedViewFrom = S.viewFrom;
+    S.renderedViewTo = S.viewTo;
+    S.renderedScrollY = S.scrollY;
 
     // Background
     ctx.fillStyle = '#f5f5f8';
@@ -416,7 +550,17 @@ function render() {
         drawTrace();
     }
 
+    // Interactive mode: draw "now" line in content area
+    if (INTERACTIVE_ID && S.meta) {
+        drawNowLine(h);
+    }
+
     ctx.restore();
+
+    // Interactive mode: draw "NOW" label in header (outside content clip)
+    if (INTERACTIVE_ID && S.meta) {
+        drawNowLabel();
+    }
 
     // Time display
     const centerMs = (S.viewFrom + S.viewTo) / 2;
@@ -513,6 +657,48 @@ function drawWarmupOverlay(h) {
     ctx.textBaseline = 'top';
     const labelX = Math.max(x0 + 4, x1 - ctx.measureText(label).width - 6);
     ctx.fillText(label, labelX, 4);
+}
+
+function drawNowLine(h) {
+    // Draws the vertical "now" line in the content area (called inside content clip)
+    const nowMs = S.meta.time_max;
+    if (nowMs < S.viewFrom || nowMs > S.viewTo) return;
+    const x = msToX(nowMs);
+    if (x < S.labelW || x > canvas.width) return;
+
+    ctx.strokeStyle = '#dc2626';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([6, 3]);
+    ctx.beginPath();
+    ctx.moveTo(x, S.headerH);
+    ctx.lineTo(x, h);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.lineWidth = 1;
+}
+
+function drawNowLabel() {
+    // Draws the "NOW" label + triangle in the header area (called outside clip)
+    const nowMs = S.meta.time_max;
+    if (nowMs < S.viewFrom || nowMs > S.viewTo) return;
+    const x = msToX(nowMs);
+    if (x < S.labelW || x > canvas.width) return;
+
+    // Triangle pointing down at header bottom
+    ctx.fillStyle = '#dc2626';
+    ctx.beginPath();
+    ctx.moveTo(x, S.headerH);
+    ctx.lineTo(x - 5, S.headerH - 7);
+    ctx.lineTo(x + 5, S.headerH - 7);
+    ctx.closePath();
+    ctx.fill();
+
+    // Label above triangle
+    ctx.font = 'bold 9px monospace';
+    ctx.fillStyle = '#dc2626';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('NOW', x, S.headerH - 8);
 }
 
 function drawDensity() {
@@ -935,6 +1121,7 @@ function formatDuration(ms) {
 // ── Interaction ────────────────────────────────────────────────
 canvas.addEventListener('wheel', async (e) => {
     e.preventDefault();
+    if (followMode) { followMode = false; updateFollowIndicator(); }
     const span = S.viewTo - S.viewFrom;
 
     if (e.ctrlKey || e.metaKey) {
@@ -945,8 +1132,7 @@ canvas.addEventListener('wheel', async (e) => {
         const ratio = (mouseMs - S.viewFrom) / span;
         S.viewFrom = mouseMs - ratio * newSpan;
         S.viewTo = mouseMs + (1 - ratio) * newSpan;
-        if (S.viewFrom < S.meta.time_min) { S.viewFrom = S.meta.time_min; S.viewTo = S.viewFrom + newSpan; }
-        if (S.viewTo > S.meta.time_max) { S.viewTo = S.meta.time_max; S.viewFrom = S.viewTo - newSpan; }
+        clampViewport();
         await loadViewport();
     } else if (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
         // Shift+wheel or horizontal scroll: move time window left/right
@@ -954,8 +1140,7 @@ canvas.addEventListener('wheel', async (e) => {
         const dMs = delta / (canvas.width - S.labelW) * span * 2;
         S.viewFrom += dMs;
         S.viewTo += dMs;
-        if (S.viewFrom < S.meta.time_min) { S.viewFrom = S.meta.time_min; S.viewTo = S.viewFrom + span; }
-        if (S.viewTo > S.meta.time_max) { S.viewTo = S.meta.time_max; S.viewFrom = S.viewTo - span; }
+        clampViewport();
         await loadViewport();
     } else {
         // Vertical scroll: scroll node lanes up/down
@@ -970,33 +1155,29 @@ canvas.addEventListener('wheel', async (e) => {
 canvas.addEventListener('mousedown', (e) => {
     if (e.offsetX < S.labelW) return;
     S.dragging = true;
+    S.dragMoved = false;
     S.dragStartX = e.offsetX;
     S.dragStartY = e.offsetY;
     S.dragViewFrom = S.viewFrom;
     S.dragScrollY = S.scrollY;
-    canvas.style.cursor = 'grabbing';
 });
 
 canvas.addEventListener('mousemove', async (e) => {
     if (S.dragging) {
         const dx = e.offsetX - S.dragStartX;
         const dy = e.offsetY - S.dragStartY;
+        // Only start actual drag after threshold to avoid micro-shifts on click
+        if (!S.dragMoved && Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+        S.dragMoved = true;
+        canvas.style.cursor = 'grabbing';
+        if (followMode) { followMode = false; updateFollowIndicator(); }
         const span = S.viewTo - S.viewFrom;
 
         // Horizontal: pan time
         const dMs = -dx / (canvas.width - S.labelW) * span;
         S.viewFrom = S.dragViewFrom + dMs;
         S.viewTo = S.viewFrom + span;
-
-        // Clamp horizontal
-        if (S.viewFrom < S.meta.time_min) {
-            S.viewFrom = S.meta.time_min;
-            S.viewTo = S.viewFrom + span;
-        }
-        if (S.viewTo > S.meta.time_max) {
-            S.viewTo = S.meta.time_max;
-            S.viewFrom = S.viewTo - span;
-        }
+        clampViewport();
 
         // Vertical: scroll nodes
         S.scrollY = S.dragScrollY - dy;
@@ -1023,10 +1204,20 @@ canvas.addEventListener('mouseleave', () => {
     tooltip.style.display = 'none';
 });
 
+canvas.addEventListener('dblclick', () => {
+    if (INTERACTIVE_ID && !followMode) {
+        followMode = true;
+        updateFollowIndicator();
+    }
+});
+
 canvas.addEventListener('click', async (e) => {
+    // Skip event selection if this was a drag gesture
+    if (S.dragMoved) return;
+
     if (e.offsetX < S.labelW) {
-        // Clicked on node label
-        const laneIdx = Math.floor((e.offsetY - S.headerH + S.scrollY) / S.laneH);
+        // Clicked on node label — use rendered scrollY
+        const laneIdx = Math.floor((e.offsetY - S.headerH + S.renderedScrollY) / S.laneH);
         if (laneIdx >= 0 && laneIdx < S.nodes.length) {
             showNodeDetail(S.nodes[laneIdx].name);
         }
@@ -1051,15 +1242,24 @@ function findEventAt(mx, my) {
     if (S.densityCache) return null;
     if (my < S.headerH) return null;
 
-    const ms = xToMs(mx);
-    const laneIdx = Math.floor((my - S.headerH + S.scrollY) / S.laneH);
+    // Use rendered viewport state so hit-testing matches what's actually drawn
+    const vFrom = S.renderedViewFrom;
+    const vTo = S.renderedViewTo;
+    const sY = S.renderedScrollY;
+    const ms = vFrom + (mx - S.labelW) / (canvas.width - S.labelW) * (vTo - vFrom);
+    const laneIdx = Math.floor((my - S.headerH + sY) / S.laneH);
     if (laneIdx < 0 || laneIdx >= S.nodes.length) return null;
     const targetNode = S.nodes[laneIdx].name;
+
+    // Determine if click is in upper half (TX) or lower half (RX) of lane
+    const laneY = S.headerH + laneIdx * S.laneH - sY;
+    const relY = my - laneY;
+    const inUpperHalf = relY < S.laneH / 2;
 
     // Search nearby events — TX bars match over their full airtime width
     let best = null;
     let bestDist = Infinity;
-    const span = S.viewTo - S.viewFrom;
+    const span = vTo - vFrom;
     const tolerance = span * 0.008; // 0.8% of viewport for point events
 
     for (const ev of S.cachedEvents) {
@@ -1068,6 +1268,12 @@ function findEventAt(mx, my) {
             evNode = ev.to;
         }
         if (evNode !== targetNode) continue;
+
+        // Check lane half: TX in upper, RX/collision/drop in lower
+        const isTxType = ev.type === 'tx' || ev.type === 'cmd_reply';
+        const isRxType = !isTxType;
+        // Prefer events in the correct half, but allow cross-half if nothing else matches
+        const halfMismatch = (inUpperHalf && isRxType) || (!inUpperHalf && isTxType);
 
         let dist;
         if (ev.type === 'tx' || ev.type === 'rx' || ev.type === 'drop_halfduplex') {
@@ -1083,6 +1289,9 @@ function findEventAt(mx, my) {
             dist = Math.abs(ev.time_ms - ms);
             if (dist > tolerance) continue;
         }
+
+        // Penalize events in wrong lane half so correct-half events win
+        if (halfMismatch) dist += tolerance * 2;
 
         if (dist < bestDist) {
             bestDist = dist;
@@ -1216,7 +1425,7 @@ function resolveHash(hash, pkMap) {
 // ── Trace mode ─────────────────────────────────────────────────
 async function tracePkt(pkt) {
     S.tracePkt = pkt;
-    const data = await fetchJSON(`/api/sims/${SIM_ID}/deep_trace/${pkt}`);
+    const data = await fetchJSON(`${API_PREFIX}/deep_trace/${pkt}`);
     S.deepTrace = data;  // {root_pkt, hops: [{pkt, events, relay_from?}]}
 
     // Collect all events across all hops for canvas highlight
@@ -1292,8 +1501,7 @@ async function jumpToEvent(nodeName, timeMs) {
     const span = S.viewTo - S.viewFrom;
     S.viewFrom = timeMs - span * 0.3;
     S.viewTo = S.viewFrom + span;
-    if (S.viewFrom < S.meta.time_min) { S.viewFrom = S.meta.time_min; S.viewTo = S.viewFrom + span; }
-    if (S.viewTo > S.meta.time_max) { S.viewTo = S.meta.time_max; S.viewFrom = S.viewTo - span; }
+    clampViewport();
 
     await loadViewport();
     render();
@@ -1665,7 +1873,7 @@ function showNodeDetail(name) {
 }
 
 async function findMsgTx(node, afterMs) {
-    const data = await fetchJSON(`/api/sims/${SIM_ID}/msg_tx/${node}?after=${afterMs}`);
+    const data = await fetchJSON(`${API_PREFIX}/msg_tx/${node}?after=${afterMs}`);
     if (data.tx) {
         await tracePkt(data.tx.pkt);
         // Jump viewport to the TX time
@@ -1740,9 +1948,7 @@ timeSlider.addEventListener('input', async () => {
     const center = S.meta.time_min + fraction * totalSpan;
     S.viewFrom = center - viewSpan / 2;
     S.viewTo = center + viewSpan / 2;
-    // Clamp
-    if (S.viewFrom < S.meta.time_min) { S.viewFrom = S.meta.time_min; S.viewTo = S.viewFrom + viewSpan; }
-    if (S.viewTo > S.meta.time_max) { S.viewTo = S.meta.time_max; S.viewFrom = S.viewTo - viewSpan; }
+    clampViewport();
     await loadViewport();
     render();
 });
@@ -1761,11 +1967,10 @@ document.getElementById('btn-zoom-in').addEventListener('click', async () => {
 document.getElementById('btn-zoom-out').addEventListener('click', async () => {
     const center = (S.viewFrom + S.viewTo) / 2;
     const totalSpan = S.meta.time_max - S.meta.time_min;
-    const newSpan = Math.min(totalSpan, (S.viewTo - S.viewFrom) * 2);
+    const newSpan = Math.min(totalSpan || 10000, (S.viewTo - S.viewFrom) * 2);
     S.viewFrom = center - newSpan / 2;
     S.viewTo = center + newSpan / 2;
-    if (S.viewFrom < S.meta.time_min) { S.viewFrom = S.meta.time_min; S.viewTo = S.viewFrom + newSpan; }
-    if (S.viewTo > S.meta.time_max) { S.viewTo = S.meta.time_max; S.viewFrom = S.viewTo - newSpan; }
+    clampViewport();
     await loadViewport();
     render();
 });
@@ -1785,12 +1990,14 @@ document.addEventListener('keydown', async (e) => {
         const shift = span * 0.2;
         S.viewFrom += shift;
         S.viewTo += shift;
+        clampViewport();
         await loadViewport();
         render();
     } else if (e.key === 'ArrowLeft') {
         const shift = span * 0.2;
         S.viewFrom -= shift;
         S.viewTo -= shift;
+        clampViewport();
         await loadViewport();
         render();
     } else if (e.key === 't') {
@@ -1805,6 +2012,17 @@ document.addEventListener('keydown', async (e) => {
 });
 
 // ── Init ───────────────────────────────────────────────────────
+
+// Iframe/interactive mode: simplify toolbar
+if (IS_IFRAME || INTERACTIVE_ID) {
+    // Hide back link
+    const backLink = document.querySelector('#toolbar a');
+    if (backLink) backLink.style.display = 'none';
+}
+if (INTERACTIVE_ID) {
+    document.getElementById('follow-indicator').style.display = '';
+}
+
 init();
 </script>
 </body>

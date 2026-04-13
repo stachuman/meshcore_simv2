@@ -103,6 +103,25 @@ StepResult SimController::runToNextCommand() {
     return result;
 }
 
+StepResult SimController::runToNextEvent() {
+    StepResult result;
+    result.start_ms = _current_ms;
+    size_t events_before = _event_buffer.size();
+
+    while (_current_ms < _orch.durationMs()) {
+        _current_ms = _orch.executeStep(_current_ms);
+        // Stop as soon as any event is generated
+        if (_event_buffer.size() > events_before) {
+            break;
+        }
+    }
+
+    result.end_ms = _current_ms;
+    result.events_generated = (int)(_event_buffer.size() - events_before);
+    result.finished = isFinished();
+    return result;
+}
+
 // ---------------------------------------------------------------------------
 // queryNodes()
 // ---------------------------------------------------------------------------

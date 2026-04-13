@@ -32,10 +32,11 @@ RUN strip --strip-all /usr/local/bin/orchestrator \
 # Webapp source (no __pycache__ — excluded by .dockerignore)
 COPY webapp/server/ ./server/
 COPY webapp/static/ ./static/
+COPY topology_generator/ ./topology_generator/
 
 # Non-root user for runtime
 RUN useradd --system --no-create-home app \
-    && mkdir -p data/simulations data/configs data/topologies data/sweeps \
+    && mkdir -p data/simulations data/configs data/topologies data/sweeps data/generators \
     && chown -R app:app /app
 USER app
 

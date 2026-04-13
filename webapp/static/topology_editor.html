@@ -10,42 +10,9 @@
 <style>
   .te-layout {
     display: flex;
+    flex-direction: column;
     height: calc(100vh - 44px);
     overflow: hidden;
-  }
-
-  /* Sidebar */
-  .te-sidebar {
-    width: 240px;
-    background: var(--bg-secondary);
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0;
-    overflow-y: auto;
-  }
-  .te-sidebar .section {
-    padding: 12px;
-    border-bottom: 1px solid var(--border);
-  }
-  .te-sidebar .section h3 {
-    font-size: 11px; color: var(--text-muted); text-transform: uppercase;
-    letter-spacing: 0.5px; margin-bottom: 8px;
-  }
-  .te-sidebar .btn { width: 100%; justify-content: center; margin-bottom: 6px; }
-  .te-sidebar .btn:last-child { margin-bottom: 0; }
-
-  .radio-row {
-    display: flex; align-items: center; gap: 6px; margin-bottom: 6px;
-  }
-  .radio-row label {
-    font-size: 10px; color: var(--text-dim); min-width: 28px;
-  }
-  .radio-row select { flex: 1; }
-
-  /* Main area -- splits into tables + map */
-  .te-main {
-    flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden;
   }
 
   .te-toolbar {
@@ -64,76 +31,209 @@
   .te-toolbar .btn-danger { color: var(--error); border-color: var(--error); }
   .te-toolbar .btn-danger:hover { background: #fee2e2; }
 
-  /* Split: tables left, map right */
+  /* Split: panel left, map right */
   .te-split {
     flex: 1; display: flex; overflow: hidden;
   }
-  .te-tables {
-    flex: 1; overflow-y: auto; padding: 16px; min-width: 0;
-  }
-  .te-map-panel {
-    width: 420px; flex-shrink: 0;
-    border-left: 1px solid var(--border);
-    display: flex; flex-direction: column;
-    background: var(--bg-primary);
-  }
-  .te-map-panel .map-header {
-    display: flex; align-items: center; gap: 8px;
-    padding: 8px 12px;
-    background: var(--bg-secondary); border-bottom: 1px solid var(--border);
-  }
-  .te-map-panel .map-header h3 {
-    font-size: 11px; color: var(--text-muted); text-transform: uppercase;
-    letter-spacing: 0.5px; margin: 0; flex: 1;
-  }
-  .te-map-panel .map-header label {
-    font-size: 10px; color: var(--text-muted); display: flex; align-items: center; gap: 4px; cursor: pointer;
-  }
-  .link-label { background: none !important; border: none !important; box-shadow: none !important; font-size: 10px; color: #4b5563; font-family: var(--font-mono); white-space: nowrap; }
-  #map-preview {
-    flex: 1; min-height: 0;
-  }
-  .leaflet-container { background: #f5f5f8 !important; }
 
-  /* Tables */
-  .edit-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 16px; }
-  .edit-table th {
-    text-align: left; padding: 6px 8px; color: var(--text-muted);
-    border-bottom: 1px solid var(--border); font-weight: 600; font-size: 11px;
+  /* Left panel */
+  .te-panel {
+    width: 380px; flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    background: var(--bg-secondary);
   }
-  .edit-table td {
-    padding: 4px 6px; border-bottom: 1px solid var(--border-light);
+
+  .panel-header {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
   }
-  .edit-table input, .edit-table select {
-    background: var(--bg-input); color: var(--text); border: 1px solid var(--border);
+  .panel-header input {
+    flex: 1; min-width: 0;
+    background: var(--bg-input); color: var(--text);
+    border: 1px solid var(--border-light);
+    padding: 4px 8px; font-size: 11px; font-family: var(--font-mono);
+    border-radius: var(--radius);
+  }
+  .panel-header input:focus { outline: none; border-color: var(--accent); }
+  .panel-header .icon-btn {
+    background: none; border: 1px solid var(--border-light);
+    border-radius: var(--radius); cursor: pointer;
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; color: var(--text-muted); flex-shrink: 0;
+  }
+  .panel-header .icon-btn:hover { border-color: var(--accent); color: var(--text); }
+
+  /* Node list */
+  .node-list {
+    flex: 1; overflow-y: auto; min-height: 80px;
+  }
+  .node-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 10px; cursor: pointer;
+    border-bottom: 1px solid var(--border-light);
+    font-size: 12px;
+  }
+  .node-item:hover { background: rgba(37,99,235,0.06); }
+  .node-item.selected { background: rgba(37,99,235,0.10); border-left: 3px solid var(--accent); padding-left: 7px; }
+  .node-item .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .node-item .name { flex: 1; font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .node-item .meta { font-size: 10px; color: var(--text-muted); white-space: nowrap; }
+
+  /* Detail section */
+  .node-detail {
+    border-top: 1px solid var(--border);
+    overflow-y: auto;
+    flex-shrink: 0;
+    max-height: 55%;
+  }
+  .detail-section {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border-light);
+  }
+  .detail-section:last-child { border-bottom: none; }
+  .detail-section h4 {
+    font-size: 10px; color: var(--text-muted); text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 6px; font-weight: 600;
+  }
+  .detail-field {
+    display: flex; align-items: center; gap: 6px; margin-bottom: 4px;
+  }
+  .detail-field label {
+    font-size: 10px; color: var(--text-dim); min-width: 52px; flex-shrink: 0;
+  }
+  .detail-field input, .detail-field select {
+    flex: 1; min-width: 0;
+    background: var(--bg-input); color: var(--text);
+    border: 1px solid var(--border-light);
     padding: 3px 6px; font-size: 11px; font-family: var(--font-mono);
-    border-radius: var(--radius); width: 100%;
+    border-radius: var(--radius);
   }
-  .edit-table input:focus, .edit-table select:focus {
+  .detail-field input:focus, .detail-field select:focus {
     outline: none; border-color: var(--accent);
   }
-  .edit-table .num-input { width: 70px; }
-  .edit-table .name-col { width: 120px; }
-  .edit-table .del-btn {
-    background: none; border: none; color: var(--error); cursor: pointer;
-    font-size: 14px; padding: 2px 6px;
-  }
-  .edit-table .del-btn:hover { color: #ef4444; }
-  .edit-table tr:hover td { background: rgba(37,99,235,0.06); }
 
-  .add-row-btn {
-    display: inline-flex; align-items: center; gap: 4px;
-    background: none; border: 1px dashed var(--border); color: var(--text-muted);
-    padding: 4px 12px; font-size: 11px; font-family: var(--font-mono);
-    border-radius: var(--radius); cursor: pointer; margin-bottom: 16px;
+  /* Link rows in detail */
+  .link-row {
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 0; border-bottom: 1px solid var(--border-light);
+    font-size: 11px; cursor: pointer;
+    border-radius: var(--radius);
   }
-  .add-row-btn:hover { border-color: var(--accent); color: var(--text); }
+  .link-row:hover { background: rgba(37,99,235,0.06); }
+  .link-row:last-child { border-bottom: none; }
+  .link-row .peer-name {
+    flex: 1; font-family: var(--font-mono); cursor: pointer; color: var(--accent);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .link-row .peer-name:hover { text-decoration: underline; }
+  .link-row .snr-val { width: 55px; text-align: right; font-family: var(--font-mono); }
+  .link-row .loss-val { width: 45px; text-align: right; color: var(--text-muted); font-family: var(--font-mono); }
+  .link-row .edit-hint {
+    font-size: 10px; color: var(--text-dim); flex-shrink: 0;
+    opacity: 0; transition: opacity 0.15s;
+  }
+  .link-row:hover .edit-hint { opacity: 1; }
+  .link-row .del-btn {
+    background: none; border: none; color: var(--error); cursor: pointer;
+    font-size: 14px; padding: 0 4px; flex-shrink: 0;
+  }
+  .link-row .del-btn:hover { color: #ef4444; }
+
+  /* Expanded link edit */
+  .link-expanded {
+    padding: 8px; margin: 2px 0;
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+    background: rgba(37,99,235,0.03);
+  }
+  .link-expanded .link-exp-header {
+    display: flex; align-items: center; gap: 6px; margin-bottom: 6px; font-size: 11px;
+  }
+  .link-expanded .link-exp-header .peer-name {
+    flex: 1; font-family: var(--font-mono); cursor: pointer; color: var(--accent);
+  }
+  .link-expanded .link-exp-header .peer-name:hover { text-decoration: underline; }
+  .link-expanded .link-exp-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; }
+  .link-expanded .link-exp-fields .detail-field { margin-bottom: 0; }
+  .link-expanded .link-exp-actions {
+    display: flex; gap: 6px; justify-content: flex-end; margin-top: 8px;
+  }
+
+  .add-link-row {
+    display: flex; align-items: center; gap: 6px; padding: 6px 0;
+  }
+  .add-link-row select {
+    flex: 1; min-width: 0;
+    background: var(--bg-input); color: var(--text);
+    border: 1px solid var(--border-light);
+    padding: 3px 6px; font-size: 11px; font-family: var(--font-mono);
+    border-radius: var(--radius);
+  }
+
+  /* Panel footer */
+  .panel-footer {
+    padding: 8px 12px;
+    border-top: 1px solid var(--border);
+    font-size: 10px; color: var(--text-muted);
+    flex-shrink: 0;
+    display: flex; justify-content: space-between;
+  }
+
+  /* Map */
+  .te-map {
+    flex: 1; display: flex; flex-direction: column;
+    min-width: 0; background: var(--bg-primary);
+  }
+  .te-map .map-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 12px;
+    background: var(--bg-secondary); border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .te-map .map-header label {
+    font-size: 10px; color: var(--text-muted); display: flex;
+    align-items: center; gap: 4px; cursor: pointer;
+  }
+  #map-preview { flex: 1; min-height: 0; }
+  .leaflet-container { background: #f5f5f8 !important; }
+  .link-label { background: none !important; border: none !important; box-shadow: none !important; font-size: 10px; color: #4b5563; font-family: var(--font-mono); white-space: nowrap; }
 
   /* Status */
   #te-status {
     padding: 8px 12px; font-size: 11px; background: var(--bg-secondary);
     border-top: 1px solid var(--border); flex-shrink: 0;
   }
+
+  /* Settings popover */
+  .settings-popover {
+    position: absolute; top: 100%; right: 0;
+    width: 300px; z-index: 200;
+    background: var(--bg-secondary); border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+    padding: 12px;
+  }
+  .settings-popover .section { margin-bottom: 12px; }
+  .settings-popover .section:last-child { margin-bottom: 0; }
+  .settings-popover .section h4 {
+    font-size: 10px; color: var(--text-muted); text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 6px; font-weight: 600;
+  }
+  .settings-popover .radio-row {
+    display: flex; align-items: center; gap: 6px; margin-bottom: 4px;
+  }
+  .settings-popover .radio-row label {
+    font-size: 10px; color: var(--text-dim); min-width: 28px;
+  }
+  .settings-popover .radio-row select,
+  .settings-popover .radio-row input { flex: 1; font-size: 11px; }
+  .settings-popover .btn { width: 100%; justify-content: center; margin-bottom: 4px; }
+  .settings-popover .btn:last-child { margin-bottom: 0; }
+  .settings-anchor { position: relative; }
 
   /* Generate grid modal */
   .modal-overlay {
@@ -160,158 +260,83 @@
     <li><a href="/static/simulations.html">Simulations</a></li>
     <li><a href="/static/topologies.html" class="active">Topologies</a></li>
     <li><a href="/static/scenarios.html">Scenarios</a></li>
-    <li><a href="/static/sweep.html">Sweeps</a></li>
   </ul>
   <span class="spacer"></span>
 </nav>
 
 <div class="te-layout">
-  <!-- Sidebar -->
-  <div class="te-sidebar">
-    <div class="section">
-      <h3>Create / Import</h3>
-      <label class="btn btn-sm" for="import-file" style="cursor:pointer">Import Real Network</label>
-      <input type="file" id="import-file" accept=".json" style="display:none">
-      <button class="btn btn-sm" id="btn-gen-grid">Generate Grid</button>
-      <button class="btn btn-sm" id="btn-from-config">From Config</button>
-    </div>
-
-    <div class="section">
-      <h3>Radio Defaults</h3>
-      <div class="radio-row">
-        <label>SF</label>
-        <select id="radio-sf" class="form-select">
-          <option value="6">6</option>
-          <option value="7">7</option>
-          <option value="8">8</option>
-          <option value="9">9</option>
-          <option value="10">10</option>
-          <option value="11">11</option>
-          <option value="12" selected>12</option>
-        </select>
-      </div>
-      <div class="radio-row">
-        <label>BW</label>
-        <select id="radio-bw" class="form-select">
-          <option value="31250">31.25 kHz</option>
-          <option value="41700">41.7 kHz</option>
-          <option value="62500">62.5 kHz</option>
-          <option value="125000" selected>125 kHz</option>
-          <option value="250000">250 kHz</option>
-          <option value="500000">500 kHz</option>
-        </select>
-      </div>
-      <div class="radio-row">
-        <label>CR</label>
-        <select id="radio-cr" class="form-select">
-          <option value="1" selected>4/5</option>
-          <option value="2">4/6</option>
-          <option value="3">4/7</option>
-          <option value="4">4/8</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="section">
-      <h3>Coordinate Origin</h3>
-      <div class="radio-row">
-        <label>Lat</label>
-        <input id="origin-lat" class="form-input" type="number" step="any" value="54.35" style="flex:1;">
-      </div>
-      <div class="radio-row">
-        <label>Lon</label>
-        <input id="origin-lon" class="form-input" type="number" step="any" value="18.65" style="flex:1;">
-      </div>
-    </div>
-
-    <div class="section" style="flex:1;">
-      <h3>Info</h3>
-      <div id="sidebar-info" style="font-size:11px; color:var(--text-muted);">
-        <div>Nodes: <span id="info-nodes">0</span></div>
-        <div>Links: <span id="info-links">0</span></div>
-        <div>Has geo: <span id="info-geo">No</span></div>
-      </div>
-    </div>
+  <div class="te-toolbar">
+    <input id="topo-name" class="form-input name-input" type="text" placeholder="Topology name...">
+    <input id="topo-desc" class="form-input desc-input" type="text" placeholder="Description (optional)">
+    <button class="btn btn-success" id="btn-save">Save</button>
+    <div class="toolbar-gap"></div>
+    <button class="btn btn-sm" id="btn-save-copy" title="Save as new topology" disabled>Save Copy</button>
+    <button class="btn btn-sm" id="btn-download" title="Download as JSON">Download</button>
+    <button class="btn btn-sm btn-danger" id="btn-delete" title="Delete topology" style="display:none">Delete</button>
   </div>
 
-  <!-- Main -->
-  <div class="te-main">
-    <div class="te-toolbar">
-      <input id="topo-name" class="form-input name-input" type="text" placeholder="Topology name...">
-      <input id="topo-desc" class="form-input desc-input" type="text" placeholder="Description (optional)">
-      <button class="btn btn-success" id="btn-save">Save</button>
-      <div class="toolbar-gap"></div>
-      <button class="btn btn-sm" id="btn-save-copy" title="Save as new topology" disabled>Save Copy</button>
-      <button class="btn btn-sm" id="btn-download" title="Download as JSON">Download</button>
-      <button class="btn btn-sm btn-danger" id="btn-delete" title="Delete topology" style="display:none">Delete</button>
-    </div>
-
-    <div class="te-split">
-      <!-- Left: tables -->
-      <div class="te-tables">
-        <h3>Nodes</h3>
-        <table class="edit-table" id="nodes-table">
-          <thead>
-            <tr>
-              <th class="name-col">Name</th>
-              <th>Role</th>
-              <th>Contact</th>
-              <th>Lat</th>
-              <th>Lon</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="nodes-tbody"></tbody>
-        </table>
-        <button class="add-row-btn" id="btn-add-node">+ Add Node</button>
-
-        <h3>Links</h3>
-        <table class="edit-table" id="links-table">
-          <thead>
-            <tr>
-              <th>From</th>
-              <th>To</th>
-              <th>SNR</th>
-              <th>RSSI</th>
-              <th>Loss</th>
-              <th>SNR StdDev</th>
-              <th>Bidir</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="links-tbody"></tbody>
-        </table>
-        <button class="add-row-btn" id="btn-add-link">+ Add Link</button>
-      </div>
-
-      <!-- Right: map preview (always visible) -->
-      <div class="te-map-panel">
-        <div class="map-header">
-          <h3>Topology Preview</h3>
-          <label><input type="checkbox" id="map-labels"> Labels</label>
+  <div class="te-split">
+    <!-- Left panel: list + detail -->
+    <div class="te-panel">
+      <div class="panel-header">
+        <input id="node-search" type="text" placeholder="Search nodes...">
+        <button class="icon-btn" id="btn-add-node" title="Add node">+</button>
+        <div class="settings-anchor">
+          <button class="icon-btn" id="btn-settings" title="Settings">&#9881;</button>
         </div>
-        <div id="map-preview" style="width:100%;height:100%"></div>
+      </div>
+
+      <div class="node-list" id="node-list"></div>
+
+      <div class="node-detail" id="node-detail" style="display:none">
+        <div class="detail-section" id="detail-props"></div>
+        <div class="detail-section" id="detail-links"></div>
+      </div>
+
+      <div class="panel-footer" id="panel-footer">
+        <span id="footer-stats">Nodes: 0  Links: 0</span>
+        <span id="footer-radio"></span>
       </div>
     </div>
 
-    <div id="te-status">Ready</div>
+    <!-- Map (fills remaining space) -->
+    <div class="te-map">
+      <div class="map-header">
+        <label><input type="checkbox" id="map-labels"> Labels</label>
+        <label><input type="checkbox" id="map-snr-colors" checked> SNR colors</label>
+      </div>
+      <div id="map-preview"></div>
+    </div>
   </div>
+
+  <div id="te-status">Ready</div>
 </div>
 
 <div id="modal-container" style="display:none"></div>
+<input type="file" id="import-file" accept=".json" style="display:none">
 
 <script src="/static/js/api.js"></script>
 <script>
 (function() {
   let topoId = new URLSearchParams(window.location.search).get('id');
   let leafletMap = null;
-  let mapMarkers = [];
-  let mapLines = [];
+  let canvasRenderer = null;
+  let markerGroup = null;
+  let lineGroup = null;
+  let labelGroup = null;
 
   // -- Node/Link data ------------------------------------------------
   let nodes = [];
   let links = [];
   let isDirty = false;
+
+  // -- Selection state -----------------------------------------------
+  let selectedNodeIdx = null;
+  let searchFilter = '';
+  let expandedLinkIdx = null;  // index into links[] for expanded edit
+
+  // -- Settings popover state ----------------------------------------
+  let settingsOpen = false;
 
   function markDirty() {
     isDirty = true;
@@ -333,6 +358,11 @@
       e.preventDefault();
       document.getElementById('btn-save').click();
     }
+    // Escape deselects
+    if (e.key === 'Escape') {
+      if (settingsOpen) closeSettings();
+      else deselectNode();
+    }
   });
 
   // -- Unsaved changes guard ----------------------------------------
@@ -341,284 +371,677 @@
   });
 
   function getNodeNames() {
-    return nodes.map(n => n.name).filter(Boolean);
+    return nodes.map(n => n.name).filter(Boolean).sort((a, b) => a.localeCompare(b));
   }
 
-  // -- Render nodes table --------------------------------------------
-  function renderNodes() {
-    const tbody = document.getElementById('nodes-tbody');
-    tbody.innerHTML = '';
-    nodes.forEach((node, idx) => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><input class="name-col" data-idx="${idx}" data-field="name" value="${esc(node.name || '')}"></td>
-        <td><select data-idx="${idx}" data-field="role">
-          <option value="repeater"${node.role === 'repeater' ? ' selected' : ''}>repeater</option>
-          <option value="companion"${node.role === 'companion' ? ' selected' : ''}>companion</option>
-        </select></td>
-        <td><input data-idx="${idx}" data-field="contact" value="${esc(node.contact || '')}"></td>
-        <td><input class="num-input" data-idx="${idx}" data-field="lat" type="number" step="any" value="${node.lat ?? ''}"></td>
-        <td><input class="num-input" data-idx="${idx}" data-field="lon" type="number" step="any" value="${node.lon ?? ''}"></td>
-        <td><button class="del-btn" data-idx="${idx}" title="Remove node">&times;</button></td>
-      `;
-      tbody.appendChild(tr);
-    });
+  // -- Debounced map update ------------------------------------------
+  let _mapTimer = null;
+  function debouncedMapUpdate() {
+    if (_mapTimer) clearTimeout(_mapTimer);
+    _mapTimer = setTimeout(updateMap, 200);
+  }
 
-    // Bind events
-    tbody.querySelectorAll('input, select').forEach(el => {
+  // -- Selection functions -------------------------------------------
+  function selectNode(idx) {
+    if (idx < 0 || idx >= nodes.length) return;
+    selectedNodeIdx = idx;
+    expandedLinkIdx = null;
+    renderNodeList();
+    renderDetail();
+    highlightOnMap();
+    scrollNodeListToSelected();
+  }
+
+  function deselectNode() {
+    if (selectedNodeIdx === null) return;
+    selectedNodeIdx = null;
+    expandedLinkIdx = null;
+    renderNodeList();
+    renderDetail();
+    highlightOnMap();
+  }
+
+  function scrollNodeListToSelected() {
+    if (selectedNodeIdx === null) return;
+    const container = document.getElementById('node-list');
+    const items = container.querySelectorAll('.node-item');
+    // Find the item with matching index
+    for (const item of items) {
+      if (parseInt(item.dataset.idx) === selectedNodeIdx) {
+        item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        break;
+      }
+    }
+  }
+
+  // -- Node list rendering -------------------------------------------
+  function renderNodeList() {
+    const container = document.getElementById('node-list');
+    container.innerHTML = '';
+
+    // Build link count per node
+    const linkCount = {};
+    for (const l of links) {
+      linkCount[l.from] = (linkCount[l.from] || 0) + 1;
+      linkCount[l.to] = (linkCount[l.to] || 0) + 1;
+    }
+
+    const filter = searchFilter.toLowerCase();
+
+    // Build sorted index array for display
+    const sortedIndices = nodes.map((_, i) => i);
+    sortedIndices.sort((a, b) => (nodes[a].name || '').localeCompare(nodes[b].name || ''));
+
+    for (const idx of sortedIndices) {
+      const node = nodes[idx];
+      if (filter && !node.name.toLowerCase().includes(filter)) continue;
+
+      const div = document.createElement('div');
+      div.className = 'node-item' + (idx === selectedNodeIdx ? ' selected' : '');
+      div.dataset.idx = idx;
+      const color = node.role === 'companion' ? '#16a34a' : '#2563eb';
+      const count = linkCount[node.name] || 0;
+
+      div.innerHTML =
+        '<span class="dot" style="background:' + color + '"></span>' +
+        '<span class="name">' + esc(node.name) + '</span>' +
+        '<span class="meta">' + node.role + '</span>' +
+        '<span class="meta">' + count + ' lnk</span>';
+      div.addEventListener('click', () => selectNode(idx));
+      container.appendChild(div);
+    }
+
+    updateFooter();
+  }
+
+  // -- Detail panel rendering ----------------------------------------
+  function renderDetail() {
+    const panel = document.getElementById('node-detail');
+    const propsDiv = document.getElementById('detail-props');
+    const linksDiv = document.getElementById('detail-links');
+
+    if (selectedNodeIdx === null || selectedNodeIdx >= nodes.length) {
+      panel.style.display = 'none';
+      return;
+    }
+    panel.style.display = '';
+
+    const node = nodes[selectedNodeIdx];
+
+    // --- Node properties ---
+    propsDiv.innerHTML =
+      '<h4>Selected: ' + esc(node.name) + '</h4>' +
+      '<div class="detail-field">' +
+        '<label>Name</label>' +
+        '<input id="det-name" value="' + esc(node.name || '') + '">' +
+      '</div>' +
+      '<div class="detail-field">' +
+        '<label>Role</label>' +
+        '<select id="det-role">' +
+          '<option value="repeater"' + (node.role === 'repeater' ? ' selected' : '') + '>repeater</option>' +
+          '<option value="companion"' + (node.role === 'companion' ? ' selected' : '') + '>companion</option>' +
+        '</select>' +
+      '</div>' +
+      '<div class="detail-field">' +
+        '<label>Lat</label>' +
+        '<input id="det-lat" type="number" step="any" value="' + (node.lat ?? '') + '">' +
+      '</div>' +
+      '<div class="detail-field">' +
+        '<label>Lon</label>' +
+        '<input id="det-lon" type="number" step="any" value="' + (node.lon ?? '') + '">' +
+      '</div>' +
+      '<div class="detail-field">' +
+        '<label>Contact</label>' +
+        '<input id="det-contact" value="' + esc(node.contact || '') + '">' +
+      '</div>' +
+      '<div style="margin-top:8px">' +
+        '<button class="btn btn-sm btn-danger" id="det-delete-node">Delete Node</button>' +
+      '</div>';
+
+    // Bind property change events
+    const bindField = (id, field, parser) => {
+      const el = propsDiv.querySelector('#' + id);
+      if (!el) return;
       el.addEventListener('change', () => {
-        const idx = parseInt(el.dataset.idx);
-        const field = el.dataset.field;
+        const idx = selectedNodeIdx;
+        if (idx === null) return;
         let val = el.value;
-        if (['lat', 'lon'].includes(field)) {
-          val = val === '' ? undefined : parseFloat(val);
-        }
+        if (parser) val = parser(val);
+        const oldVal = nodes[idx][field];
         nodes[idx][field] = val;
-        if (field === 'name') { renderLinks(); }
-        markDirty();
-        updateInfo();
-        updateMap();
-      });
-    });
-    tbody.querySelectorAll('.del-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        nodes.splice(parseInt(btn.dataset.idx), 1);
-        markDirty();
-        renderNodes();
-        renderLinks();
-        updateInfo();
-        updateMap();
-      });
-    });
-
-    updateInfo();
-  }
-
-  // -- Render links table --------------------------------------------
-  function renderLinks() {
-    const tbody = document.getElementById('links-tbody');
-    tbody.innerHTML = '';
-    const names = getNodeNames();
-
-    links.forEach((link, idx) => {
-      const tr = document.createElement('tr');
-      const fromOpts = names.map(n => `<option value="${esc(n)}"${link.from === n ? ' selected' : ''}>${esc(n)}</option>`).join('');
-      const toOpts = names.map(n => `<option value="${esc(n)}"${link.to === n ? ' selected' : ''}>${esc(n)}</option>`).join('');
-
-      tr.innerHTML = `
-        <td><select data-idx="${idx}" data-field="from"><option value="">--</option>${fromOpts}</select></td>
-        <td><select data-idx="${idx}" data-field="to"><option value="">--</option>${toOpts}</select></td>
-        <td><input class="num-input" data-idx="${idx}" data-field="snr" type="number" step="any" value="${link.snr ?? 0}"></td>
-        <td><input class="num-input" data-idx="${idx}" data-field="rssi" type="number" step="any" value="${link.rssi ?? -80}"></td>
-        <td><input class="num-input" data-idx="${idx}" data-field="loss" type="number" step="0.01" min="0" max="1" value="${link.loss ?? ''}"></td>
-        <td><input class="num-input" data-idx="${idx}" data-field="snr_std_dev" type="number" step="0.1" value="${link.snr_std_dev ?? ''}"></td>
-        <td><input type="checkbox" data-idx="${idx}" data-field="bidir" ${link.bidir ? 'checked' : ''}></td>
-        <td><button class="del-btn" data-idx="${idx}" title="Remove link">&times;</button></td>
-      `;
-      tbody.appendChild(tr);
-    });
-
-    tbody.querySelectorAll('input, select').forEach(el => {
-      el.addEventListener('change', () => {
-        const idx = parseInt(el.dataset.idx);
-        const field = el.dataset.field;
-        if (field === 'bidir') {
-          links[idx].bidir = el.checked;
-        } else if (['snr', 'rssi', 'loss', 'snr_std_dev'].includes(field)) {
-          links[idx][field] = el.value === '' ? undefined : parseFloat(el.value);
-          // SNR change -> auto-update RSSI
-          if (field === 'snr' && links[idx].snr != null) {
-            links[idx].rssi = rssiFromSnr(links[idx].snr);
-            const rssiInput = tbody.querySelector(`input[data-idx="${idx}"][data-field="rssi"]`);
-            if (rssiInput) rssiInput.value = links[idx].rssi;
-          }
-        } else {
-          links[idx][field] = el.value;
-          // from/to change -> re-estimate link params from distance
-          if (field === 'from' || field === 'to') {
-            const fNode = nodes.find(n => n.name === links[idx].from);
-            const tNode = nodes.find(n => n.name === links[idx].to);
-            const est = fNode && tNode ? estimateLinkParams(fNode, tNode) : null;
-            if (est) {
-              links[idx].snr = est.snr;
-              links[idx].rssi = est.rssi;
-              links[idx].loss = est.loss;
-              renderLinks(); // refresh all cells
-              updateMap();
-              markDirty();
-              return;
-            }
+        if (field === 'name') {
+          // Update link references
+          for (const l of links) {
+            if (l.from === oldVal) l.from = val;
+            if (l.to === oldVal) l.to = val;
           }
         }
         markDirty();
-        updateInfo();
-        updateMap();
+        renderNodeList();
+        if (field === 'name') renderDetail();
+        debouncedMapUpdate();
       });
-    });
-    tbody.querySelectorAll('.del-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        links.splice(parseInt(btn.dataset.idx), 1);
-        markDirty();
-        renderLinks();
-        updateInfo();
-        updateMap();
-      });
-    });
-
-    updateInfo();
-  }
-
-  // -- Info update ---------------------------------------------------
-  function updateInfo() {
-    document.getElementById('info-nodes').textContent = nodes.length;
-    document.getElementById('info-links').textContent = links.length;
-    const hasGeo = nodes.some(n => n.lat != null && n.lon != null);
-    document.getElementById('info-geo').textContent = hasGeo ? 'Yes' : 'No';
-  }
-
-  // -- Origin helpers ------------------------------------------------
-  function getOrigin() {
-    return {
-      lat: parseFloat(document.getElementById('origin-lat').value) || 54.35,
-      lon: parseFloat(document.getElementById('origin-lon').value) || 18.65,
     };
+    bindField('det-name', 'name');
+    bindField('det-role', 'role');
+    bindField('det-lat', 'lat', v => v === '' ? undefined : parseFloat(v));
+    bindField('det-lon', 'lon', v => v === '' ? undefined : parseFloat(v));
+    bindField('det-contact', 'contact');
+
+    propsDiv.querySelector('#det-delete-node').addEventListener('click', () => {
+      if (!confirm('Delete node "' + node.name + '"?')) return;
+      const name = nodes[selectedNodeIdx].name;
+      nodes.splice(selectedNodeIdx, 1);
+      // Remove links referencing this node
+      links = links.filter(l => l.from !== name && l.to !== name);
+      selectedNodeIdx = null;
+      expandedLinkIdx = null;
+      markDirty();
+      renderNodeList();
+      renderDetail();
+      updateMap();
+    });
+
+    // --- Connected links ---
+    const nodeLinks = [];
+    links.forEach((l, li) => {
+      if (l.from === node.name || l.to === node.name) {
+        const peer = l.from === node.name ? l.to : l.from;
+        nodeLinks.push({ link: l, linkIdx: li, peer });
+      }
+    });
+    nodeLinks.sort((a, b) => a.peer.localeCompare(b.peer));
+
+    let linksHtml = '<h4>Links (' + nodeLinks.length + ')</h4>';
+
+    for (const { link, linkIdx, peer } of nodeLinks) {
+      if (expandedLinkIdx === linkIdx) {
+        // Expanded view
+        linksHtml += '<div class="link-expanded" data-lidx="' + linkIdx + '">' +
+          '<div class="link-exp-header">' +
+            '<span class="peer-name" data-peer="' + esc(peer) + '">' + esc(peer) + '</span>' +
+          '</div>' +
+          '<div class="link-exp-fields">' +
+            '<div class="detail-field"><label>SNR</label><input data-lidx="' + linkIdx + '" data-lf="snr" type="number" step="any" value="' + (link.snr ?? 0) + '"></div>' +
+            '<div class="detail-field"><label>RSSI</label><input data-lidx="' + linkIdx + '" data-lf="rssi" type="number" step="any" value="' + (link.rssi ?? -80) + '"></div>' +
+            '<div class="detail-field"><label>Loss</label><input data-lidx="' + linkIdx + '" data-lf="loss" type="number" step="0.01" min="0" max="1" value="' + (link.loss ?? '') + '"></div>' +
+            '<div class="detail-field"><label>StdDev</label><input data-lidx="' + linkIdx + '" data-lf="snr_std_dev" type="number" step="0.1" value="' + (link.snr_std_dev ?? '') + '"></div>' +
+            '<div class="detail-field"><label>Bidir</label><input data-lidx="' + linkIdx + '" data-lf="bidir" type="checkbox"' + (link.bidir ? ' checked' : '') + '></div>' +
+          '</div>' +
+          '<div class="link-exp-actions">' +
+            '<button class="btn btn-sm btn-danger" data-action="delete" data-lidx="' + linkIdx + '">Delete</button>' +
+            '<button class="btn btn-sm" data-action="done" data-lidx="' + linkIdx + '">Done</button>' +
+          '</div>' +
+        '</div>';
+      } else {
+        // Collapsed view — click row to expand into edit mode
+        const snrStr = (link.snr ?? 0).toFixed(1);
+        const lossStr = link.loss != null ? link.loss.toFixed(2) : '0';
+        linksHtml += '<div class="link-row" data-lidx="' + linkIdx + '">' +
+          '<span class="peer-name" data-peer="' + esc(peer) + '">' + esc(peer) + '</span>' +
+          '<span class="snr-val">' + snrStr + ' dB</span>' +
+          '<span class="loss-val">' + lossStr + '</span>' +
+          '<span class="edit-hint">edit</span>' +
+          '<button class="del-btn" data-lidx="' + linkIdx + '" title="Delete link">&times;</button>' +
+        '</div>';
+      }
+    }
+
+    // Add link UI
+    const available = nodes.filter(n => n.name !== node.name && !nodeLinks.some(nl => nl.peer === n.name))
+      .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    if (available.length > 0) {
+      linksHtml += '<div class="add-link-row">' +
+        '<select id="add-link-target">' +
+        available.map(n => '<option value="' + esc(n.name) + '">' + esc(n.name) + '</option>').join('') +
+        '</select>' +
+        '<button class="btn btn-sm" id="btn-add-link-sel">+ Link</button>' +
+      '</div>';
+    } else if (nodes.length > 1) {
+      linksHtml += '<div style="font-size:10px;color:var(--text-dim);padding:4px 0;">All nodes already linked</div>';
+    }
+
+    linksDiv.innerHTML = linksHtml;
+
+    // Bind link events
+    linksDiv.querySelectorAll('.peer-name').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const peerName = el.dataset.peer;
+        const peerIdx = nodes.findIndex(n => n.name === peerName);
+        if (peerIdx >= 0) selectNode(peerIdx);
+      });
+    });
+
+    // Click on collapsed link row to expand
+    linksDiv.querySelectorAll('.link-row').forEach(el => {
+      el.addEventListener('click', (e) => {
+        if (e.target.classList.contains('peer-name') || e.target.classList.contains('del-btn')) return;
+        expandedLinkIdx = parseInt(el.dataset.lidx);
+        renderDetail();
+      });
+    });
+
+    // Expanded link field changes (live update as you type)
+    linksDiv.querySelectorAll('.link-exp-fields input').forEach(el => {
+      el.addEventListener('change', () => {
+        const lidx = parseInt(el.dataset.lidx);
+        const field = el.dataset.lf;
+        if (field === 'bidir') {
+          links[lidx].bidir = el.checked;
+        } else if (['snr', 'rssi', 'loss', 'snr_std_dev'].includes(field)) {
+          links[lidx][field] = el.value === '' ? undefined : parseFloat(el.value);
+          if (field === 'snr' && links[lidx].snr != null) {
+            links[lidx].rssi = rssiFromSnr(links[lidx].snr);
+            const rssiInput = linksDiv.querySelector('input[data-lidx="' + lidx + '"][data-lf="rssi"]');
+            if (rssiInput) rssiInput.value = links[lidx].rssi;
+          }
+        }
+        markDirty();
+        debouncedMapUpdate();
+      });
+    });
+
+    // Expanded action buttons (Done / Delete)
+    linksDiv.querySelectorAll('.link-exp-actions button').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const lidx = parseInt(el.dataset.lidx);
+        const action = el.dataset.action;
+        if (action === 'delete') {
+          links.splice(lidx, 1);
+          expandedLinkIdx = null;
+          markDirty();
+          renderNodeList();
+          renderDetail();
+          updateMap();
+        } else if (action === 'done') {
+          expandedLinkIdx = null;
+          renderDetail();
+        }
+      });
+    });
+
+    // Collapsed row delete buttons
+    linksDiv.querySelectorAll('.link-row .del-btn').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const lidx = parseInt(el.dataset.lidx);
+        links.splice(lidx, 1);
+        expandedLinkIdx = null;
+        markDirty();
+        renderNodeList();
+        renderDetail();
+        updateMap();
+      });
+    });
+
+    // Add link button
+    const addLinkBtn = linksDiv.querySelector('#btn-add-link-sel');
+    if (addLinkBtn) {
+      addLinkBtn.addEventListener('click', () => {
+        const target = linksDiv.querySelector('#add-link-target').value;
+        if (!target) return;
+        const fromNode = node;
+        const toNode = nodes.find(n => n.name === target);
+        const est = fromNode && toNode ? estimateLinkParams(fromNode, toNode) : null;
+        links.push({
+          from: node.name, to: target,
+          snr: est ? est.snr : 5,
+          rssi: est ? est.rssi : rssiFromSnr(5),
+          loss: est ? est.loss : undefined,
+          bidir: true,
+        });
+        markDirty();
+        renderNodeList();
+        renderDetail();
+        updateMap();
+      });
+    }
+  }
+
+  // -- Footer --------------------------------------------------------
+  function updateFooter() {
+    const sf = document.getElementById('radio-sf');
+    const bw = document.getElementById('radio-bw');
+    const cr = document.getElementById('radio-cr');
+    const sfVal = sf ? sf.value : '12';
+    const bwVal = bw ? bw.value : '125000';
+    const crVal = cr ? cr.value : '1';
+    const bwLabel = { '31250': '31.25k', '41700': '41.7k', '62500': '62.5k', '125000': '125k', '250000': '250k', '500000': '500k' }[bwVal] || bwVal;
+    const crLabel = { '1': '4/5', '2': '4/6', '3': '4/7', '4': '4/8' }[crVal] || crVal;
+
+    document.getElementById('footer-stats').textContent = 'Nodes: ' + nodes.length + '  Links: ' + links.length;
+    document.getElementById('footer-radio').textContent = 'SF' + sfVal + ' BW' + bwLabel + ' CR' + crLabel;
+  }
+
+  // -- Settings popover ----------------------------------------------
+  function openSettings() {
+    if (settingsOpen) { closeSettings(); return; }
+    settingsOpen = true;
+    const anchor = document.querySelector('.settings-anchor');
+
+    const pop = document.createElement('div');
+    pop.className = 'settings-popover';
+    pop.id = 'settings-pop';
+    pop.innerHTML =
+      '<div class="section">' +
+        '<h4>Radio Defaults</h4>' +
+        '<div class="radio-row"><label>SF</label><select id="radio-sf" class="form-select">' +
+          '<option value="6">6</option><option value="7">7</option><option value="8">8</option>' +
+          '<option value="9">9</option><option value="10">10</option><option value="11">11</option>' +
+          '<option value="12" selected>12</option></select></div>' +
+        '<div class="radio-row"><label>BW</label><select id="radio-bw" class="form-select">' +
+          '<option value="31250">31.25 kHz</option><option value="41700">41.7 kHz</option>' +
+          '<option value="62500">62.5 kHz</option><option value="125000" selected>125 kHz</option>' +
+          '<option value="250000">250 kHz</option><option value="500000">500 kHz</option></select></div>' +
+        '<div class="radio-row"><label>CR</label><select id="radio-cr" class="form-select">' +
+          '<option value="1" selected>4/5</option><option value="2">4/6</option>' +
+          '<option value="3">4/7</option><option value="4">4/8</option></select></div>' +
+      '</div>' +
+      '<div class="section">' +
+        '<h4>Coordinate Origin</h4>' +
+        '<div class="radio-row"><label>Lat</label><input id="origin-lat" class="form-input" type="number" step="any" value="' + _originLat + '"></div>' +
+        '<div class="radio-row"><label>Lon</label><input id="origin-lon" class="form-input" type="number" step="any" value="' + _originLon + '"></div>' +
+      '</div>' +
+      '<div class="section">' +
+        '<h4>Create / Import</h4>' +
+        '<label class="btn btn-sm" for="import-file" style="cursor:pointer">Import Real Network</label>' +
+        '<button class="btn btn-sm" id="pop-gen-grid">Generate Grid</button>' +
+        '<button class="btn btn-sm" id="pop-from-config">From Config</button>' +
+      '</div>';
+
+    anchor.appendChild(pop);
+
+    // Restore current radio values
+    if (_radioSf) pop.querySelector('#radio-sf').value = _radioSf;
+    if (_radioBw) pop.querySelector('#radio-bw').value = _radioBw;
+    if (_radioCr) pop.querySelector('#radio-cr').value = _radioCr;
+
+    // Bind radio change events
+    pop.querySelectorAll('#radio-sf, #radio-bw, #radio-cr').forEach(el => {
+      el.addEventListener('change', () => {
+        _radioSf = pop.querySelector('#radio-sf').value;
+        _radioBw = pop.querySelector('#radio-bw').value;
+        _radioCr = pop.querySelector('#radio-cr').value;
+        markDirty();
+        updateFooter();
+        if (el.id === 'radio-bw') {
+          links.forEach(l => {
+            if (l.snr != null) l.rssi = rssiFromSnr(l.snr);
+          });
+          renderDetail();
+        }
+      });
+    });
+
+    // Bind origin changes
+    pop.querySelector('#origin-lat').addEventListener('change', (e) => {
+      _originLat = parseFloat(e.target.value) || 54.35;
+      markDirty();
+      if (leafletMap && !nodes.some(n => n.lat != null && n.lon != null)) {
+        leafletMap.setView([_originLat, _originLon], 13);
+      }
+    });
+    pop.querySelector('#origin-lon').addEventListener('change', (e) => {
+      _originLon = parseFloat(e.target.value) || 18.65;
+      markDirty();
+      if (leafletMap && !nodes.some(n => n.lat != null && n.lon != null)) {
+        leafletMap.setView([_originLat, _originLon], 13);
+      }
+    });
+
+    // Bind create/import
+    pop.querySelector('#pop-gen-grid').addEventListener('click', () => { closeSettings(); showGenGridModal(); });
+    pop.querySelector('#pop-from-config').addEventListener('click', () => { closeSettings(); showFromConfigModal(); });
+
+    // Close on outside click (deferred to avoid immediate close)
+    setTimeout(() => {
+      document.addEventListener('click', _settingsOutsideClick);
+    }, 0);
+  }
+
+  function _settingsOutsideClick(e) {
+    const pop = document.getElementById('settings-pop');
+    if (pop && !pop.contains(e.target) && e.target.id !== 'btn-settings') {
+      closeSettings();
+    }
+  }
+
+  function closeSettings() {
+    settingsOpen = false;
+    const pop = document.getElementById('settings-pop');
+    if (pop) pop.remove();
+    document.removeEventListener('click', _settingsOutsideClick);
+  }
+
+  // Radio state stored outside popover so it persists
+  let _radioSf = '12', _radioBw = '125000', _radioCr = '1';
+  let _originLat = 54.35, _originLon = 18.65;
+
+  function getOrigin() {
+    return { lat: _originLat, lon: _originLon };
   }
 
   function setOriginFromCentroid() {
     const geo = nodes.filter(n => n.lat != null && n.lon != null);
     if (!geo.length) return;
-    const lat = geo.reduce((s, n) => s + n.lat, 0) / geo.length;
-    const lon = geo.reduce((s, n) => s + n.lon, 0) / geo.length;
-    document.getElementById('origin-lat').value = parseFloat(lat.toFixed(6));
-    document.getElementById('origin-lon').value = parseFloat(lon.toFixed(6));
+    _originLat = parseFloat((geo.reduce((s, n) => s + n.lat, 0) / geo.length).toFixed(6));
+    _originLon = parseFloat((geo.reduce((s, n) => s + n.lon, 0) / geo.length).toFixed(6));
   }
+
+  document.getElementById('btn-settings').addEventListener('click', (e) => {
+    e.stopPropagation();
+    openSettings();
+  });
 
   // -- Map -----------------------------------------------------------
   function initMap() {
     leafletMap = L.map('map-preview', { zoomControl: true, attributionControl: false });
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(leafletMap);
+    canvasRenderer = L.canvas({ padding: 0.5 });
+    markerGroup = L.featureGroup().addTo(leafletMap);
+    lineGroup = L.featureGroup().addTo(leafletMap);
+    labelGroup = L.featureGroup().addTo(leafletMap);
     const o = getOrigin();
     leafletMap.setView([o.lat, o.lon], 13);
+
+    // Click on map background deselects
+    leafletMap.on('click', () => deselectNode());
+  }
+
+  function snrColor(snr) {
+    if (snr < 0) return '#ef4444';   // red
+    if (snr < 5) return '#f59e0b';   // yellow
+    return '#22c55e';                  // green
   }
 
   function updateMap() {
     if (!leafletMap) initMap();
 
-    // Clear old markers & lines
-    mapMarkers.forEach(m => leafletMap.removeLayer(m));
-    mapLines.forEach(l => leafletMap.removeLayer(l));
-    mapMarkers = [];
-    mapLines = [];
+    markerGroup.clearLayers();
+    lineGroup.clearLayers();
+    labelGroup.clearLayers();
 
     const bounds = L.latLngBounds();
-    const nodePos = {};
+    const showLabels = document.getElementById('map-labels').checked;
+    const showSnrColors = document.getElementById('map-snr-colors').checked;
 
+    // Build node positions for links
+    const nodePos = {};
+    nodes.forEach(n => {
+      if (n.lat != null && n.lon != null) nodePos[n.name] = L.latLng(n.lat, n.lon);
+    });
+
+    // Selected node info for highlighting
+    const selName = selectedNodeIdx !== null && selectedNodeIdx < nodes.length ? nodes[selectedNodeIdx].name : null;
+    const selLinks = new Set();
+    if (selName) {
+      links.forEach((l, i) => {
+        if (l.from === selName || l.to === selName) selLinks.add(i);
+      });
+    }
+
+    // Draw links
+    const linkLabelsLimit = links.length <= 200;
+    links.forEach((link, li) => {
+      const from = nodePos[link.from];
+      const to = nodePos[link.to];
+      if (!from || !to) return;
+
+      const isSelLink = selLinks.has(li);
+      const color = showSnrColors ? snrColor(link.snr ?? 0) : '#9ca3af';
+      const weight = isSelLink ? 3 : (selName ? 1 : 1.5);
+      const opacity = isSelLink ? 0.9 : (selName ? 0.25 : 0.6);
+
+      const line = L.polyline([from, to], {
+        renderer: canvasRenderer,
+        color, weight, opacity,
+      });
+      lineGroup.addLayer(line);
+
+      if (showLabels && linkLabelsLimit) {
+        const mid = L.latLng((from.lat + to.lat) / 2, (from.lng + to.lng) / 2);
+        const snrText = (link.snr ?? 0).toFixed(1) + ' dB';
+        const label = L.marker(mid, {
+          icon: L.divIcon({ className: 'link-label', html: snrText, iconSize: [50, 14], iconAnchor: [25, 7] }),
+          interactive: false,
+        });
+        labelGroup.addLayer(label);
+      }
+    });
+
+    // Draw nodes
     nodes.forEach((node, idx) => {
       if (node.lat == null || node.lon == null) return;
       const ll = L.latLng(node.lat, node.lon);
       bounds.extend(ll);
-      nodePos[node.name] = ll;
-      const color = node.role === 'companion' ? '#16a34a' : '#2563eb';
+
+      const isSelected = idx === selectedNodeIdx;
+      const baseColor = node.role === 'companion' ? '#16a34a' : '#2563eb';
+      const size = isSelected ? 18 : 14;
+      const border = isSelected ? '3px solid #f97316' : '2px solid #374151';
+
       const icon = L.divIcon({
         className: '',
-        html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2px solid #374151;opacity:0.85;"></div>`,
-        iconSize: [14, 14],
-        iconAnchor: [7, 7],
+        html: '<div style="width:' + size + 'px;height:' + size + 'px;border-radius:50%;background:' + baseColor + ';border:' + border + ';opacity:0.85;"></div>',
+        iconSize: [size, size],
+        iconAnchor: [size / 2, size / 2],
       });
-      const marker = L.marker(ll, { icon, draggable: true }).addTo(leafletMap);
-      const showLabels = document.getElementById('map-labels').checked;
+      const marker = L.marker(ll, { icon, draggable: true });
       marker.bindTooltip(node.name || '?', { permanent: showLabels, direction: 'top', offset: [0, -10] });
       marker._nodeIdx = idx;
+
+      marker.on('click', function(e) {
+        L.DomEvent.stopPropagation(e);
+        selectNode(this._nodeIdx);
+      });
+
       marker.on('dragend', function() {
         const pos = this.getLatLng();
         const i = this._nodeIdx;
         nodes[i].lat = parseFloat(pos.lat.toFixed(6));
         nodes[i].lon = parseFloat(pos.lng.toFixed(6));
-        // Update table inputs without full re-render
-        const latInput = document.querySelector(`#nodes-tbody input[data-idx="${i}"][data-field="lat"]`);
-        const lonInput = document.querySelector(`#nodes-tbody input[data-idx="${i}"][data-field="lon"]`);
-        if (latInput) latInput.value = nodes[i].lat;
-        if (lonInput) lonInput.value = nodes[i].lon;
         markDirty();
-        // Redraw links
+        if (selectedNodeIdx === i) renderDetail();
         redrawLinks();
       });
-      mapMarkers.push(marker);
-    });
 
-    // Draw links
-    redrawLinks();
+      markerGroup.addLayer(marker);
+    });
 
     if (bounds.isValid()) {
       leafletMap.fitBounds(bounds, { padding: [30, 30] });
     } else {
-      // No geo nodes -- center on origin
       const o = getOrigin();
       leafletMap.setView([o.lat, o.lon], 13);
     }
   }
 
   function redrawLinks() {
-    mapLines.forEach(l => leafletMap.removeLayer(l));
-    mapLines = [];
+    lineGroup.clearLayers();
+    labelGroup.clearLayers();
+
     const nodePos = {};
     nodes.forEach(n => {
       if (n.lat != null && n.lon != null) nodePos[n.name] = L.latLng(n.lat, n.lon);
     });
+
     const showLabels = document.getElementById('map-labels').checked;
-    for (const link of links) {
+    const showSnrColors = document.getElementById('map-snr-colors').checked;
+    const linkLabelsLimit = links.length <= 200;
+
+    const selName = selectedNodeIdx !== null && selectedNodeIdx < nodes.length ? nodes[selectedNodeIdx].name : null;
+    const selLinks = new Set();
+    if (selName) {
+      links.forEach((l, i) => {
+        if (l.from === selName || l.to === selName) selLinks.add(i);
+      });
+    }
+
+    links.forEach((link, li) => {
       const from = nodePos[link.from];
       const to = nodePos[link.to];
-      if (!from || !to) continue;
+      if (!from || !to) return;
+
+      const isSelLink = selLinks.has(li);
+      const color = showSnrColors ? snrColor(link.snr ?? 0) : '#9ca3af';
+      const weight = isSelLink ? 3 : (selName ? 1 : 1.5);
+      const opacity = isSelLink ? 0.9 : (selName ? 0.25 : 0.6);
+
       const line = L.polyline([from, to], {
-        color: '#9ca3af', weight: 2, opacity: 0.6,
-      }).addTo(leafletMap);
-      if (showLabels) {
+        renderer: canvasRenderer,
+        color, weight, opacity,
+      });
+      lineGroup.addLayer(line);
+
+      if (showLabels && linkLabelsLimit) {
         const mid = L.latLng((from.lat + to.lat) / 2, (from.lng + to.lng) / 2);
-        const snrText = (link.snr ?? 0) + ' dB';
+        const snrText = (link.snr ?? 0).toFixed(1) + ' dB';
         const label = L.marker(mid, {
           icon: L.divIcon({ className: 'link-label', html: snrText, iconSize: [50, 14], iconAnchor: [25, 7] }),
           interactive: false,
-        }).addTo(leafletMap);
-        mapLines.push(label);
+        });
+        labelGroup.addLayer(label);
       }
-      mapLines.push(line);
-    }
+    });
   }
 
-  // -- Add node/link -------------------------------------------------
+  function highlightOnMap() {
+    // Full redraw to update marker styles + link weights
+    updateMap();
+  }
+
+  // -- Search --------------------------------------------------------
+  document.getElementById('node-search').addEventListener('input', (e) => {
+    searchFilter = e.target.value;
+    renderNodeList();
+  });
+
+  // -- Map toggles ---------------------------------------------------
+  document.getElementById('map-labels').addEventListener('change', () => updateMap());
+  document.getElementById('map-snr-colors').addEventListener('change', () => updateMap());
+
+  // -- Add node ------------------------------------------------------
   document.getElementById('btn-add-node').addEventListener('click', () => {
     const idx = nodes.length + 1;
     const name = nodes.length === 0 ? 'R1' : 'R' + idx;
-    const o = getOrigin();
-    nodes.push({
-      name, role: 'repeater',
-      lat: parseFloat((o.lat + (Math.random() - 0.5) * 0.01).toFixed(6)),
-      lon: parseFloat((o.lon + (Math.random() - 0.5) * 0.01).toFixed(6)),
-    });
+    // Place at current map center so it's always visible
+    let lat, lon;
+    if (leafletMap) {
+      const center = leafletMap.getCenter();
+      lat = parseFloat(center.lat.toFixed(6));
+      lon = parseFloat(center.lng.toFixed(6));
+    } else {
+      const o = getOrigin();
+      lat = o.lat;
+      lon = o.lon;
+    }
+    nodes.push({ name, role: 'repeater', lat, lon });
     markDirty();
-    renderNodes();
-    renderLinks();
+    renderNodeList();
     updateMap();
-  });
-
-  document.getElementById('btn-add-link').addEventListener('click', () => {
-    const names = getNodeNames();
-    const fromName = names[0] || '';
-    const toName = names[1] || names[0] || '';
-    const fromNode = nodes.find(n => n.name === fromName);
-    const toNode = nodes.find(n => n.name === toName);
-    const est = fromNode && toNode ? estimateLinkParams(fromNode, toNode) : null;
-    links.push({
-      from: fromName, to: toName,
-      snr: est ? est.snr : 5,
-      rssi: est ? est.rssi : rssiFromSnr(5),
-      loss: est ? est.loss : undefined,
-      bidir: true,
-    });
-    markDirty();
-    renderLinks();
-    updateMap();
+    selectNode(nodes.length - 1);
   });
 
   // -- Save ----------------------------------------------------------
@@ -649,6 +1072,51 @@
     }
   });
 
+  // -- Save Copy ----------------------------------------------------
+  document.getElementById('btn-save-copy').addEventListener('click', async () => {
+    if (!topoId) return;
+    const payload = buildTopoPayload();
+    payload.name = (payload.name || 'Topology') + ' (copy)';
+    document.getElementById('topo-name').value = payload.name;
+
+    try {
+      setStatus('Saving copy...');
+      const result = await postJSON('/api/topologies/', payload);
+      topoId = result.id;
+      history.replaceState(null, '', '?id=' + topoId);
+      markClean();
+      updateToolbarButtons();
+      setStatus('Copy saved (ID: ' + topoId + ')');
+    } catch (err) {
+      setStatus('Save copy failed: ' + err.message, true);
+    }
+  });
+
+  // -- Download -----------------------------------------------------
+  document.getElementById('btn-download').addEventListener('click', () => {
+    const payload = buildTopoPayload();
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = (payload.name || 'topology').replace(/[^a-zA-Z0-9_-]/g, '_') + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  // -- Delete -------------------------------------------------------
+  document.getElementById('btn-delete').addEventListener('click', async () => {
+    if (!topoId) return;
+    if (!confirm('Delete this topology? This cannot be undone.')) return;
+    try {
+      setStatus('Deleting...');
+      await deleteJSON('/api/topologies/' + topoId);
+      window.location.href = '/static/topologies.html';
+    } catch (err) {
+      setStatus('Delete failed: ' + err.message, true);
+    }
+  });
+
   // -- Import real network -------------------------------------------
   document.getElementById('import-file').addEventListener('change', async (e) => {
     const file = e.target.files[0];
@@ -668,9 +1136,10 @@
       setRadioFromConfig(config);
       setOriginFromCentroid();
 
+      selectedNodeIdx = null;
       markDirty();
-      renderNodes();
-      renderLinks();
+      renderNodeList();
+      renderDetail();
       updateMap();
       setStatus('Imported ' + nodes.length + ' nodes, ' + links.length + ' links');
     } catch (err) {
@@ -678,29 +1147,29 @@
     }
   });
 
-  // -- Generate grid -------------------------------------------------
-  document.getElementById('btn-gen-grid').addEventListener('click', () => {
+  // -- Generate grid modal -------------------------------------------
+  function showGenGridModal() {
     const modal = document.getElementById('modal-container');
     modal.style.display = '';
-    modal.innerHTML = `
-      <div class="modal-overlay" onclick="this.parentElement.style.display='none'">
-        <div class="modal-dialog" onclick="event.stopPropagation()">
-          <h3>Generate Grid Topology</h3>
-          <div class="gen-grid">
-            <div><label>Rows</label><input id="gen-rows" class="form-input" type="number" min="1" value="3"></div>
-            <div><label>Cols</label><input id="gen-cols" class="form-input" type="number" min="1" value="3"></div>
-            <div><label>Spacing (km)</label><input id="gen-spacing" class="form-input" type="number" step="0.5" value="5.0"></div>
-            <div><label>SNR (dB)</label><input id="gen-snr" class="form-input" type="number" step="0.5" value="5.0"></div>
-            <div><label>Base Lat</label><input id="gen-lat" class="form-input" type="number" step="any" value="54.35"></div>
-            <div><label>Base Lon</label><input id="gen-lon" class="form-input" type="number" step="any" value="18.65"></div>
-            <div><label>Companions</label><input id="gen-comp" class="form-input" type="number" min="0" value="2"></div>
-          </div>
-          <div class="btn-row">
-            <button class="btn" onclick="this.closest('.modal-overlay').parentElement.style.display='none'">Cancel</button>
-            <button class="btn btn-primary" id="btn-gen-go">Generate</button>
-          </div>
-        </div>
-      </div>`;
+    modal.innerHTML =
+      '<div class="modal-overlay" onclick="this.parentElement.style.display=\'none\'">' +
+        '<div class="modal-dialog" onclick="event.stopPropagation()">' +
+          '<h3>Generate Grid Topology</h3>' +
+          '<div class="gen-grid">' +
+            '<div><label>Rows</label><input id="gen-rows" class="form-input" type="number" min="1" value="3"></div>' +
+            '<div><label>Cols</label><input id="gen-cols" class="form-input" type="number" min="1" value="3"></div>' +
+            '<div><label>Spacing (km)</label><input id="gen-spacing" class="form-input" type="number" step="0.5" value="5.0"></div>' +
+            '<div><label>SNR (dB)</label><input id="gen-snr" class="form-input" type="number" step="0.5" value="5.0"></div>' +
+            '<div><label>Base Lat</label><input id="gen-lat" class="form-input" type="number" step="any" value="' + _originLat + '"></div>' +
+            '<div><label>Base Lon</label><input id="gen-lon" class="form-input" type="number" step="any" value="' + _originLon + '"></div>' +
+            '<div><label>Companions</label><input id="gen-comp" class="form-input" type="number" min="0" value="2"></div>' +
+          '</div>' +
+          '<div class="btn-row">' +
+            '<button class="btn" onclick="this.closest(\'.modal-overlay\').parentElement.style.display=\'none\'">Cancel</button>' +
+            '<button class="btn btn-primary" id="btn-gen-go">Generate</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
 
     document.getElementById('btn-gen-go').addEventListener('click', async () => {
       const body = {
@@ -722,19 +1191,20 @@
         links = (config.topology && config.topology.links) || [];
         setRadioFromConfig(config);
         setOriginFromCentroid();
+        selectedNodeIdx = null;
         markDirty();
-        renderNodes();
-        renderLinks();
+        renderNodeList();
+        renderDetail();
         updateMap();
         setStatus('Generated ' + nodes.length + ' nodes, ' + links.length + ' links');
       } catch (err) {
         setStatus('Generation failed: ' + err.message, true);
       }
     });
-  });
+  }
 
-  // -- From config ---------------------------------------------------
-  document.getElementById('btn-from-config').addEventListener('click', async () => {
+  // -- From config modal ---------------------------------------------
+  async function showFromConfigModal() {
     let configs;
     try {
       configs = await fetchJSON('/api/configs/');
@@ -748,23 +1218,23 @@
     }
 
     const options = configs.map(c =>
-      `<option value="${c.id}">${esc(c.name)} (${c.node_count} nodes)</option>`
+      '<option value="' + c.id + '">' + esc(c.name) + ' (' + c.node_count + ' nodes)</option>'
     ).join('');
 
     const modal = document.getElementById('modal-container');
     modal.style.display = '';
-    modal.innerHTML = `
-      <div class="modal-overlay" onclick="this.parentElement.style.display='none'">
-        <div class="modal-dialog" onclick="event.stopPropagation()">
-          <h3>Import from Config</h3>
-          <label class="form-label">Select config:</label>
-          <select id="cfg-select" class="form-select">${options}</select>
-          <div class="btn-row">
-            <button class="btn" onclick="this.closest('.modal-overlay').parentElement.style.display='none'">Cancel</button>
-            <button class="btn btn-primary" id="btn-cfg-go">Import</button>
-          </div>
-        </div>
-      </div>`;
+    modal.innerHTML =
+      '<div class="modal-overlay" onclick="this.parentElement.style.display=\'none\'">' +
+        '<div class="modal-dialog" onclick="event.stopPropagation()">' +
+          '<h3>Import from Config</h3>' +
+          '<label class="form-label">Select config:</label>' +
+          '<select id="cfg-select" class="form-select">' + options + '</select>' +
+          '<div class="btn-row">' +
+            '<button class="btn" onclick="this.closest(\'.modal-overlay\').parentElement.style.display=\'none\'">Cancel</button>' +
+            '<button class="btn btn-primary" id="btn-cfg-go">Import</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
 
     document.getElementById('btn-cfg-go').addEventListener('click', async () => {
       const cfgId = document.getElementById('cfg-select').value;
@@ -781,22 +1251,23 @@
         if (!document.getElementById('topo-name').value) {
           document.getElementById('topo-name').value = 'Topology from ' + (entry.name || cfgId);
         }
+        selectedNodeIdx = null;
         markDirty();
-        renderNodes();
-        renderLinks();
+        renderNodeList();
+        renderDetail();
         updateMap();
         setStatus('Imported from config: ' + nodes.length + ' nodes, ' + links.length + ' links');
       } catch (err) {
         setStatus('Import failed: ' + err.message, true);
       }
     });
-  });
+  }
 
   // -- Helpers -------------------------------------------------------
-  function esc(s) { return (s || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function esc(s) { return (s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
   function noiseFloorDbm() {
-    const bw = parseInt(document.getElementById('radio-bw').value) || 125000;
+    const bw = parseInt(_radioBw) || 125000;
     return -174 + 10 * Math.log10(bw) + 6; // thermal + NF
   }
 
@@ -847,50 +1318,17 @@
   }
 
   function normalizeCR(cr) {
-    // Convert LoRa-style CR (5-8) to orchestrator-style (1-4) if needed
     if (cr >= 5 && cr <= 8) return cr - 4;
     return cr;
   }
 
   function setRadioFromConfig(config) {
     const radio = config.simulation?.radio || config.radio || {};
-    if (radio.sf) document.getElementById('radio-sf').value = radio.sf;
-    if (radio.bw) document.getElementById('radio-bw').value = radio.bw;
-    if (radio.cr) document.getElementById('radio-cr').value = normalizeCR(radio.cr);
+    if (radio.sf) _radioSf = String(radio.sf);
+    if (radio.bw) _radioBw = String(radio.bw);
+    if (radio.cr) _radioCr = String(normalizeCR(radio.cr));
+    updateFooter();
   }
-
-  // -- Radio defaults change ------------------------------------------
-  document.querySelectorAll('#radio-sf, #radio-bw, #radio-cr').forEach(el => {
-    el.addEventListener('change', () => {
-      markDirty();
-      // BW affects noise floor → RSSI estimates on links
-      if (el.id === 'radio-bw') {
-        links.forEach(l => {
-          if (l.snr != null) l.rssi = rssiFromSnr(l.snr);
-        });
-        renderLinks();
-      }
-    });
-  });
-
-  // -- Map labels toggle ---------------------------------------------
-  document.getElementById('map-labels').addEventListener('change', () => updateMap());
-
-  // -- Origin change -------------------------------------------------
-  document.getElementById('origin-lat').addEventListener('change', () => {
-    markDirty();
-    if (leafletMap && !nodes.some(n => n.lat != null && n.lon != null)) {
-      const o = getOrigin();
-      leafletMap.setView([o.lat, o.lon], 13);
-    }
-  });
-  document.getElementById('origin-lon').addEventListener('change', () => {
-    markDirty();
-    if (leafletMap && !nodes.some(n => n.lat != null && n.lon != null)) {
-      const o = getOrigin();
-      leafletMap.setView([o.lat, o.lon], 13);
-    }
-  });
 
   // -- Toolbar button visibility ------------------------------------
   function updateToolbarButtons() {
@@ -903,9 +1341,9 @@
     const name = document.getElementById('topo-name').value.trim();
     const desc = document.getElementById('topo-desc').value.trim();
     const radio = {
-      sf: parseInt(document.getElementById('radio-sf').value),
-      bw: parseInt(document.getElementById('radio-bw').value),
-      cr: parseInt(document.getElementById('radio-cr').value),
+      sf: parseInt(_radioSf),
+      bw: parseInt(_radioBw),
+      cr: parseInt(_radioCr),
     };
     const cleanNodes = nodes.map(n => {
       const clean = { name: n.name, role: n.role || 'repeater' };
@@ -925,58 +1363,14 @@
     return { name, description: desc, nodes: cleanNodes, links: cleanLinks, radio };
   }
 
-  // -- Save Copy ----------------------------------------------------
-  document.getElementById('btn-save-copy').addEventListener('click', async () => {
-    if (!topoId) return;
-    const payload = buildTopoPayload();
-    payload.name = (payload.name || 'Topology') + ' (copy)';
-    document.getElementById('topo-name').value = payload.name;
-
-    try {
-      setStatus('Saving copy...');
-      const result = await postJSON('/api/topologies/', payload);
-      topoId = result.id;
-      history.replaceState(null, '', '?id=' + topoId);
-      markClean();
-      updateToolbarButtons();
-      setStatus('Copy saved (ID: ' + topoId + ')');
-    } catch (err) {
-      setStatus('Save copy failed: ' + err.message, true);
-    }
-  });
-
-  // -- Download -----------------------------------------------------
-  document.getElementById('btn-download').addEventListener('click', () => {
-    const payload = buildTopoPayload();
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = (payload.name || 'topology').replace(/[^a-zA-Z0-9_-]/g, '_') + '.json';
-    a.click();
-    URL.revokeObjectURL(url);
-  });
-
-  // -- Delete -------------------------------------------------------
-  document.getElementById('btn-delete').addEventListener('click', async () => {
-    if (!topoId) return;
-    if (!confirm('Delete this topology? This cannot be undone.')) return;
-    try {
-      setStatus('Deleting...');
-      await deleteJSON('/api/topologies/' + topoId);
-      window.location.href = '/static/topologies.html';
-    } catch (err) {
-      setStatus('Delete failed: ' + err.message, true);
-    }
-  });
-
   // -- Load existing topology ----------------------------------------
   async function loadTopology() {
     if (!topoId) {
-      renderNodes();
-      renderLinks();
+      renderNodeList();
+      renderDetail();
       updateMap();
       updateToolbarButtons();
+      updateFooter();
       return;
     }
 
@@ -988,16 +1382,21 @@
       nodes = entry.nodes || [];
       links = entry.links || [];
       const radio = entry.radio || {};
-      if (radio.sf) document.getElementById('radio-sf').value = radio.sf;
-      if (radio.bw) document.getElementById('radio-bw').value = radio.bw;
-      if (radio.cr) document.getElementById('radio-cr').value = normalizeCR(radio.cr);
+      if (radio.sf) _radioSf = String(radio.sf);
+      if (radio.bw) _radioBw = String(radio.bw);
+      if (radio.cr) _radioCr = String(normalizeCR(radio.cr));
       setOriginFromCentroid();
-      renderNodes();
-      renderLinks();
-      updateMap();
+
+      renderNodeList();
+      renderDetail();
       markClean();
       updateToolbarButtons();
-      setStatus('Loaded: ' + entry.name);
+      updateFooter();
+      setStatus('Rendering map (' + nodes.length + ' nodes, ' + links.length + ' links)...');
+      requestAnimationFrame(() => {
+        updateMap();
+        setStatus('Loaded: ' + entry.name);
+      });
     } catch (err) {
       setStatus('Failed to load topology: ' + err.message, true);
     }

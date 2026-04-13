@@ -1,0 +1,29 @@
+{
+  "id": "0d12a664fe95",
+  "name": "GdanskV2",
+  "created_at": 1776104472.8164773,
+  "updated_at": 1776108695.289763,
+  "config": {
+    "simulation": {
+      "duration_ms": 120000,
+      "warmup_ms": 5000,
+      "step_ms": 1,
+      "hot_start": true
+    },
+    "topology_id": "e019e9808dee",
+    "commands": [
+      {
+        "at_ms": 10000,
+        "node": "R170",
+        "command": "msg R171 hello"
+      },
+      {
+        "at_ms": 15000,
+        "node": "R172",
+        "command": "msga R170 nothing special"
+      }
+    ],
+    "expect": []
+  },
+  "topology_id": "e019e9808dee"
+}

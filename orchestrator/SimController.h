@@ -49,6 +49,7 @@ public:
     // --- Time control ---
     StepResult step(unsigned long delta_ms);
     StepResult runToNextCommand();
+    StepResult runToNextEvent();
     unsigned long currentTimeMs() const { return _current_ms; }
     bool isFinished() const;
     int stepMs() const;

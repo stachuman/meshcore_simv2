@@ -13,6 +13,8 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
+from server.config import validate_safe_id
+
 from server.config import Settings
 from server.services.config_merger import merge_topology_and_scenario
 from server.services.event_index import (
@@ -123,6 +125,10 @@ async def create_sim(body: CreateSimRequest, request: Request):
     config = body.config_json
 
     if body.topology_id:
+        try:
+            validate_safe_id(body.topology_id, "topology ID")
+        except ValueError as e:
+            raise HTTPException(400, str(e))
         topo_path = Settings.get().DATA_DIR / "topologies" / f"{body.topology_id}.json"
         if not topo_path.exists():
             raise HTTPException(

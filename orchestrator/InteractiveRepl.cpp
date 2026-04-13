@@ -84,6 +84,22 @@ void InteractiveRepl::handleNext() {
     });
 }
 
+void InteractiveRepl::handleNextEvent() {
+    if (_ctrl.isFinished()) {
+        printResponse(std::string("Simulation already finished"));
+        return;
+    }
+    auto result = _ctrl.runToNextEvent();
+#ifdef ENABLE_LUA
+    if (_lua) _lua->collectAndDispatchEvents();
+#endif
+    printResponse(json{
+        {"stepped_to_ms", result.end_ms},
+        {"events", result.events_generated},
+        {"finished", result.finished}
+    });
+}
+
 void InteractiveRepl::handleTime() {
     printResponse(json{
         {"time_ms", _ctrl.currentTimeMs()},
@@ -223,6 +239,7 @@ int InteractiveRepl::run() {
         if (cmd == "quit" || cmd == "exit") break;
         else if (cmd == "step") handleStep(args);
         else if (cmd == "next") handleNext();
+        else if (cmd == "next_event") handleNextEvent();
         else if (cmd == "time") handleTime();
         else if (cmd == "nodes") handleNodes();
         else if (cmd == "status") handleStatus(args);

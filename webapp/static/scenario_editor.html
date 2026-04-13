@@ -247,7 +247,6 @@
     <li><a href="/static/simulations.html">Simulations</a></li>
     <li><a href="/static/topologies.html">Topologies</a></li>
     <li><a href="/static/scenarios.html" class="active">Scenarios</a></li>
-    <li><a href="/static/sweep.html">Sweeps</a></li>
   </ul>
   <span class="spacer"></span>
 </nav>
@@ -402,6 +401,7 @@
       <h3>Actions</h3>
       <button class="btn" id="btn-validate">Validate</button>
       <button class="btn btn-primary" id="btn-run">Run Simulation</button>
+      <button class="btn btn-success" id="btn-interactive">Interactive</button>
     </div>
 
     <div id="status-area">
@@ -425,8 +425,9 @@
   let currentMode = 'json';   // 'json' or 'visual'
   let selectedNodeName = null; // from map click
   let leafletMap = null;
-  let mapMarkers = [];
-  let mapLines = [];
+  let canvasRenderer = null;
+  let markerGroup = null;
+  let lineGroup = null;
 
   // Visual mode data
   let visualData = {
@@ -1015,6 +1016,36 @@
     }
   });
 
+  // -- Interactive Session -------------------------------------------
+  document.getElementById('btn-interactive').addEventListener('click', async function() {
+    clearStatus();
+    let parsed;
+    try {
+      if (currentMode === 'visual') syncJSONFromVisual();
+      parsed = getEditorJSON();
+    } catch (e) {
+      addStatus('error', 'Invalid JSON: ' + e.message);
+      return;
+    }
+
+    try {
+      addStatus('info', 'Starting interactive session...');
+      this.disabled = true;
+
+      const body = { config_json: parsed };
+      if (selectedTopoId) {
+        body.topology_id = selectedTopoId;
+      }
+
+      const result = await postJSON('/api/interactive/', body);
+      const sessId = result.id;
+      window.location.href = '/static/interactive.html?id=' + encodeURIComponent(sessId);
+    } catch (e) {
+      addStatus('error', 'Failed to start interactive session: ' + e.message);
+      this.disabled = false;
+    }
+  });
+
   // ================================================================
   // -- PHASE 2: TOPOLOGY MAP --------------------------------------
   // ================================================================
@@ -1037,17 +1068,17 @@
   function initMap() {
     leafletMap = L.map('se-map', { zoomControl: true, attributionControl: false });
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(leafletMap);
+    canvasRenderer = L.canvas({ padding: 0.5 });
+    markerGroup = L.featureGroup().addTo(leafletMap);
+    lineGroup = L.featureGroup().addTo(leafletMap);
     leafletMap.setView([54.35, 18.65], 13);
   }
 
   function updateMap() {
     if (!leafletMap) return;
 
-    // Clear old
-    mapMarkers.forEach(m => leafletMap.removeLayer(m));
-    mapLines.forEach(l => leafletMap.removeLayer(l));
-    mapMarkers = [];
-    mapLines = [];
+    markerGroup.clearLayers();
+    lineGroup.clearLayers();
 
     if (!topoData) return;
 
@@ -1072,7 +1103,7 @@
         iconSize: [size, size],
         iconAnchor: [size/2, size/2],
       });
-      const marker = L.marker(ll, { icon }).addTo(leafletMap);
+      const marker = L.marker(ll, { icon });
       marker.bindTooltip(node.name || '?', { permanent: showLabels, direction: 'top', offset: [0, -10] });
       marker._nodeName = node.name;
       marker.on('click', function() {
@@ -1080,27 +1111,29 @@
         addStatus('info', 'Selected node: ' + selectedNodeName);
         updateMap();
       });
-      mapMarkers.push(marker);
+      markerGroup.addLayer(marker);
     });
 
-    // Draw links
+    // Draw links (canvas renderer, labels capped at 200)
+    const showLinkLabels = showLabels && links.length <= 200;
     for (const link of links) {
       const from = nodePos[link.from];
       const to = nodePos[link.to];
       if (!from || !to) continue;
       const line = L.polyline([from, to], {
+        renderer: canvasRenderer,
         color: '#9ca3af', weight: 2, opacity: 0.6,
-      }).addTo(leafletMap);
-      if (showLabels) {
+      });
+      lineGroup.addLayer(line);
+      if (showLinkLabels) {
         const mid = L.latLng((from.lat + to.lat) / 2, (from.lng + to.lng) / 2);
         const snrText = (link.snr ?? 0) + ' dB';
         const lbl = L.marker(mid, {
           icon: L.divIcon({ className: 'link-label', html: snrText, iconSize: [50, 14], iconAnchor: [25, 7] }),
           interactive: false,
-        }).addTo(leafletMap);
-        mapLines.push(lbl);
+        });
+        lineGroup.addLayer(lbl);
       }
-      mapLines.push(line);
     }
 
     if (bounds.isValid()) {
@@ -1377,16 +1410,42 @@
   }
 
   // -- Node select helper -------------------------------------------
+  // Companions first, then repeaters, both sorted alphabetically
   function nodeSelectHtml(selected, includeGroups) {
     const names = topoNodeNames.length > 0 ? topoNodeNames : [];
-    let opts = '<option value="">--</option>';
+    const companions = [];
+    const repeaters = [];
     for (const n of names) {
-      opts += '<option value="' + esc(n) + '"' + (n === selected ? ' selected' : '') + '>' + esc(n) + '</option>';
+      const role = getNodeRole(n);
+      if (role === 'companion') companions.push(n);
+      else repeaters.push(n);
+    }
+    companions.sort((a, b) => a.localeCompare(b));
+    repeaters.sort((a, b) => a.localeCompare(b));
+
+    let opts = '<option value="">--</option>';
+    if (companions.length > 0 && repeaters.length > 0) {
+      opts += '<optgroup label="Companions">';
+      for (const n of companions) {
+        opts += '<option value="' + esc(n) + '"' + (n === selected ? ' selected' : '') + '>' + esc(n) + '</option>';
+      }
+      opts += '</optgroup><optgroup label="Repeaters">';
+      for (const n of repeaters) {
+        opts += '<option value="' + esc(n) + '"' + (n === selected ? ' selected' : '') + '>' + esc(n) + '</option>';
+      }
+      opts += '</optgroup>';
+    } else {
+      const sorted = [...companions, ...repeaters];
+      for (const n of sorted) {
+        opts += '<option value="' + esc(n) + '"' + (n === selected ? ' selected' : '') + '>' + esc(n) + '</option>';
+      }
     }
     if (includeGroups) {
+      opts += '<optgroup label="Groups">';
       for (const g of GROUP_TARGETS) {
         opts += '<option value="' + g + '"' + (g === selected ? ' selected' : '') + '>' + g + '</option>';
       }
+      opts += '</optgroup>';
     }
     // If selected value not in list, add it
     if (selected && !names.includes(selected) && !GROUP_TARGETS.includes(selected)) {

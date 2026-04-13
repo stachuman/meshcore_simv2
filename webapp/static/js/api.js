@@ -147,6 +147,51 @@ function truncate(str, maxLen = 8) {
 }
 
 /**
+ * Connect to a WebSocket endpoint with auto-reconnect.
+ * @param {string} path       WS endpoint path (e.g. "/api/interactive/abc123/ws")
+ * @param {object} handlers   { onOpen, onMessage, onClose, onError }
+ * @param {object} options    { reconnect: true, reconnectDelay: 2000 }
+ * @returns {{ ws: WebSocket, close: function }}
+ */
+function connectWS(path, handlers = {}, options = {}) {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const url = proto + '//' + location.host + path;
+  const reconnect = options.reconnect !== false;
+  const delay = options.reconnectDelay || 2000;
+  let closed = false;
+  let ws;
+
+  function connect() {
+    ws = new WebSocket(url);
+    ws.onopen = () => { if (handlers.onOpen) handlers.onOpen(ws); };
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (handlers.onMessage) handlers.onMessage(data, ws);
+      } catch (e) {
+        if (handlers.onMessage) handlers.onMessage(event.data, ws);
+      }
+    };
+    ws.onclose = (event) => {
+      if (handlers.onClose) handlers.onClose(event);
+      if (reconnect && !closed) {
+        setTimeout(connect, delay);
+      }
+    };
+    ws.onerror = (event) => {
+      if (handlers.onError) handlers.onError(event);
+    };
+  }
+
+  connect();
+  return {
+    get ws() { return ws; },
+    send(data) { if (ws && ws.readyState === WebSocket.OPEN) ws.send(typeof data === 'string' ? data : JSON.stringify(data)); },
+    close() { closed = true; if (ws) ws.close(); },
+  };
+}
+
+/**
  * Create and return a DOM element with optional classes and text.
  */
 function el(tag, classes, text) {

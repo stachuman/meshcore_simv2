@@ -138,16 +138,16 @@ echo "  Output: $CSV_FILE"
 echo ""
 
 SWEEP_DEFAULTS=(
-    --tx-base  "1.9:2.5:0.2"
-    --tx-slope "0.0:0.4:0.2"
-    --tx-pow   "0.7:1.8:0.4"
-    --dtx-base  "0.9:1.5:0.2"
-    --dtx-slope "0.3:0.7:0.2"
-    --dtx-pow   "0.7:1.8:0.4"
+    --tx-base  "2.3:2.6:0.3"
+    --tx-slope "0.3:0.6:0.3"
+    --tx-pow   "1.1:2.1:0.5"
+    --dtx-base  "1.1:1.1:0.0"
+    --dtx-slope "0.5:0.5:0.0"
+    --dtx-pow   "1.5:2.0:0.5"
     --rx-base  "0.0"
     --rx-slope "0.0"
     --rx-pow   "1.0"
-    --clamp-max 6.0
+    --clamp-max 15.0
     --seeds 6
     --orchestrator "$ORCH_PATH"
     -j 6

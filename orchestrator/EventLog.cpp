@@ -111,17 +111,18 @@ void simEnd(unsigned long time_ms) {
     emitLine(buf);
 }
 
-void nodeReady(unsigned long time_ms, const char* node, const uint8_t* pub_key, int key_len,
+void nodeReady(unsigned long time_ms, const char* node, const char* role,
+               const uint8_t* pub_key, int key_len,
                bool has_location, double lat, double lon) {
     char hex[128];
     to_hex(hex, pub_key, key_len);
     char buf[2048];
     if (has_location) {
-        snprintf(buf, sizeof(buf), "{\"type\":\"node_ready\",\"time_ms\":%lu,\"node\":\"%s\",\"pub\":\"%s\",\"lat\":%.6f,\"lon\":%.6f}\n",
-                time_ms, node, hex, lat, lon);
+        snprintf(buf, sizeof(buf), "{\"type\":\"node_ready\",\"time_ms\":%lu,\"node\":\"%s\",\"role\":\"%s\",\"pub\":\"%s\",\"lat\":%.6f,\"lon\":%.6f}\n",
+                time_ms, node, role, hex, lat, lon);
     } else {
-        snprintf(buf, sizeof(buf), "{\"type\":\"node_ready\",\"time_ms\":%lu,\"node\":\"%s\",\"pub\":\"%s\"}\n",
-                time_ms, node, hex);
+        snprintf(buf, sizeof(buf), "{\"type\":\"node_ready\",\"time_ms\":%lu,\"node\":\"%s\",\"role\":\"%s\",\"pub\":\"%s\"}\n",
+                time_ms, node, role, hex);
     }
     emitLine(buf);
 }

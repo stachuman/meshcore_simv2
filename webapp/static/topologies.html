@@ -77,7 +77,6 @@
     <li><a href="/static/simulations.html">Simulations</a></li>
     <li><a href="/static/topologies.html" class="active">Topologies</a></li>
     <li><a href="/static/scenarios.html">Scenarios</a></li>
-    <li><a href="/static/sweep.html">Sweeps</a></li>
   </ul>
   <span class="spacer"></span>
 </nav>
@@ -90,6 +89,7 @@
       <button class="btn" onclick="showFromConfigModal()">Import from Config</button>
       <label class="btn" for="file-upload" style="cursor:pointer">Upload Topology</label>
       <input type="file" id="file-upload" accept=".json" style="display:none" onchange="handleUpload(event)">
+      <a href="/static/topology_creator.html" class="btn btn-primary">Generate from API</a>
       <a href="/static/topology_editor.html" class="btn btn-primary">+ Create Topology</a>
     </div>
   </div>
@@ -187,13 +187,23 @@ async function loadTopologies() {
           <div class="topo-actions">
             <a href="/static/topology_editor.html?id=${encodeURIComponent(t.id)}" class="btn btn-sm">Edit</a>
             <a href="/static/scenario_editor.html?topology=${encodeURIComponent(t.id)}" class="btn btn-sm btn-primary">Use in Scenario</a>
-            <button class="btn btn-sm" onclick="downloadTopo('${t.id}', '${escapeHtml(t.name)}')">Download</button>
-            <button class="btn btn-sm btn-danger" onclick="confirmDelete('${t.id}', '${escapeHtml(t.name)}')">Delete</button>
+            <button class="btn btn-sm" data-action="download" data-id="${t.id}" data-name="${escapeHtml(t.name)}">Download</button>
+            <button class="btn btn-sm btn-danger" data-action="delete" data-id="${t.id}" data-name="${escapeHtml(t.name)}">Delete</button>
           </div>
         </div>`;
     }
     $('#topos-list').innerHTML = html;
     $('#topos-list').style.display = '';
+    // Event delegation for action buttons
+    $('#topos-list').querySelectorAll('[data-action]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const action = btn.dataset.action;
+        const id = btn.dataset.id;
+        const name = btn.dataset.name;
+        if (action === 'download') downloadTopo(id, name);
+        else if (action === 'delete') confirmDelete(id, name);
+      });
+    });
   } catch (err) {
     $('#topos-loading').innerHTML = '<p style="color:var(--error)">Failed to load topologies: ' + escapeHtml(err.message) + '</p>';
   }

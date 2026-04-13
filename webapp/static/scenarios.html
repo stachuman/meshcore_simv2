@@ -48,7 +48,6 @@
     <li><a href="/static/simulations.html">Simulations</a></li>
     <li><a href="/static/topologies.html">Topologies</a></li>
     <li><a href="/static/scenarios.html" class="active">Scenarios</a></li>
-    <li><a href="/static/sweep.html">Sweeps</a></li>
   </ul>
   <span class="spacer"></span>
 </nav>
@@ -191,6 +190,7 @@ async function loadScenarios() {
           <div class="scenario-actions">
             <a href="/static/scenario_editor.html?config=${encodeURIComponent(s.id)}" class="btn btn-sm">Edit</a>
             <button class="btn btn-sm btn-primary" onclick="runScenario('${s.id}')">Run</button>
+            <button class="btn btn-sm btn-success" onclick="runInteractive('${s.id}')">Interactive</button>
             <button class="btn btn-sm" onclick="duplicateScenario('${s.id}', '${escapeAttr(s.name)}')">Duplicate</button>
             <button class="btn btn-sm" onclick="downloadScenario('${s.id}', '${escapeAttr(s.name)}')">Download</button>
             <button class="btn btn-sm btn-danger" onclick="confirmDelete('${s.id}', '${escapeAttr(s.name)}')">Delete</button>
@@ -212,6 +212,7 @@ async function loadScenarios() {
           <div class="scenario-actions">
             <a href="/static/scenario_editor.html?config=${encodeURIComponent(s.id)}" class="btn btn-sm">Edit</a>
             <button class="btn btn-sm btn-primary" onclick="runScenario('${s.id}')">Run</button>
+            <button class="btn btn-sm btn-success" onclick="runInteractive('${s.id}')">Interactive</button>
             <button class="btn btn-sm" onclick="downloadScenario('${s.id}', '${escapeAttr(s.name)}')">Download</button>
             <button class="btn btn-sm btn-danger" onclick="confirmDelete('${s.id}', '${escapeAttr(s.name)}')">Delete</button>
           </div>
@@ -238,6 +239,19 @@ async function runScenario(id) {
     window.location.href = '/static/simulation.html?id=' + encodeURIComponent(result.id);
   } catch (err) {
     alert('Failed to start simulation: ' + err.message);
+  }
+}
+
+async function runInteractive(id) {
+  try {
+    const data = await fetchJSON('/api/configs/' + id);
+    const body = { config_json: data.config };
+    const topoId = data.topology_id || (data.config && data.config.topology_id);
+    if (topoId) body.topology_id = topoId;
+    const result = await postJSON('/api/interactive/', body);
+    window.location.href = '/static/interactive.html?id=' + encodeURIComponent(result.id);
+  } catch (err) {
+    alert('Failed to start interactive session: ' + err.message);
   }
 }
 

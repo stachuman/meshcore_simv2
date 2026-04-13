@@ -61,7 +61,6 @@
     <li><a href="/static/topologies.html">Topologies</a></li>
     <li><a href="/static/scenarios.html">Scenarios</a></li>
     <li><a href="/static/configs.html" class="active">Configs</a></li>
-    <li><a href="/static/sweep.html">Sweeps</a></li>
   </ul>
   <span class="spacer"></span>
 </nav>
@@ -160,13 +159,20 @@ async function loadConfigs() {
           <div class="config-actions">
             <a href="/static/scenario_editor.html?config=${encodeURIComponent(cfg.id)}" class="btn btn-sm">Edit</a>
             <button class="btn btn-sm" onclick="runConfig('${cfg.id}')">Run</button>
-            <button class="btn btn-sm" onclick="downloadConfig('${cfg.id}', '${escapeHtml(cfg.name)}')">Download</button>
-            <button class="btn btn-sm btn-danger" onclick="confirmDelete('${cfg.id}', '${escapeHtml(cfg.name)}')">Delete</button>
+            <button class="btn btn-sm" data-action="download" data-id="${cfg.id}" data-name="${escapeHtml(cfg.name)}">Download</button>
+            <button class="btn btn-sm btn-danger" data-action="delete" data-id="${cfg.id}" data-name="${escapeHtml(cfg.name)}">Delete</button>
           </div>
         </div>`;
     }
     $('#configs-list').innerHTML = html;
     $('#configs-list').style.display = '';
+    $('#configs-list').querySelectorAll('[data-action]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const { action, id, name } = btn.dataset;
+        if (action === 'download') downloadConfig(id, name);
+        else if (action === 'delete') confirmDelete(id, name);
+      });
+    });
   } catch (err) {
     $('#configs-loading').innerHTML = '<p style="color:var(--error)">Failed to load configs: ' + escapeHtml(err.message) + '</p>';
   }

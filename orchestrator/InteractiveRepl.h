@@ -20,6 +20,7 @@ class InteractiveRepl {
     void printResponse(const std::string& msg);
     void handleStep(const std::string& args);
     void handleNext();
+    void handleNextEvent();
     void handleTime();
     void handleNodes();
     void handleStatus(const std::string& args);

@@ -54,10 +54,11 @@ class EventIndex:
             self.time_min = self.times[0]
             self.time_max = self.times[-1]
 
-        # Infer roles: nodes with node_stats are companions
+        # Infer roles for old event files that lack role in node_ready
         companion_names = {s["node"] for s in self.stats}
         for n in self.nodes:
-            n["role"] = "companion" if n["name"] in companion_names else "repeater"
+            if n.get("role", "repeater") == "repeater" and n["name"] in companion_names:
+                n["role"] = "companion"
 
         logger.info(
             "Loaded %d events, %d nodes, time range %d-%dms (%.1fs)",
@@ -77,7 +78,8 @@ class EventIndex:
             self.sim_info["end_ms"] = time_ms
             return
         if etype == "node_ready":
-            meta = {"name": ev["node"], "pub": ev.get("pub", "")}
+            meta = {"name": ev["node"], "pub": ev.get("pub", ""),
+                    "role": ev.get("role", "repeater")}
             if "lat" in ev:
                 meta["lat"] = ev["lat"]
                 meta["lon"] = ev["lon"]

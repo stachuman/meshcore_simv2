@@ -1,5 +1,16 @@
 import os
+import re
 from pathlib import Path
+
+# Filesystem-safe ID: hex chars only (uuid4().hex[:12] format)
+_SAFE_ID_RE = re.compile(r"^[a-f0-9]{1,64}$")
+
+
+def validate_safe_id(value: str, label: str = "ID") -> str:
+    """Raise ValueError if *value* is not a safe filesystem ID."""
+    if not _SAFE_ID_RE.match(value):
+        raise ValueError(f"Invalid {label}: must be 1-64 lowercase hex characters")
+    return value
 
 
 class Settings:
@@ -14,6 +25,12 @@ class Settings:
         )
         self.MAX_CONCURRENT_SIMS: int = int(
             os.environ.get("MAX_CONCURRENT_SIMS", str(os.cpu_count() or 4))
+        )
+        self.MAX_INTERACTIVE_SESSIONS: int = int(
+            os.environ.get("MAX_INTERACTIVE_SESSIONS", "4")
+        )
+        self.INTERACTIVE_IDLE_TIMEOUT_S: int = int(
+            os.environ.get("INTERACTIVE_IDLE_TIMEOUT_S", "300")
         )
 
     @classmethod
