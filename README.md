@@ -284,7 +284,7 @@ The simulator models realistic LoRa radio behavior:
 
 ## Delay Optimization
 
-The `delay_optimization/` directory contains scripts for sweeping MeshCore delay parameters across different network densities. See [delay_optimization/DELAY_OPTIMIZATION.md](delay_optimization/DELAY_OPTIMIZATION.md) for methodology, results, and the multi-density test pipeline.
+The `delay_optimization_v2/` directory contains Lua-based scripts for sweeping MeshCore delay parameters (e.g. `FLOOD_DELAY_MS`, `ADV_INTERVAL_MS`) across different network densities (sparse, medium, dense, very dense). Each density has a pre-built topology and test config; `run_sweep.sh` drives the parameter grid search and outputs CSV results.
 
 ## Visualization
 
@@ -311,7 +311,17 @@ Creates a repeater grid with companion nodes at the corners, auto-generates cros
 
 ## Web App & Docker
 
-A browser-based UI for managing simulations, editing configs, and viewing results.
+A browser-based UI for the full simulation workflow -- from topology creation through simulation execution to result visualization.
+
+**Features:**
+- **Topology Creator** -- generate topologies from the live MeshCore network API with ITM propagation modeling, or create manually
+- **Topology Editor** -- selection-driven node/link editing with an interactive map, SNR-colored links, drag-to-reposition
+- **Scenario Editor** -- visual config builder: define nodes, links, commands, message schedules, and assertions
+- **Batch Simulations** -- run simulations with real-time progress via SSE, view results in swim-lane and map visualizations
+- **Interactive Simulations** -- WebSocket-based step-through mode: send commands, step the clock, observe events live
+- **Config Library** -- save, duplicate, import/export simulation configs
+
+No database (filesystem-only storage), no build step (CDN-served JS libraries).
 
 ### Run locally (development)
 
@@ -380,7 +390,7 @@ simple_repeater/     Standalone single-repeater binary
 companion_radio/     Standalone single-companion binary
 topology_generator/  ITM-based topology generation from live network data
 simulation/          Real-world topology data and generated configs
-delay_optimization/  Delay parameter sweep scripts and results
+delay_optimization_v2/ Lua-based delay parameter sweep scripts and results
 test/                Test configs (t*.json), runner, and Lua integration tests
 tools/               Injection, generation, analysis, and run scripts
 visualization/       Interactive event visualizer
