@@ -132,10 +132,11 @@ class InteractiveSessionManager:
             # Open events file for append
             self._event_files[sid] = open(sess_dir / "events.ndjson", "w")
 
-            # Start stdout reader
+            # Start stdout + stderr readers
             self._reader_tasks[sid] = asyncio.create_task(
                 self._read_stdout(sid)
             )
+            asyncio.create_task(self._read_stderr(sid))
 
             # Probe with 'nodes' command to detect readiness
             # (response arrives after init + hot-start completes)
@@ -446,9 +447,32 @@ class InteractiveSessionManager:
             # Process ended or reader crashed — close session
             if session.status != "closed":
                 reason = "process_exited"
-                if proc.returncode and proc.returncode != 0:
+                rc = proc.returncode
+                if rc and rc != 0:
                     reason = "crashed"
+                logger.warning(
+                    "orchestrator[%s] process exited (returncode=%s, status was '%s')",
+                    sid, rc, session.status,
+                )
                 await self.close_session(sid, reason=reason)
+
+    async def _read_stderr(self, sid: str) -> None:
+        """Log orchestrator stderr so errors are visible in docker logs."""
+        proc = self._processes.get(sid)
+        if not proc or not proc.stderr:
+            return
+        try:
+            while True:
+                line = await proc.stderr.readline()
+                if not line:
+                    break
+                text = line.decode("utf-8", errors="replace").rstrip()
+                if text:
+                    logger.warning("orchestrator[%s] stderr: %s", sid, text)
+        except asyncio.CancelledError:
+            return
+        except Exception:
+            pass
 
     # ------------------------------------------------------------------
     # Cleanup loop
