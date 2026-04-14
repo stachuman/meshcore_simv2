@@ -3,7 +3,7 @@
   "name": "GdanskAreav2",
   "description": "Generated from MeshCore Map API using ITM propagation model",
   "created_at": 1776103001.41798,
-  "updated_at": 1776104913.640408,
+  "updated_at": 1776153216.702004,
   "nodes": [
     {
       "name": "GTC_JednosciNarodu_R",
@@ -1036,6 +1036,12 @@
       "role": "companion",
       "lat": 54.314081,
       "lon": 18.963776
+    },
+    {
+      "name": "R173",
+      "role": "companion",
+      "lat": 54.111043,
+      "lon": 19.440308
     }
   ],
   "links": [
@@ -1682,8 +1688,8 @@
     {
       "from": "GA_Orlowo01_RPT",
       "to": "GDYKopernika",
-      "snr": 4.19,
-      "rssi": -115.85,
+      "snr": 7.19,
+      "rssi": -113,
       "loss": 0.0003,
       "snr_std_dev": 0.5,
       "bidir": true
@@ -4389,6 +4395,13 @@
       "to": "MIK_DW_RPT",
       "snr": 43.11,
       "rssi": -77,
+      "bidir": true
+    },
+    {
+      "from": "R173",
+      "to": "ELBp_ELBz_ATK10_BRID",
+      "snr": 38.12,
+      "rssi": -82,
       "bidir": true
     }
   ],

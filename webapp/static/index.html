@@ -25,30 +25,11 @@
 <div class="page">
   <h1>Dashboard</h1>
 
-  <!-- Quick stats -->
-  <div class="grid grid-4 mb-16" id="stats-grid">
-    <div class="card stat-box">
-      <div class="stat-value" id="stat-total">--</div>
-      <div class="stat-label">Total Simulations</div>
-    </div>
-    <div class="card stat-box">
-      <div class="stat-value" id="stat-running" style="color:var(--accent)">--</div>
-      <div class="stat-label">Running</div>
-    </div>
-    <div class="card stat-box">
-      <div class="stat-value" id="stat-completed" style="color:var(--success)">--</div>
-      <div class="stat-label">Completed</div>
-    </div>
-    <div class="card stat-box">
-      <div class="stat-value" id="stat-failed" style="color:var(--error)">--</div>
-      <div class="stat-label">Failed</div>
-    </div>
-  </div>
-
   <!-- Action buttons -->
   <div class="flex gap-12 mb-16">
     <a href="/static/scenario_editor.html" class="btn btn-primary btn-lg">+ New Scenario</a>
-    <a href="/static/topology_editor.html" class="btn btn-lg">+ Create Topology</a>
+    <a href="/static/topology_editor.html" class="btn btn-lg">Create Topology Manually</a>
+    <a href="/static/topology_creator.html" class="btn btn-lg">Create Topology from MeshCore map</a>
     <button class="btn" onclick="loadSims()">Refresh</button>
   </div>
 
@@ -120,12 +101,7 @@
       const sims = await fetchJSON('/api/sims');
       loading.classList.add('hidden');
 
-      // Update stats
       const all = Array.isArray(sims) ? sims : [];
-      document.getElementById('stat-total').textContent     = all.length;
-      document.getElementById('stat-running').textContent   = all.filter(s => s.status === 'running').length;
-      document.getElementById('stat-completed').textContent = all.filter(s => s.status === 'completed').length;
-      document.getElementById('stat-failed').textContent    = all.filter(s => s.status === 'failed').length;
 
       if (all.length === 0) {
         empty.classList.remove('hidden');

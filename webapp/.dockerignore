@@ -1,0 +1,39 @@
+# Python
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+.venv
+venv
+
+# Build artifacts
+build/
+build-*/
+*.so
+*.o
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+.cmake
+
+# IDE / editor
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# Git
+.git
+.gitignore
+.gitmodules
+
+# Env / secrets
+.env
+.env.*
+
+# Logs
+*.log
+
+# Data (mounted as volume at runtime)
+webapp/data/

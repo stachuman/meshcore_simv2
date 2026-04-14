@@ -246,6 +246,26 @@
     color: var(--text);
   }
   .ia-cmdbar input[type="text"] { flex: 1; }
+  .ia-cmdbar .cmd-help-anchor { position: relative; }
+
+  /* Command helper popover */
+  .cmd-help-pop {
+    position: absolute; bottom: 100%; right: 0;
+    margin-bottom: 6px;
+    width: 280px; max-height: 340px; overflow-y: auto;
+    background: var(--bg-secondary); border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 -4px 24px rgba(0,0,0,0.12);
+    z-index: 200; padding: 6px 0;
+  }
+  .cmd-help-pop .cmd-group { padding: 4px 10px 2px; font-size: 9px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+  .cmd-help-pop .cmd-item {
+    display: flex; align-items: baseline; gap: 6px;
+    padding: 4px 10px; cursor: pointer; font-size: 11px;
+  }
+  .cmd-help-pop .cmd-item:hover { background: rgba(37,99,235,0.06); }
+  .cmd-help-pop .cmd-item .cmd-name { font-family: var(--font-mono); color: var(--accent); white-space: nowrap; }
+  .cmd-help-pop .cmd-item .cmd-desc { color: var(--text-muted); font-size: 10px; }
 
   /* Create flow */
   .create-flow {
@@ -437,9 +457,12 @@
       <select id="cmd-node"><option value="">-- node --</option></select>
       <input type="text" id="cmd-input" placeholder="Command (e.g. msg bob hello)">
       <button class="btn btn-sm btn-primary" id="btn-send-cmd">Send</button>
-      <button class="btn btn-sm" data-quick="neighbors">neighbors</button>
-      <button class="btn btn-sm" data-quick="stats">stats</button>
-      <button class="btn btn-sm" data-quick="advert">advert</button>
+      <div class="cmd-help-anchor">
+        <button class="btn btn-sm" id="btn-companion-cmds">Companion Cmds</button>
+      </div>
+      <div class="cmd-help-anchor">
+        <button class="btn btn-sm" id="btn-repeater-cmds">Repeater Cmds</button>
+      </div>
     </div>
   </div>
 </div>
@@ -652,11 +675,15 @@
     const list = document.getElementById('node-list');
     const select = document.getElementById('cmd-node');
     list.innerHTML = '';
-    // Keep first option
     select.innerHTML = '<option value="">-- node --</option>';
 
-    nodes.forEach(n => {
-      // Sidebar card
+    // Sort: companions first, then repeaters, alphabetical within each
+    const companions = nodes.filter(n => n.role === 'companion').sort((a, b) => a.name.localeCompare(b.name));
+    const repeaters = nodes.filter(n => n.role !== 'companion').sort((a, b) => a.name.localeCompare(b.name));
+    const sorted = [...companions, ...repeaters];
+
+    // Sidebar cards
+    sorted.forEach(n => {
       const card = document.createElement('div');
       card.className = 'node-card';
       card.dataset.name = n.name;
@@ -668,13 +695,37 @@
       `;
       card.addEventListener('click', () => toggleNodeCard(card, n.name));
       list.appendChild(card);
-
-      // Command bar dropdown
-      const opt = document.createElement('option');
-      opt.value = n.name;
-      opt.textContent = n.name;
-      select.appendChild(opt);
     });
+
+    // Command bar dropdown with optgroups
+    if (companions.length > 0 && repeaters.length > 0) {
+      const compGroup = document.createElement('optgroup');
+      compGroup.label = 'Companions';
+      companions.forEach(n => {
+        const opt = document.createElement('option');
+        opt.value = n.name;
+        opt.textContent = n.name;
+        compGroup.appendChild(opt);
+      });
+      select.appendChild(compGroup);
+
+      const repGroup = document.createElement('optgroup');
+      repGroup.label = 'Repeaters';
+      repeaters.forEach(n => {
+        const opt = document.createElement('option');
+        opt.value = n.name;
+        opt.textContent = n.name;
+        repGroup.appendChild(opt);
+      });
+      select.appendChild(repGroup);
+    } else {
+      sorted.forEach(n => {
+        const opt = document.createElement('option');
+        opt.value = n.name;
+        opt.textContent = n.name;
+        select.appendChild(opt);
+      });
+    }
   }
 
   function toggleNodeCard(card, name) {
@@ -863,13 +914,120 @@
     document.getElementById('cmd-input').value = '';
   }
 
-  // Quick command buttons
-  document.querySelectorAll('[data-quick]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const node = document.getElementById('cmd-node').value;
-      if (!node) { addSystemEvent('Select a node first'); return; }
-      if (wsConn) wsConn.send({ cmd: 'cmd', node: node, command: btn.dataset.quick });
-    });
+  // Command helper popovers
+  const COMPANION_CMDS = [
+    { group: 'Messaging' },
+    { cmd: 'msg <name> <text>', desc: 'Send direct message' },
+    { cmd: 'msga <name> <text>', desc: 'Send message with ACK' },
+    { cmd: 'msgc <text>', desc: 'Send channel message' },
+    { group: 'Discovery' },
+    { cmd: 'neighbors', desc: 'List known contacts' },
+    { cmd: 'list', desc: 'List contacts by activity' },
+    { cmd: 'advert', desc: 'Send advertisement' },
+    { cmd: 'advert.zerohop', desc: 'Advert (direct only)' },
+    { group: 'Path' },
+    { cmd: 'path <name>', desc: 'Show path to contact' },
+    { cmd: 'reset_path <name>', desc: 'Reset path to contact' },
+    { cmd: 'disc_path <name>', desc: 'Discover path to contact' },
+    { group: 'Info' },
+    { cmd: 'stats', desc: 'Message statistics' },
+    { cmd: 'clock', desc: 'Show current time' },
+    { cmd: 'ver', desc: 'Version info' },
+  ];
+
+  const REPEATER_CMDS = [
+    { group: 'Discovery' },
+    { cmd: 'neighbors', desc: 'List neighbors' },
+    { cmd: 'neighbor.remove <hex>', desc: 'Remove neighbor' },
+    { cmd: 'advert', desc: 'Send advertisement' },
+    { cmd: 'advert.zerohop', desc: 'Advert (direct only)' },
+    { cmd: 'discover.neighbors', desc: 'Explicit neighbor discovery' },
+    { group: 'Statistics' },
+    { cmd: 'stats-core', desc: 'Core mesh stats' },
+    { cmd: 'stats-radio', desc: 'Radio stats' },
+    { cmd: 'stats-packets', desc: 'Packet stats' },
+    { cmd: 'clear stats', desc: 'Reset counters' },
+    { group: 'Get Config' },
+    { cmd: 'get name', desc: 'Node name' },
+    { cmd: 'get radio', desc: 'Radio params' },
+    { cmd: 'get repeat', desc: 'Forward on/off' },
+    { cmd: 'get af', desc: 'Airtime factor' },
+    { cmd: 'get rxdelay', desc: 'RX delay base' },
+    { cmd: 'get txdelay', desc: 'TX delay factor' },
+    { cmd: 'get flood.max', desc: 'Flood max' },
+    { cmd: 'get loop.detect', desc: 'Loop detection mode' },
+    { cmd: 'get lat', desc: 'Latitude' },
+    { cmd: 'get lon', desc: 'Longitude' },
+    { group: 'Set Config' },
+    { cmd: 'set name <name>', desc: 'Set node name' },
+    { cmd: 'set repeat on|off', desc: 'Enable/disable forward' },
+    { cmd: 'set af <val>', desc: 'Set airtime factor' },
+    { cmd: 'set rxdelay <sec>', desc: 'Set RX delay base' },
+    { cmd: 'set txdelay <val>', desc: 'Set TX delay factor' },
+    { cmd: 'set flood.max <n>', desc: 'Set flood max (0-64)' },
+    { cmd: 'set loop.detect <mode>', desc: 'off|minimal|moderate|strict' },
+    { group: 'Info' },
+    { cmd: 'clock', desc: 'Show current time' },
+    { cmd: 'ver', desc: 'Version info' },
+  ];
+
+  let _cmdPopOpen = null;
+
+  function showCmdHelp(btnId, cmds) {
+    closeCmdHelp();
+    const anchor = document.getElementById(btnId).parentElement;
+    const pop = document.createElement('div');
+    pop.className = 'cmd-help-pop';
+    pop.id = 'cmd-help-pop';
+
+    for (const item of cmds) {
+      if (item.group) {
+        const g = document.createElement('div');
+        g.className = 'cmd-group';
+        g.textContent = item.group;
+        pop.appendChild(g);
+      } else {
+        const d = document.createElement('div');
+        d.className = 'cmd-item';
+        d.innerHTML = '<span class="cmd-name">' + escapeHtml(item.cmd.split(' ')[0]) + '</span><span class="cmd-desc">' + escapeHtml(item.desc) + '</span>';
+        d.addEventListener('click', () => {
+          document.getElementById('cmd-input').value = item.cmd;
+          document.getElementById('cmd-input').focus();
+          closeCmdHelp();
+        });
+        pop.appendChild(d);
+      }
+    }
+
+    anchor.appendChild(pop);
+    _cmdPopOpen = true;
+    setTimeout(() => document.addEventListener('click', _cmdHelpOutsideClick), 0);
+  }
+
+  function _cmdHelpOutsideClick(e) {
+    const pop = document.getElementById('cmd-help-pop');
+    if (pop && !pop.contains(e.target) && e.target.id !== 'btn-companion-cmds' && e.target.id !== 'btn-repeater-cmds') {
+      closeCmdHelp();
+    }
+  }
+
+  function closeCmdHelp() {
+    _cmdPopOpen = false;
+    const pop = document.getElementById('cmd-help-pop');
+    if (pop) pop.remove();
+    document.removeEventListener('click', _cmdHelpOutsideClick);
+  }
+
+  document.getElementById('btn-companion-cmds').addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (_cmdPopOpen) { closeCmdHelp(); return; }
+    showCmdHelp('btn-companion-cmds', COMPANION_CMDS);
+  });
+
+  document.getElementById('btn-repeater-cmds').addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (_cmdPopOpen) { closeCmdHelp(); return; }
+    showCmdHelp('btn-repeater-cmds', REPEATER_CMDS);
   });
 
   // ── Post-session actions ────────────────────────────

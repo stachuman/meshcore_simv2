@@ -36,7 +36,7 @@ COPY topology_generator/ ./topology_generator/
 
 # Non-root user for runtime
 RUN useradd --system --no-create-home app \
-    && mkdir -p data/simulations data/configs data/topologies data/sweeps data/generators \
+    && mkdir -p data/simulations data/configs data/topologies data/sweeps data/interactive data/generators \
     && chown -R app:app /app
 USER app
 

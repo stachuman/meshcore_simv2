@@ -87,6 +87,7 @@
   .node-detail {
     border-top: 1px solid var(--border);
     overflow-y: auto;
+    overflow-x: hidden;
     flex-shrink: 0;
     max-height: 55%;
   }
@@ -149,6 +150,7 @@
     border: 1px solid var(--accent);
     border-radius: var(--radius);
     background: rgba(37,99,235,0.03);
+    overflow: hidden;
   }
   .link-expanded .link-exp-header {
     display: flex; align-items: center; gap: 6px; margin-bottom: 6px; font-size: 11px;
@@ -157,8 +159,13 @@
     flex: 1; font-family: var(--font-mono); cursor: pointer; color: var(--accent);
   }
   .link-expanded .link-exp-header .peer-name:hover { text-decoration: underline; }
-  .link-expanded .link-exp-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; }
-  .link-expanded .link-exp-fields .detail-field { margin-bottom: 0; }
+  .link-expanded .link-exp-fields {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px;
+    overflow: hidden;
+  }
+  .link-expanded .link-exp-fields .detail-field { margin-bottom: 0; overflow: hidden; }
+  .link-expanded .link-exp-fields .detail-field label { min-width: 40px; max-width: 40px; font-size: 9px; }
+  .link-expanded .link-exp-fields .detail-field input { min-width: 0; width: 100%; }
   .link-expanded .link-exp-actions {
     display: flex; gap: 6px; justify-content: flex-end; margin-top: 8px;
   }
