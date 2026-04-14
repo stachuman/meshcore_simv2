@@ -5,8 +5,19 @@
 #   cmake --build build-release --target orchestrator -j$(nproc)
 #   cd webapp && docker compose build
 #
-# Run:
+# Run (local):
 #   docker compose up
+#
+# Deploy to another machine:
+#   docker save meshcore-sim:latest | gzip > meshcore-sim.tar.gz
+#   scp meshcore-sim.tar.gz user@host:/path/
+#   # On target:
+#   docker load < meshcore-sim.tar.gz
+#   docker run -d --name meshcore-sim \
+#       -p 8000:8000 \
+#       -v meshcore-data:/app/data \
+#       --restart unless-stopped \
+#       meshcore-sim:latest
 
 FROM python:3.11-slim
 

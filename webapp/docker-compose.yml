@@ -1,5 +1,6 @@
 services:
   simulator:
+    image: meshcore-sim:latest
     build:
       context: ..
       dockerfile: webapp/Dockerfile
