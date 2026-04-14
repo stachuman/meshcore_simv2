@@ -18,6 +18,10 @@
 !topology_generator/
 !topology_generator/**
 
+# Allow tools (convert_topology.py, gen_grid_test.py used by topo_tools service)
+!tools/
+!tools/**
+
 # Dockerfile
 !webapp/Dockerfile
 

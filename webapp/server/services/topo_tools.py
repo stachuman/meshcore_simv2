@@ -10,9 +10,18 @@ from pathlib import Path
 from types import SimpleNamespace
 
 # Add the tools directory to sys.path so we can import from it.
-_TOOLS_DIR = str(Path(__file__).resolve().parent.parent.parent.parent / "tools")
-if _TOOLS_DIR not in sys.path:
-    sys.path.insert(0, _TOOLS_DIR)
+# In Docker: /app/tools/  (WORKDIR is /app)
+# Local dev: ../../../../tools  (relative to server/services/)
+_THIS_DIR = Path(__file__).resolve().parent
+_TOOLS_CANDIDATES = [
+    _THIS_DIR.parent.parent / "tools",          # Docker: /app/tools
+    _THIS_DIR.parent.parent.parent.parent / "tools",  # Local dev: repo root/tools
+]
+for _candidate in _TOOLS_CANDIDATES:
+    _dir = str(_candidate)
+    if _candidate.is_dir() and _dir not in sys.path:
+        sys.path.insert(0, _dir)
+        break
 
 # Import helper functions directly from the CLI scripts.
 # convert_topology.py: full pipeline via convert() + helpers

@@ -347,7 +347,7 @@ docker compose up
 
 ```bash
 # On the build machine — save image to a tarball
-docker save meshcore-sim-simulator:latest | gzip > meshcore-sim.tar.gz
+docker save meshcore-sim:latest | gzip > meshcore-sim.tar.gz
 
 # Copy to target
 scp meshcore-sim.tar.gz user@nas-ip:/share/docker/
@@ -358,7 +358,7 @@ docker run -d --name meshcore-sim \
     -p 8000:8000 \
     -v meshcore-data:/app/data \
     --restart unless-stopped \
-    meshcore-sim-simulator:latest
+    meshcore-sim:latest
 ```
 
 The `-v meshcore-data:/app/data` volume persists simulation data across container restarts.

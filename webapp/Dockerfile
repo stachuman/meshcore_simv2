@@ -44,6 +44,7 @@ RUN strip --strip-all /usr/local/bin/orchestrator \
 COPY webapp/server/ ./server/
 COPY webapp/static/ ./static/
 COPY topology_generator/ ./topology_generator/
+COPY tools/ ./tools/
 
 # Non-root user for runtime
 RUN useradd --system --no-create-home app \
