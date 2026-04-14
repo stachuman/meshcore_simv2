@@ -47,9 +47,10 @@ COPY topology_generator/ ./topology_generator/
 COPY tools/ ./tools/
 
 # Non-root user for runtime
-RUN useradd --system --no-create-home app \
+RUN useradd --system --create-home --home-dir /home/app app \
     && mkdir -p data/simulations data/configs data/topologies data/sweeps data/interactive data/generators \
-    && chown -R app:app /app
+    && mkdir -p /home/app/.cache/srtm \
+    && chown -R app:app /app /home/app
 USER app
 
 ENV ORCHESTRATOR_PATH=/usr/local/bin/orchestrator
