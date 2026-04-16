@@ -90,6 +90,35 @@
   .stat-bad  { color: #dc2626; }
   .stat-dim  { color: var(--text-dim); }
 
+  /* Assertions card */
+  .assert-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+  .assert-table th {
+    text-align: left;
+    padding: 6px 8px;
+    border-bottom: 2px solid var(--border);
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 11px;
+  }
+  .assert-table td {
+    padding: 5px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .assert-pass { color: #16a34a; font-weight: 600; }
+  .assert-fail { color: #dc2626; font-weight: 600; }
+  .assert-summary {
+    font-size: 12px;
+    padding: 8px 12px;
+    border-radius: var(--radius);
+  }
+  .assert-summary-pass { background: rgba(22,163,74,0.08); color: #16a34a; }
+  .assert-summary-fail { background: rgba(220,38,38,0.08); color: #dc2626; }
+
   /* Log / messages area */
   .log-area {
     background: #f0f0f4;
@@ -206,6 +235,16 @@
         <div class="results-card" id="stats-card" style="display:none">
           <h2>Statistics</h2>
           <div class="stats-grid" id="stats-grid"></div>
+        </div>
+
+        <!-- Assertions (shown when assertions exist) -->
+        <div class="results-card" id="assertions-card" style="display:none">
+          <h2>Assertions</h2>
+          <div id="assertions-summary"></div>
+          <table class="assert-table" id="assertions-table">
+            <thead><tr><th>Status</th><th>Type</th><th>Details</th></tr></thead>
+            <tbody id="assertions-body"></tbody>
+          </table>
         </div>
 
         <!-- Log output -->
@@ -465,6 +504,7 @@
       const summary = meta.summary || {};
       const stats = meta.stats || [];
       renderStatsCard(summary, stats);
+      renderAssertions(meta.assertions);
     } catch (_) { /* stats not available yet */ }
   }
 
@@ -600,6 +640,40 @@
       '<div class="stat-value ' + (cls || '') + '">' + escapeHtml(value) + '</div>' +
       (detail ? '<div class="stat-detail">' + escapeHtml(detail) + '</div>' : '') +
       '</div>';
+  }
+
+  function renderAssertions(assertions) {
+    if (!assertions || !assertions.results || !assertions.results.length) return;
+    const card = document.getElementById('assertions-card');
+    const body = document.getElementById('assertions-body');
+    const summaryEl = document.getElementById('assertions-summary');
+    card.style.display = '';
+
+    const allPass = assertions.failed === 0;
+    summaryEl.innerHTML = '<div class="assert-summary ' +
+      (allPass ? 'assert-summary-pass' : 'assert-summary-fail') + '">' +
+      assertions.passed + ' passed, ' + assertions.failed + ' failed out of ' + assertions.total +
+      '</div>';
+
+    let html = '';
+    for (const r of assertions.results) {
+      const cls = r.status === 'pass' ? 'assert-pass' : 'assert-fail';
+      const icon = r.status === 'pass' ? 'PASS' : 'FAIL';
+      const parts = [];
+      if (r.node) parts.push('node=' + r.node);
+      if (r.command) parts.push('cmd="' + escapeHtml(r.command) + '"');
+      if (r.value) parts.push('value="' + escapeHtml(r.value) + '"');
+      if (r.event_type) parts.push('event=' + r.event_type);
+      if (r.min != null) parts.push('min=' + r.min);
+      if (r.max != null) parts.push('max=' + r.max);
+      if (r.count != null) parts.push('count=' + r.count);
+      if (r.actual != null) parts.push('actual=' + r.actual);
+      const detail = parts.length ? parts.join(', ') : '';
+      html += '<tr><td class="' + cls + '">' + icon + '</td>' +
+              '<td>' + escapeHtml(r.type) + '</td>' +
+              '<td>' + escapeHtml(detail) + '</td></tr>';
+    }
+    body.innerHTML = html;
   }
 
   function colorClass(pct) {

@@ -1467,8 +1467,12 @@ bool Orchestrator::checkAssertions() {
     if (_assertions.empty()) return true;
 
     int pass = 0, fail = 0;
+    std::string json_arr = "[";
+    bool first = true;
+
     for (const auto& a : _assertions) {
         bool ok = false;
+        int actual = -1;
 
         if (a.type == "cmd_reply_contains") {
             for (const auto& r : _reply_log) {
@@ -1491,7 +1495,7 @@ bool Orchestrator::checkAssertions() {
                 }
             }
         } else if (a.type == "event_count_min") {
-            int actual = 0;
+            actual = 0;
             if (a.value == "tx") actual = _tx_count;
             else if (a.value == "rx") actual = _rx_count;
             ok = (actual >= a.count);
@@ -1502,7 +1506,7 @@ bool Orchestrator::checkAssertions() {
             // Generic event count assertion: match event_type + optional node filter
             std::string key = a.event_type;
             if (!a.node.empty()) key += ":" + a.node;
-            int actual = 0;
+            actual = 0;
             auto it = _event_counts.find(key);
             if (it != _event_counts.end()) actual = it->second;
             ok = true;
@@ -1522,6 +1526,7 @@ bool Orchestrator::checkAssertions() {
                 int at = (int)tx.airtime_ms;
                 if (at < a.min || at > a.max) {
                     ok = false;
+                    actual = at;
                     fprintf(stderr, "  FAIL: tx_airtime_between node=%s airtime=%d not in [%d, %d]\n",
                             tx.node.c_str(), at, a.min, a.max);
                     break;
@@ -1545,9 +1550,30 @@ bool Orchestrator::checkAssertions() {
                         a.type.c_str(), a.node.c_str(), a.command.c_str(), a.value.c_str());
             }
         }
+
+        // Build JSON object for this assertion
+        if (!first) json_arr += ",";
+        first = false;
+        json_arr += "{\"type\":\"" + a.type + "\",\"status\":\"" + (ok ? "pass" : "fail") + "\"";
+        if (!a.node.empty()) json_arr += ",\"node\":\"" + a.node + "\"";
+        if (!a.command.empty()) json_arr += ",\"command\":\"" + a.command + "\"";
+        if (!a.value.empty()) json_arr += ",\"value\":\"" + a.value + "\"";
+        if (!a.event_type.empty()) json_arr += ",\"event_type\":\"" + a.event_type + "\"";
+        if (a.count > 0) json_arr += ",\"count\":" + std::to_string(a.count);
+        if (a.min >= 0) json_arr += ",\"min\":" + std::to_string(a.min);
+        if (a.max >= 0) json_arr += ",\"max\":" + std::to_string(a.max);
+        if (actual >= 0) json_arr += ",\"actual\":" + std::to_string(actual);
+        json_arr += "}";
     }
+
+    json_arr += "]";
 
     fprintf(stderr, "ASSERTIONS: %d passed, %d failed out of %d\n",
             pass, fail, (int)_assertions.size());
+
+    // Emit structured NDJSON event to stdout (same pattern as sim_summary)
+    printf("{\"type\":\"assertions\",\"time_ms\":%lu,\"passed\":%d,\"failed\":%d,\"total\":%d,\"results\":%s}\n",
+           _duration_ms, pass, fail, (int)_assertions.size(), json_arr.c_str());
+
     return fail == 0;
 }

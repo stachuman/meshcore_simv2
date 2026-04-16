@@ -49,6 +49,16 @@
   .confirm-dialog h3 { margin-bottom: 12px; }
   .confirm-dialog p { color: var(--text-muted); font-size: 12px; margin-bottom: 16px; }
   .confirm-dialog .btn-row { display: flex; gap: 8px; justify-content: flex-end; }
+
+  .toast {
+    position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+    background: #16a34a; color: #fff; padding: 10px 20px;
+    border-radius: var(--radius-lg); font-size: 13px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    z-index: 2000; opacity: 0; transition: opacity 0.3s;
+    pointer-events: none; max-width: 90vw; text-align: center;
+  }
+  .toast.show { opacity: 1; }
 </style>
 </head>
 <body>
@@ -70,14 +80,16 @@
     <h1 style="margin-bottom:0">Saved Configs</h1>
     <div class="flex gap-8">
       <button class="btn" onclick="loadConfigs()">Refresh</button>
-      <label class="btn btn-primary" for="file-upload" style="cursor:pointer">Upload Config</label>
+      <label class="btn btn-primary" for="file-upload" style="cursor:pointer">Import JSON</label>
       <input type="file" id="file-upload" accept=".json" style="display:none" onchange="handleUpload(event)">
     </div>
   </div>
 
   <div id="upload-area" class="upload-area" onclick="document.getElementById('file-upload').click()">
-    Drop a JSON config file here or click to upload
+    Drop a JSON file here &mdash; topology or full simulation config
   </div>
+
+  <div id="toast" class="toast"></div>
 
   <div id="configs-loading" class="empty-state">
     <div class="spinner"></div>
@@ -115,15 +127,40 @@ function handleUpload(e) {
   e.target.value = '';
 }
 
+function showToast(msg, durationMs = 4000) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._tid);
+  t._tid = setTimeout(() => t.classList.remove('show'), durationMs);
+}
+
+const SIM_KEYS = ['commands', 'expect', 'simulation', 'message_schedule', 'channel_schedule'];
+
 async function uploadFile(file) {
   try {
     const text = await file.text();
-    const config = JSON.parse(text);
-    const name = file.name.replace(/\.json$/i, '');
-    await postJSON('/api/configs/', { config, name });
-    loadConfigs();
+    const data = JSON.parse(text);
+    const name = data._name || data._desc || file.name.replace(/\.json$/i, '');
+    const isFullSim = SIM_KEYS.some(k => k in data);
+
+    if (isFullSim) {
+      await postJSON('/api/configs/', { config: data, name });
+      const nodes = (data.nodes || []).length;
+      const cmds = (data.commands || []).length;
+      const asserts = (data.expect || []).length;
+      showToast(`Imported full simulation: ${nodes} nodes, ${cmds} commands, ${asserts} assertions`);
+      loadConfigs();
+    } else {
+      const nodes = data.nodes || [];
+      const links = data.links || data.topology?.links || [];
+      const radio = data.radio || data.simulation?.radio || {};
+      await postJSON('/api/topologies/', { name, nodes, links, radio });
+      showToast(`Imported topology: ${nodes.length} nodes, ${links.length} links`);
+      loadConfigs();
+    }
   } catch (err) {
-    alert('Failed to upload config: ' + err.message);
+    alert('Failed to import: ' + err.message);
   }
 }
 

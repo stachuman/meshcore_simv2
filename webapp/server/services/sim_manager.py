@@ -306,6 +306,13 @@ class SimManager:
                 elif record.status == "cancelled":
                     # Already handled by cancel_sim
                     pass
+                elif proc.returncode == 1 and stderr_output and "ASSERTIONS:" in stderr_output:
+                    # Simulation ran fine but assertions failed — still "completed"
+                    record.status = "completed"
+                    record.progress_pct = 100
+                    self._notify_progress(
+                        sim_id, {"status": "completed", "progress": 1.0}
+                    )
                 else:
                     record.status = "failed"
                     record.error = (

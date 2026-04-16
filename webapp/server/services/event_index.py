@@ -29,6 +29,7 @@ class EventIndex:
         self.stats: list[dict] = []          # companion node_stats events
         self.repeater_stats: list[dict] = []  # repeater node_stats (with stats_type)
         self.summary: dict = {}              # sim_summary event (radio, delivery, acks, fate)
+        self.assertions: dict = {}           # assertions event (pass/fail results)
 
         self._load(path)
 
@@ -89,6 +90,9 @@ class EventIndex:
             return
         if etype == "sim_summary":
             self.summary = ev
+            return
+        if etype == "assertions":
+            self.assertions = ev
             return
         if etype == "node_stats":
             if "stats_type" in ev:
@@ -370,6 +374,7 @@ class EventIndex:
             "stats": self.stats,
             "repeater_stats": self.repeater_stats,
             "summary": self.summary,
+            "assertions": self.assertions,
         }
 
 

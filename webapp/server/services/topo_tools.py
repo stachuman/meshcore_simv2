@@ -15,7 +15,7 @@ from types import SimpleNamespace
 _THIS_DIR = Path(__file__).resolve().parent
 _TOOLS_CANDIDATES = [
     _THIS_DIR.parent.parent / "tools",          # Docker: /app/tools
-    _THIS_DIR.parent.parent.parent.parent / "tools",  # Local dev: repo root/tools
+    _THIS_DIR.parent.parent.parent / "tools",  # Local dev: repo root/tools
 ]
 for _candidate in _TOOLS_CANDIDATES:
     _dir = str(_candidate)

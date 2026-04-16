@@ -99,6 +99,10 @@ public:
     void trackAck(uint32_t expected_ack, bool is_flood) {
         _pending_acks[expected_ack] = is_flood;
     }
+
+    void sendFloodWithScope(const TransportKey& scope, mesh::Packet* pkt, uint32_t delay_millis) {
+        sendFloodScoped(scope, pkt, delay_millis);
+    }
 };
 
 class CompanionMeshWrapper : public MeshWrapper {
@@ -156,6 +160,24 @@ public:
     }
 
     std::string handleCommand(uint32_t timestamp, const char* cmd) override {
+        if (strncmp(cmd, "scope ", 6) == 0) {
+            const char* name = cmd + 6;
+            NodePrefs* prefs = _mesh.getNodePrefs();
+            if (strlen(name) == 0 || strcmp(name, "none") == 0) {
+                memset(prefs->default_scope_name, 0, sizeof(prefs->default_scope_name));
+                memset(prefs->default_scope_key, 0, sizeof(prefs->default_scope_key));
+                return "default scope cleared";
+            }
+            strncpy(prefs->default_scope_name, name, sizeof(prefs->default_scope_name) - 1);
+            prefs->default_scope_name[sizeof(prefs->default_scope_name) - 1] = '\0';
+            // Compute auto-key (same as firmware CMD_SET_DEFAULT_FLOOD_SCOPE / DEFAULT_FLOOD_SCOPE_NAME init)
+            TransportKeyStore temp;
+            TransportKey key;
+            std::string hash_name = std::string("#") + name;
+            temp.getAutoKeyFor(0, hash_name.c_str(), key);
+            memcpy(prefs->default_scope_key, key.key, sizeof(key.key));
+            return "default scope set to " + std::string(name);
+        }
         if (strncmp(cmd, "advert.zerohop", 14) == 0) {
             mesh::Packet* pkt = _mesh.createSelfAdvert(_mesh.getNodeName());
             if (pkt) {
@@ -167,8 +189,13 @@ public:
         if (strncmp(cmd, "advert", 6) == 0) {
             mesh::Packet* pkt = _mesh.createSelfAdvert(_mesh.getNodeName());
             if (pkt) {
-                _mesh.sendFlood(pkt);
-                return "advert sent (flood)";
+                NodePrefs* prefs = _mesh.getNodePrefs();
+                TransportKey scope;
+                memcpy(&scope.key, prefs->default_scope_key, sizeof(scope.key));
+                _mesh.sendFloodWithScope(scope, pkt, 0);
+                return scope.isNull()
+                    ? "advert sent (flood)"
+                    : "advert sent (flood, scoped: " + std::string(prefs->default_scope_name) + ")";
             }
             return "ERROR: createSelfAdvert failed";
         }
