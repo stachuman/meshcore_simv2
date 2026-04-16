@@ -1,0 +1,19 @@
+{
+  "sources": {
+    "default": {
+      "repo": "https://github.com/meshcore-dev/MeshCore.git",
+      "branch": "main",
+      "path": "MeshCore"
+    },
+    "scope": {
+      "repo": "https://github.com/meshcore-dev/MeshCore.git",
+      "branch": "default-scope",
+      "path": "MeshCore-default-scope"
+    },
+    "1.13": {
+      "repo": "https://github.com/meshcore-dev/MeshCore.git",
+      "tag": "room-server-v1.13.0",
+      "path": "MeshCore-1.13"
+    }
+  }
+}

@@ -20,7 +20,10 @@ def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     a = (math.sin(dlat / 2) ** 2
          + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2))
          * math.sin(dlon / 2) ** 2)
-    return R * 2 * math.asin(min(1.0, math.sqrt(a)))
+    # Clamp `a` (not sqrt(a)) at 1.0 to guard against floating-point overshoot
+    # for antipodal or near-antipodal pairs. Clamping sqrt afterwards would
+    # still have already triggered a domain error on sqrt(a > 1).
+    return R * 2 * math.asin(math.sqrt(min(1.0, a)))
 
 
 def intermediate_point(

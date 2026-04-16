@@ -6,9 +6,11 @@
 
 SimRadio::SimRadio(mesh::MillisecondClock& ms, int sf, int bw_hz, int cr,
                    float rx_to_tx_delay_ms, float tx_to_rx_delay_ms)
-    : _sf(sf), _bw_hz(bw_hz), _cr(cr), _ms(ms),
+    // Init-list order must match declaration order in SimRadio.h.
+    : _sf(sf), _bw_hz(bw_hz), _cr(cr),
       _rx_to_tx_delay_ms(rx_to_tx_delay_ms), _tx_to_rx_delay_ms(tx_to_rx_delay_ms),
-      _earliest_tx_ms(0), _earliest_rx_ms(0)
+      _earliest_tx_ms(0), _earliest_rx_ms(0),
+      _ms(ms)
 {
     if (_bw_hz <= 0) {
         fprintf(stderr, "SimRadio: bw_hz=%d invalid, defaulting to 125000\n", _bw_hz);
@@ -20,6 +22,10 @@ SimRadio::SimRadio(mesh::MillisecondClock& ms, int sf, int bw_hz, int cr,
     }
 }
 
+#ifndef ORCHESTRATOR_BUILD
+// Only used by the stdout JSON emit path below (standalone repeater/companion
+// builds). Under ORCHESTRATOR_BUILD the packet data is routed through the
+// TxCallback instead, so this helper is dead weight there.
 static const char HEX[] = "0123456789abcdef";
 static void bytes_to_hex(char* out, const uint8_t* in, int len) {
     for (int i = 0; i < len; i++) {
@@ -28,6 +34,7 @@ static void bytes_to_hex(char* out, const uint8_t* in, int len) {
     }
     out[len*2] = '\0';
 }
+#endif
 
 void SimRadio::notifyRxStart(uint32_t duration_ms) {
     unsigned long now = _ms.getMillis();

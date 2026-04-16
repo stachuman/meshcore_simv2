@@ -345,6 +345,25 @@
   // -- Settings popover state ----------------------------------------
   let settingsOpen = false;
 
+  // -- Firmware plugins cache ----------------------------------------
+  let _firmwarePlugins = [];
+
+  function _firmwareOptionsHtml(selected) {
+    let html = '<option value=""' + (selected === '' ? ' selected' : '') + '>(default)</option>';
+    for (const name of _firmwarePlugins) {
+      if (name === 'fw_default') continue;
+      html += '<option value="' + name + '"' + (selected === name ? ' selected' : '') + '>' + name + '</option>';
+    }
+    return html;
+  }
+
+  async function loadFirmwarePlugins() {
+    try {
+      const data = await fetchJSON('/api/firmware');
+      _firmwarePlugins = data.plugins || [];
+    } catch (_) {}
+  }
+
   function markDirty() {
     isDirty = true;
     const btn = document.getElementById('btn-save');
@@ -501,6 +520,12 @@
         '<label>Contact</label>' +
         '<input id="det-contact" value="' + esc(node.contact || '') + '">' +
       '</div>' +
+      '<div class="detail-field">' +
+        '<label>Firmware</label>' +
+        '<select id="det-firmware">' +
+          _firmwareOptionsHtml(node.firmware || '') +
+        '</select>' +
+      '</div>' +
       '<div style="margin-top:8px">' +
         '<button class="btn btn-sm btn-danger" id="det-delete-node">Delete Node</button>' +
       '</div>';
@@ -534,6 +559,7 @@
     bindField('det-lat', 'lat', v => v === '' ? undefined : parseFloat(v));
     bindField('det-lon', 'lon', v => v === '' ? undefined : parseFloat(v));
     bindField('det-contact', 'contact');
+    bindField('det-firmware', 'firmware', v => v === '' ? undefined : v);
 
     propsDiv.querySelector('#det-delete-node').addEventListener('click', () => {
       if (!confirm('Delete node "' + node.name + '"?')) return;
@@ -1409,7 +1435,7 @@
     }
   }
 
-  loadTopology();
+  loadFirmwarePlugins().then(() => loadTopology());
 })();
 </script>
 </body>

@@ -68,6 +68,10 @@ class BufferStream : public Stream {
     uint8_t*       _wbuf;
     size_t         _wmax, _wpos;
 public:
+    // Expose the base-class multi-byte write() overloads that would
+    // otherwise be hidden by the single-byte override below.
+    using Print::write;
+
     BufferStream(const uint8_t* rbuf, size_t rlen, uint8_t* wbuf, size_t wmax)
         : _rbuf(rbuf), _rlen(rlen), _rpos(0),
           _wbuf(wbuf), _wmax(wmax), _wpos(0) {}

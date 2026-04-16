@@ -65,6 +65,8 @@ orchestrator (host binary)
 
 Each plugin is a self-contained shared library with its own copy of all MeshCore code. Symbol isolation is achieved via `-Wl,-Bsymbolic`, ensuring each plugin uses its own function implementations even when the host binary also contains MeshCore symbols.
 
+**Note:** The host binary links against `fw_default.so` at build time (`target_link_libraries(orchestrator PRIVATE fw_default)`). This resolves MeshCore symbols referenced transitively through shared headers (e.g. `SimpleMeshTables`, `target.h`). Additional plugins are loaded purely via `dlopen` at runtime. The `-Wl,-Bsymbolic` flag on each plugin prevents the host's `fw_default` symbols from interposing on other plugins' internal calls.
+
 ### Plugin ABI
 
 Each plugin exports three `extern "C"` functions:

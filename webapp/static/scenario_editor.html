@@ -382,6 +382,12 @@
         <label>Seed</label>
         <input id="p-seed" class="form-input" type="number" value="">
       </div>
+      <div class="param-row">
+        <label>Default Firmware</label>
+        <select id="p-firmware" class="form-input">
+          <option value="">fw_default (built-in)</option>
+        </select>
+      </div>
     </div>
 
     <div class="side-section">
@@ -556,6 +562,8 @@
       if (sim.warmup_ms != null) document.getElementById('p-warmup').value = sim.warmup_ms;
       document.getElementById('p-hotstart').checked = !!sim.hot_start;
       document.getElementById('p-seed').value = sim.seed ?? '';
+      const fwDefault = (sim.firmware || {}).default || '';
+      document.getElementById('p-firmware').value = fwDefault;
     } catch (_) {}
   }
 
@@ -572,6 +580,16 @@
       if (seed) obj.simulation.seed = parseInt(seed);
       else delete obj.simulation.seed;
 
+      const fwVal = document.getElementById('p-firmware').value;
+      if (fwVal) {
+        if (!obj.simulation.firmware) obj.simulation.firmware = {};
+        obj.simulation.firmware.default = fwVal;
+      } else {
+        if (obj.simulation.firmware) delete obj.simulation.firmware.default;
+        if (obj.simulation.firmware && Object.keys(obj.simulation.firmware).length === 0)
+          delete obj.simulation.firmware;
+      }
+
       programmaticChange = true;
       const cursor = editor.getCursor();
       editor.setValue(JSON.stringify(obj, null, 2));
@@ -585,9 +603,10 @@
     el.addEventListener('change', syncParamsToEditor);
   });
   document.getElementById('p-hotstart').addEventListener('change', syncParamsToEditor);
+  document.getElementById('p-firmware').addEventListener('change', syncParamsToEditor);
 
   // Side params also mark dirty
-  document.querySelectorAll('#p-duration, #p-step, #p-warmup, #p-seed, #p-hotstart').forEach(el => {
+  document.querySelectorAll('#p-duration, #p-step, #p-warmup, #p-seed, #p-hotstart, #p-firmware').forEach(el => {
     el.addEventListener('input', markDirty);
   });
 
@@ -607,6 +626,26 @@
   }
 
   loadTopologyList();
+
+  // -- Load firmware plugins dropdown --------------------------------
+  async function loadFirmwarePlugins() {
+    try {
+      const data = await fetchJSON('/api/firmware');
+      const sel = document.getElementById('p-firmware');
+      sel.innerHTML = '<option value="">fw_default (built-in)</option>';
+      for (const name of data.plugins) {
+        if (name === 'fw_default') continue;
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        sel.appendChild(opt);
+      }
+      window._availablePlugins = data.plugins;
+    } catch (_) {
+      // API unavailable, keep just the default option
+    }
+  }
+  loadFirmwarePlugins();
 
   // -- Load saved configs dropdown ----------------------------------
   async function loadConfigList() {

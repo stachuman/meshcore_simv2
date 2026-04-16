@@ -3,6 +3,7 @@
 #include <vector>
 #include <memory>
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <set>
 #include <cstdio>
@@ -151,7 +152,9 @@ void Orchestrator::configure(const OrchestratorConfig& cfg) {
 
     // Initialize per-undirected-link fading state for O-U process (reciprocal)
     _fading_state.clear();
-    _fading_state.resize(n * (n - 1) / 2);
+    _fading_state.resize(static_cast<size_t>(n * (n - 1) / 2));
+    // Invariant: symmetricLinkIndex(a,b,n) in [0, n*(n-1)/2) for any a!=b.
+    // Asserted at every access site below to catch mis-sized vectors early.
 
     _hot_start = cfg.hot_start;
 
@@ -464,7 +467,10 @@ void Orchestrator::registerTransmissions(unsigned long current_ms) {
                     if (_snr_coherence_ms > 0.0f) {
                         // Ornstein-Uhlenbeck (continuous-time AR(1)) correlated fading.
                         // Consecutive receptions on the same link see correlated SNR.
-                        auto& fs = _fading_state[symmetricLinkIndex(sender, receiver, n)];
+                        int fidx = symmetricLinkIndex(sender, receiver, n);
+                        assert(fidx >= 0 && static_cast<size_t>(fidx) < _fading_state.size()
+                               && "fading-state index out of bounds (n changed mid-run?)");
+                        auto& fs = _fading_state[static_cast<size_t>(fidx)];
                         float dt = (float)(current_ms - fs.last_ms);
                         float alpha = std::exp(-dt / _snr_coherence_ms);
                         float alpha_sq = alpha * alpha;
@@ -1013,7 +1019,8 @@ unsigned long Orchestrator::initSimulation() {
         const char* role_str = (node->role == NodeRole::Companion) ? "companion" : "repeater";
         EventLog::nodeReady(0, node->name.c_str(), role_str,
                             node->mesh->pubKey(), 32,
-                            node->has_location, node->lat, node->lon);
+                            node->has_location, node->lat, node->lon,
+                            node->firmware_name.c_str());
         if (_verbose) {
             // Print first 8 bytes of pubkey as hex
             const uint8_t* pk = node->mesh->pubKey();

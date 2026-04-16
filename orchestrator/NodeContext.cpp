@@ -3,6 +3,8 @@
 #include <vector>
 #include <memory>
 #include <cstring>
+#include <cstdio>
+#include <stdexcept>
 
 #include "NodeContext.h"
 #include "MeshWrapper.h"
@@ -11,12 +13,20 @@
 static constexpr uint64_t FNV1A_OFFSET_BASIS = 0xcbf29ce484222325ULL;
 static constexpr uint64_t FNV1A_PRIME        = 0x100000001b3ULL;
 
-NodeContext::NodeContext(const std::string& name, NodeRole role,
+#ifdef SHIM_TRACE_CONTEXT
+// When compiled with -DSHIM_TRACE_CONTEXT=1 the simulator logs every node
+// activation to stderr. Useful to detect stray firmware callbacks that run
+// when a different node is active (or none) — they would show up as an
+// unexpected swap in the log. Off by default; has measurable overhead.
+static const char* g_active_node_name = "<none>";
+#endif
+
+NodeContext::NodeContext(const std::string& node_name, NodeRole node_role,
                          uint32_t epoch_base,
                          int sf, int bw, int cr,
                          float rx_to_tx_delay_ms,
                          float tx_to_rx_delay_ms)
-    : name(name), role(role), own_clock(epoch_base),
+    : name(node_name), role(node_role), own_clock(epoch_base),
       radio(own_clock, sf, bw, cr, rx_to_tx_delay_ms, tx_to_rx_delay_ms)
 {
     // Capture outgoing packets for orchestrator routing
@@ -38,28 +48,47 @@ void NodeContext::activate() {
     _ctx_rtc     = &own_clock;
     _ctx_serial  = &serial;
     _ctx_fs      = &filesystem;
+    _ctx_arduino_seed = arduino_rng_seed;  // must be non-zero; see initMesh()
     board._target   = &node_board;
     sensors._target = &sensors_obj;
     sim_clock_set_global(&own_clock);  // millis() returns this node's time
+#ifdef SHIM_TRACE_CONTEXT
+    fprintf(stderr, "[shim-trace] activate: %s -> %s\n",
+            g_active_node_name, name.c_str());
+    g_active_node_name = name.c_str();
+#endif
 }
 
 void NodeContext::initMesh(uint64_t global_seed, FirmwarePlugin& fw) {
-    activate();
-
-    // Seed RNG deterministically from global seed XOR'd with node name hash.
-    // Different global seeds produce different per-node sequences;
-    // same-name nodes still differ from each other.
+    // Compute per-node seeds BEFORE activate() so radio_get_rng_seed()
+    // returns the right value when the firmware constructor runs.
     uint64_t name_hash = FNV1A_OFFSET_BASIS;
     for (char c : name) {
         name_hash ^= static_cast<uint8_t>(c);
         name_hash *= FNV1A_PRIME;
     }
-    rng.seed(name_hash ^ global_seed);
-    radio.seed(name_hash ^ global_seed ^ 0xDEADBEEF);  // different sequence from SimRNG
+    uint64_t combined = name_hash ^ global_seed;
+
+    // Fold 64 -> 32 bits. Ensure non-zero so radio_get_rng_seed() doesn't
+    // fall back to the time-based sentinel.
+    arduino_rng_seed = static_cast<uint32_t>(combined ^ (combined >> 32));
+    if (arduino_rng_seed == 0) arduino_rng_seed = 1;
+
+    activate();
+
+    // Seed the simulator's own SimRNG and SimRadio PRNGs. Different global
+    // seeds produce different per-node sequences; same-name nodes still
+    // differ from each other.
+    rng.seed(combined);
+    radio.seed(combined ^ 0xDEADBEEFULL);  // different sequence from SimRNG
 
     if (role == NodeRole::Companion) {
         mesh = fw.createCompanionMesh(*this);
     } else {
         mesh = fw.createRepeaterMesh(*this);
+    }
+    if (!mesh) {
+        throw std::runtime_error("Firmware plugin \"" + fw.name()
+            + "\" returned null mesh for node \"" + name + "\"");
     }
 }

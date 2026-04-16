@@ -76,7 +76,9 @@ def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     a = (math.sin(dlat / 2) ** 2
          + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2))
          * math.sin(dlon / 2) ** 2)
-    return R * 2 * math.asin(math.sqrt(a))
+    # Clamp `a` at 1.0 to guard against floating-point overshoot for
+    # antipodal pairs. Without this, math.asin(sqrt(a > 1)) raises ValueError.
+    return R * 2 * math.asin(math.sqrt(min(1.0, a)))
 
 
 # ---------------------------------------------------------------------------
@@ -157,40 +159,62 @@ def estimate_node_coordinates(
         if lat != 0.0 or lon != 0.0:
             has_coords.add(prefix)
 
-    for prefix in ordered:
-        neighbors = adjacency.get(prefix, [])
-        sum_wlat = 0.0
-        sum_wlon = 0.0
-        sum_w = 0.0
+    # Fixed-point iteration: a chain of N uncoordinated nodes takes N passes
+    # to fully resolve because each pass can only estimate nodes with at least
+    # one already-known neighbor. Single-pass would leave chain tails unset.
+    # Cap at a generous limit to bound pathological topologies.
+    MAX_ITERS = 100
+    for iteration in range(MAX_ITERS):
+        progress = 0
+        for prefix in ordered:
+            if prefix in estimated:
+                continue  # already resolved in an earlier pass
+            neighbors = adjacency.get(prefix, [])
+            sum_wlat = 0.0
+            sum_wlon = 0.0
+            sum_w = 0.0
 
-        for nbr, snr in neighbors:
-            if nbr not in has_coords:
-                continue
-            nd = nodes_in.get(nbr, {})
-            nlat = float(nd.get("lat", 0.0))
-            nlon = float(nd.get("lon", 0.0))
-            if nlat == 0.0 and nlon == 0.0:
-                # Check if we estimated this neighbor already
-                if nbr in estimated:
-                    nlat, nlon = estimated[nbr]
-                else:
+            for nbr, snr in neighbors:
+                if nbr not in has_coords:
                     continue
+                nd = nodes_in.get(nbr, {})
+                nlat = float(nd.get("lat", 0.0))
+                nlon = float(nd.get("lon", 0.0))
+                if nlat == 0.0 and nlon == 0.0:
+                    # Neighbor was estimated in an earlier iteration
+                    if nbr in estimated:
+                        nlat, nlon = estimated[nbr]
+                    else:
+                        continue
 
-            w = max(1.0, snr + 15.0)
-            sum_wlat += w * nlat
-            sum_wlon += w * nlon
-            sum_w += w
+                w = max(1.0, snr + 15.0)
+                sum_wlat += w * nlat
+                sum_wlon += w * nlon
+                sum_w += w
 
-        if sum_w > 0:
-            est_lat = round(sum_wlat / sum_w, 6)
-            est_lon = round(sum_wlon / sum_w, 6)
-            estimated[prefix] = (est_lat, est_lon)
-            has_coords.add(prefix)
-            if verbose:
-                name = nodes_in[prefix].get("name", prefix)
-                print(f"  Estimated coords for {prefix} ({name}): "
-                      f"({est_lat}, {est_lon}) from {len([n for n, _ in neighbors if n in has_coords])} neighbors",
-                      file=sys.stderr)
+            if sum_w > 0:
+                est_lat = round(sum_wlat / sum_w, 6)
+                est_lon = round(sum_wlon / sum_w, 6)
+                estimated[prefix] = (est_lat, est_lon)
+                has_coords.add(prefix)
+                progress += 1
+                if verbose:
+                    name = nodes_in[prefix].get("name", prefix)
+                    known = sum(1 for n, _ in neighbors if n in has_coords)
+                    print(f"  Estimated coords for {prefix} ({name}): "
+                          f"({est_lat}, {est_lon}) from {known} neighbors "
+                          f"[iter {iteration + 1}]",
+                          file=sys.stderr)
+
+        if progress == 0:
+            break  # fixed point — no chain can resolve further
+    else:
+        # Hit MAX_ITERS without converging — warn but don't fail
+        unresolved = [p for p in need_coords if p not in estimated]
+        if verbose:
+            print(f"  WARN: coordinate estimator hit MAX_ITERS={MAX_ITERS} "
+                  f"with {len(unresolved)} nodes still unresolved",
+                  file=sys.stderr)
 
     return estimated
 

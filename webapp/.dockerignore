@@ -9,7 +9,8 @@ venv
 # Build artifacts
 build/
 build-*/
-*.so
+!build-release/orchestrator/orchestrator
+!build-release/orchestrator/fw_*.so
 *.o
 CMakeCache.txt
 CMakeFiles/

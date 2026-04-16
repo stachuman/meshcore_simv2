@@ -20,6 +20,11 @@
 #include "MeshWrapper.h"
 #include "SimSerial.h"
 
+// Older MeshCore (e.g. 1.13) doesn't define OUT_PATH_UNKNOWN.
+#ifndef OUT_PATH_UNKNOWN
+#define OUT_PATH_UNKNOWN 0xFF
+#endif
+
 // HAS_SCOPE_SUPPORT is defined by CMake when the MeshCore tree has
 // NodePrefs::default_scope_name (present on default-scope branch,
 // absent on main/1.13).

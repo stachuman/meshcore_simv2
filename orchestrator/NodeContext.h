@@ -83,6 +83,11 @@ struct NodeContext {
     AdversarialConfig adversarial;
     std::string firmware_name;  // plugin name (e.g. "fw_default")
 
+    // 32-bit per-node seed exposed to firmware via radio_get_rng_seed().
+    // Derived in initMesh() from (global_seed XOR FNV1a(name)). Zero until
+    // initMesh() runs.
+    uint32_t arduino_rng_seed = 0;
+
     NodeContext(const std::string& name, NodeRole role,
                 uint32_t epoch_base,
                 int sf = 8, int bw = 62500, int cr = 4,

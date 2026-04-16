@@ -1,0 +1,25 @@
+# LeakSanitizer suppressions for firmware-lifetime allocations that "leak"
+# on orchestrator shutdown. On real embedded hardware these pools live
+# until power-off; in the host simulator they never get explicitly freed.
+# Suppressing them keeps ASan useful for catching genuine leaks.
+#
+# Load with LSAN_OPTIONS=suppressions=/path/to/this/file (the test runner
+# sets this automatically for ASan builds).
+#
+# Format: `leak:<substring of symbol or file>`.
+
+# MeshCore's static packet pool — allocated once per node in the
+# StaticPoolPacketManager constructor and held until process exit.
+leak:StaticPoolPacketManager
+leak:PacketQueue
+
+# ed25519 identity generation — transient buffer allocated via operator new
+# during LocalIdentity construction; lifetime tied to node lifetime.
+leak:radio_new_identity
+
+# CompanionMesh / RepeaterMesh factories allocate per-node state that
+# outlives the orchestrator loop. Not a leak in the "forgotten pointer"
+# sense — orchestrator owns these via unique_ptr that outlives the ASan
+# shutdown report.
+leak:createCompanionMesh
+leak:createRepeaterMesh

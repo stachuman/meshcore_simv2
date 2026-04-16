@@ -13,6 +13,23 @@
 
 using json = nlohmann::json;
 
+// Pull a required field from a JSON object, producing a human-readable error
+// if it's missing or the wrong type. `ctx` identifies the enclosing scope,
+// e.g. "nodes[3]" or "commands[7]", so the user knows where to look.
+template<typename T>
+static T require_field(const json& j, const char* field, const std::string& ctx) {
+    if (!j.contains(field)) {
+        throw std::runtime_error(
+            "config error at " + ctx + ": missing required field \"" + field + "\"");
+    }
+    try {
+        return j[field].get<T>();
+    } catch (const json::type_error& e) {
+        throw std::runtime_error(
+            "config error at " + ctx + ": field \"" + field + "\" has wrong type (" + e.what() + ")");
+    }
+}
+
 static NodeRole parseRole(const std::string& s) {
     if (s == "repeater")  return NodeRole::Repeater;
     if (s == "companion") return NodeRole::Companion;
@@ -78,9 +95,11 @@ static OrchestratorConfig parseJson(const json& j) {
     }
 
     if (j.contains("nodes")) {
+        size_t node_idx = 0;
         for (auto& nd : j["nodes"]) {
+            const std::string ctx = "nodes[" + std::to_string(node_idx++) + "]";
             OrchestratorConfig::NodeDef def;
-            def.name = nd["name"].get<std::string>();
+            def.name = require_field<std::string>(nd, "name", ctx);
             if (nd.contains("role")) def.role = parseRole(nd["role"].get<std::string>());
             if (nd.contains("radio")) {
                 auto& r = nd["radio"];
@@ -126,10 +145,12 @@ static OrchestratorConfig parseJson(const json& j) {
     if (j.contains("topology")) {
         auto& topo = j["topology"];
         if (topo.contains("links")) {
+            size_t link_idx = 0;
             for (auto& lk : topo["links"]) {
+                const std::string ctx = "topology.links[" + std::to_string(link_idx++) + "]";
                 OrchestratorConfig::LinkDef def;
-                def.from = lk["from"].get<std::string>();
-                def.to   = lk["to"].get<std::string>();
+                def.from = require_field<std::string>(lk, "from", ctx);
+                def.to   = require_field<std::string>(lk, "to", ctx);
                 if (lk.contains("snr"))         def.snr  = lk["snr"].get<float>();
                 if (lk.contains("rssi"))        def.rssi = lk["rssi"].get<float>();
                 if (lk.contains("snr_std_dev")) def.snr_std_dev = lk["snr_std_dev"].get<float>();
@@ -141,8 +162,10 @@ static OrchestratorConfig parseJson(const json& j) {
     }
 
     if (j.contains("commands")) {
+        size_t cmd_idx = 0;
         for (auto& cd : j["commands"]) {
-            unsigned long at_ms = cd["at_ms"].get<unsigned long>();
+            const std::string ctx = "commands[" + std::to_string(cmd_idx++) + "]";
+            unsigned long at_ms = require_field<unsigned long>(cd, "at_ms", ctx);
 
             // Lua-only command: {"at_ms": N, "lua": "function_name"}
             if (cd.contains("lua")) {
@@ -153,8 +176,8 @@ static OrchestratorConfig parseJson(const json& j) {
                 continue;
             }
 
-            std::string node    = cd["node"].get<std::string>();
-            std::string command = cd["command"].get<std::string>();
+            std::string node    = require_field<std::string>(cd, "node", ctx);
+            std::string command = require_field<std::string>(cd, "command", ctx);
 
             if (node[0] == '@') {
                 // Expand @repeaters, @companions, @all into per-node commands
@@ -343,6 +366,18 @@ static void validateConfig(const OrchestratorConfig& cfg) {
         if (nd.tx_fail_prob < 0.0f || nd.tx_fail_prob > 1.0f)
             errors.push_back(pfx + "tx_fail_prob must be [0.0, 1.0] (got " +
                              std::to_string(nd.tx_fail_prob) + ")");
+    }
+
+    // Firmware name validation
+    {
+        std::set<std::string> fw_names;
+        fw_names.insert(cfg.firmware.default_firmware);
+        for (const auto& nd : cfg.nodes)
+            if (!nd.firmware.empty()) fw_names.insert(nd.firmware);
+        for (const auto& fw : fw_names)
+            if (fw.substr(0, 3) != "fw_")
+                errors.push_back("firmware name \"" + fw +
+                    "\" must start with \"fw_\" (e.g. \"fw_default\")");
     }
 
     // Link cross-validation

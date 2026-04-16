@@ -13,6 +13,15 @@
 #include <vector>
 #include <memory>
 #include <unordered_map>
+
+// Per-file hard cap in the in-memory FS. Matches realistic NVS sizes on
+// embedded targets and bounds the failure mode when buggy firmware-under-test
+// loops on a write — instead of exhausting host RAM, writes start returning
+// short counts once a single file exceeds this.
+// Override at configure time with -DSIM_FS_MAX_FILE_BYTES=N.
+#ifndef SIM_FS_MAX_FILE_BYTES
+#define SIM_FS_MAX_FILE_BYTES (256 * 1024)
+#endif
 #endif
 
 struct FSInfo {
@@ -66,12 +75,21 @@ public:
 
     size_t write(uint8_t c) override {
         if (!_data || !_writable) return 0;
+        // Enforce per-file quota to bound host-RAM exhaustion from runaway
+        // firmware writes. Report a short write (POSIX-style) when full.
+        if (_pos >= SIM_FS_MAX_FILE_BYTES) return 0;
         if (_pos >= _data->size()) _data->resize(_pos + 1);
         (*_data)[_pos++] = c;
         return 1;
     }
     size_t write(const uint8_t* buf, size_t n) override {
         if (!_data || !_writable || n == 0) return 0;
+        // Clamp to remaining quota; return short count if we can't fit it all.
+        size_t remaining = (_pos < SIM_FS_MAX_FILE_BYTES)
+                         ? (SIM_FS_MAX_FILE_BYTES - _pos)
+                         : 0;
+        if (n > remaining) n = remaining;
+        if (n == 0) return 0;
         if (_pos + n > _data->size()) _data->resize(_pos + n);
         memcpy(_data->data() + _pos, buf, n);
         _pos += n;
@@ -245,7 +263,9 @@ public:
 // Global LittleFS instance
 #ifdef ORCHESTRATOR_BUILD
   extern fs::FS* _ctx_fs;
-  #define LittleFS (*_ctx_fs)
+  // Assert-before-deref; see target.h for the pattern rationale.
+  #define LittleFS \
+      ((void)(assert(_ctx_fs != nullptr && "LittleFS used with no active node")), *_ctx_fs)
 #else
   extern fs::FS LittleFS;
 #endif

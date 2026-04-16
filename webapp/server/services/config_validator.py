@@ -15,7 +15,7 @@ from typing import Any
 _KNOWN_TOP_KEYS = {
     "simulation", "nodes", "topology", "commands", "expect",
     "message_schedule", "channel_schedule",
-    "_name", "_desc",
+    "_name", "_desc", "_requires_plugins",
 }
 
 _VALID_ROLES = {"repeater", "companion"}
@@ -170,6 +170,14 @@ def _validate_nodes(
         # adversarial
         if "adversarial" in node:
             _validate_adversarial(node["adversarial"], pfx, result)
+
+        # firmware override
+        if "firmware" in node:
+            fw = node["firmware"]
+            if not isinstance(fw, str) or fw == "":
+                result._error(f"{pfx}: 'firmware' must be a non-empty string")
+            elif not fw.startswith("fw_"):
+                result._warn(f"{pfx}: firmware '{fw}' doesn't start with 'fw_' — expected format: fw_<name>")
 
     # Second pass: validate contact references
     for node in nodes:
@@ -369,6 +377,10 @@ def _validate_simulation(
     if "radio" in sim:
         _validate_sim_radio(sim["radio"], result)
 
+    # firmware sub-section
+    if "firmware" in sim:
+        _validate_sim_firmware(sim["firmware"], result)
+
     return duration_ms
 
 
@@ -446,6 +458,27 @@ def _validate_sim_radio(radio: Any, result: ValidationResult) -> None:
                         result._error(
                             f"simulation.radio.hardware.{field} must be >= 0, got {v}"
                         )
+
+
+def _validate_sim_firmware(fw: Any, result: ValidationResult) -> None:
+    """Validate simulation.firmware sub-section."""
+    if not isinstance(fw, dict):
+        result._error("simulation.firmware must be an object")
+        return
+    if "default" in fw:
+        d = fw["default"]
+        if not isinstance(d, str) or d == "":
+            result._error("simulation.firmware.default must be a non-empty string")
+        elif not d.startswith("fw_"):
+            result._warn(f"simulation.firmware.default '{d}' doesn't start with 'fw_'")
+    if "plugins" in fw:
+        p = fw["plugins"]
+        if not isinstance(p, dict):
+            result._error("simulation.firmware.plugins must be an object (name->path)")
+        else:
+            for k, v in p.items():
+                if not isinstance(v, str):
+                    result._error(f"simulation.firmware.plugins.{k} must be a string path")
 
 
 def _validate_commands(

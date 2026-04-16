@@ -2,6 +2,7 @@
 // Global externs and function declarations normally provided by platform-specific targets.
 // In the simulator, these are backed by Sim* classes created in main.cpp.
 
+#include <assert.h>
 #include <MeshCore.h>
 #include <Identity.h>
 #include <helpers/SensorManager.h>
@@ -12,10 +13,21 @@
 
 // For radio_driver and rtc_clock: names don't collide with MeshCore parameter
 // names, so we can safely use macros over swappable pointers.
+// The comma-operator asserts the context pointer is non-null before deref.
+// In NDEBUG (Release) the assert compiles to ((void)0) so there's no runtime
+// cost; in Debug/ASan, accidental deref-before-activate() produces a loud
+// stack trace instead of a silent SIGSEGV.
 extern SimRadio*       _ctx_radio;
 extern mesh::RTCClock* _ctx_rtc;
-#define radio_driver  (*_ctx_radio)
-#define rtc_clock     (*_ctx_rtc)
+#define radio_driver \
+    ((void)(assert(_ctx_radio != nullptr && "radio_driver used with no active node")), *_ctx_radio)
+#define rtc_clock \
+    ((void)(assert(_ctx_rtc != nullptr && "rtc_clock used with no active node")), *_ctx_rtc)
+
+// Per-node seed returned by radio_get_rng_seed(). Must be set by
+// NodeContext::activate() before the firmware constructs anything that
+// calls the platform seed hook (MeshCore's randomSeed() at startup).
+extern uint32_t _ctx_arduino_seed;
 
 // For board and sensors: names collide with parameter names in MeshCore headers
 // (CommonCLI.h, StatsFormatHelper.h, MyMesh.h), so we use proxy objects that

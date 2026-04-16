@@ -20,6 +20,24 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
     message(STATUS "Build type: Release (portable optimizations for Docker/distribution)")
 endif()
 
+# ASan build type: AddressSanitizer + UndefinedBehaviorSanitizer.
+# Intended for local dev/CI to catch memory and UB bugs in shims, orchestrator, and plugins.
+# Must be used for ALL targets (orchestrator + plugins) since plugins are dlopen'd into the host.
+# Usage: cmake -S . -B build-asan -DCMAKE_BUILD_TYPE=ASan && cmake --build build-asan
+if(CMAKE_BUILD_TYPE STREQUAL "ASan")
+    set(_SAN_FLAGS "-O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-optimize-sibling-calls")
+    set(CMAKE_CXX_FLAGS_ASAN "${_SAN_FLAGS}" CACHE STRING "" FORCE)
+    set(CMAKE_C_FLAGS_ASAN "${_SAN_FLAGS}" CACHE STRING "" FORCE)
+    set(CMAKE_EXE_LINKER_FLAGS_ASAN "-fsanitize=address,undefined" CACHE STRING "" FORCE)
+    set(CMAKE_SHARED_LINKER_FLAGS_ASAN "-fsanitize=address,undefined" CACHE STRING "" FORCE)
+    set(CMAKE_MODULE_LINKER_FLAGS_ASAN "-fsanitize=address,undefined" CACHE STRING "" FORCE)
+    mark_as_advanced(
+        CMAKE_CXX_FLAGS_ASAN CMAKE_C_FLAGS_ASAN
+        CMAKE_EXE_LINKER_FLAGS_ASAN CMAKE_SHARED_LINKER_FLAGS_ASAN CMAKE_MODULE_LINKER_FLAGS_ASAN
+    )
+    message(STATUS "Build type: ASan (AddressSanitizer + UBSan — for dev/CI bug hunting)")
+endif()
+
 # MeshCore source directory — override with -DMESHCORE_DIR=/path/to/fork
 set(MESHCORE_DIR "${CMAKE_SOURCE_DIR}/MeshCore" CACHE PATH "Path to MeshCore source tree")
 message(STATUS "Using MeshCore from: ${MESHCORE_DIR}")
@@ -36,6 +54,15 @@ option(DELAY_TUNING_RUNTIME "Enable runtime delay tuning override for sweep buil
 # Lua scripting — when ON, the orchestrator gains --lua and --lua-var flags
 # and an interactive 'lua' command. Requires liblua5.4-dev (apt install liblua5.4-dev).
 option(ENABLE_LUA "Enable Lua scripting in orchestrator (requires liblua5.4-dev)" ON)
+
+# Shim context tracing — when ON, NodeContext::activate() logs every node
+# swap to stderr. Useful for diagnosing stray callbacks that run against
+# the wrong node's context. Off by default (non-zero overhead).
+option(SHIM_TRACE_CONTEXT "Trace node context activations to stderr" OFF)
+if(SHIM_TRACE_CONTEXT)
+    add_compile_definitions(SHIM_TRACE_CONTEXT=1)
+    message(STATUS "Shim context tracing: ENABLED")
+endif()
 
 # Find OpenSSL
 find_package(OpenSSL REQUIRED)
@@ -57,20 +84,29 @@ set(COMMON_DEFS
 )
 
 # ---- Common include directories ----
-# Shim directories MUST come before MESHCORE_DIR so that our Arduino.h, FS.h,
-# target.h etc. shadow the real platform headers that MeshCore expects.
-set(COMMON_INCLUDES
+# Split into OUR_INCLUDES (our shim code — warnings active) and
+# THIRDPARTY_INCLUDES (MeshCore + ed25519 — treated as SYSTEM so their
+# warnings don't drown out our own). Shim directories MUST come before
+# MESHCORE_DIR so that our Arduino.h, FS.h, target.h etc. shadow the real
+# platform headers that MeshCore expects.
+set(OUR_INCLUDES
     ${CMAKE_SOURCE_DIR}/shims/arduino_shim
     ${CMAKE_SOURCE_DIR}/shims/lib_shim
     ${CMAKE_SOURCE_DIR}/shims/crypto_shim
     ${CMAKE_SOURCE_DIR}/shims/platform_shim
+)
+set(THIRDPARTY_INCLUDES
     ${MESHCORE_DIR}/src
     ${MESHCORE_DIR}/src/helpers
     ${MESHCORE_DIR}/lib/ed25519
 )
+# COMMON_INCLUDES preserved as the full ordered list for callers that don't
+# care about the split (legacy interface); shadow ordering is preserved.
+set(COMMON_INCLUDES ${OUR_INCLUDES} ${THIRDPARTY_INCLUDES})
 
 if(DELAY_TUNING_RUNTIME)
     # Prepend sweep shim so its helpers/DelayTuning.h shadows the fork's version
+    list(INSERT OUR_INCLUDES 0 ${CMAKE_SOURCE_DIR}/shims/sweep_shim)
     list(INSERT COMMON_INCLUDES 0 ${CMAKE_SOURCE_DIR}/shims/sweep_shim)
     message(STATUS "Runtime delay tuning: ENABLED (sweep mode)")
 endif()

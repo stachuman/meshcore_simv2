@@ -15,9 +15,14 @@ add_executable(orchestrator
     ${SHIM_SOURCES}
 )
 
+# Our code gets regular -I so warnings fire; MeshCore/ed25519 get -isystem so
+# their warnings are suppressed. sol.hpp (third_party) is vendored — SYSTEM too.
 target_include_directories(orchestrator PRIVATE
-    ${COMMON_INCLUDES}
+    ${OUR_INCLUDES}
     ${CMAKE_CURRENT_SOURCE_DIR}
+)
+target_include_directories(orchestrator SYSTEM PRIVATE
+    ${THIRDPARTY_INCLUDES}
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party
 )
 
@@ -25,6 +30,43 @@ target_compile_definitions(orchestrator PRIVATE
     ${COMMON_DEFS}
     ORCHESTRATOR_BUILD
 )
+
+# Warnings: apply to orchestrator target (covers our orchestrator sources + shims).
+# Plugins compile MeshCore sources which we don't own — warnings are not applied there.
+# -Werror is intentionally OFF for now; enable per-developer via -DORCH_WERROR=ON once
+# the current warning backlog is cleared.
+option(ORCH_WERROR "Treat warnings as errors in orchestrator/shim code" OFF)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(orchestrator PRIVATE
+        -Wall
+        -Wextra
+        -Wpedantic
+        -Wshadow
+        -Wcast-align
+        -Wunused
+        -Woverloaded-virtual
+        -Wconversion
+        -Wsign-conversion
+        -Wnull-dereference
+        -Wformat=2
+        # Noise suppression for headers we can't control / conscious choices:
+        -Wno-unused-parameter       # Arduino-style callbacks with unused args
+        -Wno-missing-field-initializers  # nlohmann::json aggregate init is noisy
+        # -Wnon-virtual-dtor disabled: MeshCore's base classes (mesh::RNG,
+        #   mesh::RTCClock, mesh::Radio, mesh::Board) do not have virtual
+        #   destructors. Our shims inherit from them, and the warning fires
+        #   on our class declaration even though we never delete shim
+        #   objects through base pointers. Cannot be fixed without editing
+        #   MeshCore; consciously dropped.
+        # -Wdouble-promotion disabled: most hits are printf("%f", float)
+        #   where the float-to-double promotion is exactly what the printf
+        #   format specifier expects. Chasing casts at every emit site is
+        #   busywork with no correctness benefit.
+    )
+    if(ORCH_WERROR)
+        target_compile_options(orchestrator PRIVATE -Werror)
+    endif()
+endif()
 
 # -rdynamic exports host symbols (shims) so plugins can resolve them at dlopen time.
 # dl provides dlopen/dlsym/dlclose.
@@ -38,7 +80,7 @@ target_link_options(orchestrator PRIVATE -rdynamic)
 if(ENABLE_LUA)
     find_package(Lua 5.4 REQUIRED)
     target_sources(orchestrator PRIVATE LuaEngine.cpp)
-    target_include_directories(orchestrator PRIVATE ${LUA_INCLUDE_DIR})
+    target_include_directories(orchestrator SYSTEM PRIVATE ${LUA_INCLUDE_DIR})
     target_link_libraries(orchestrator PRIVATE ${LUA_LIBRARIES})
     target_compile_definitions(orchestrator PRIVATE ENABLE_LUA)
 endif()

@@ -113,17 +113,21 @@ void simEnd(unsigned long time_ms) {
 
 void nodeReady(unsigned long time_ms, const char* node, const char* role,
                const uint8_t* pub_key, int key_len,
-               bool has_location, double lat, double lon) {
+               bool has_location, double lat, double lon,
+               const char* firmware) {
     char hex[128];
     to_hex(hex, pub_key, key_len);
     char buf[2048];
-    if (has_location) {
-        snprintf(buf, sizeof(buf), "{\"type\":\"node_ready\",\"time_ms\":%lu,\"node\":\"%s\",\"role\":\"%s\",\"pub\":\"%s\",\"lat\":%.6f,\"lon\":%.6f}\n",
-                time_ms, node, role, hex, lat, lon);
-    } else {
-        snprintf(buf, sizeof(buf), "{\"type\":\"node_ready\",\"time_ms\":%lu,\"node\":\"%s\",\"role\":\"%s\",\"pub\":\"%s\"}\n",
-                time_ms, node, role, hex);
-    }
+    // Build optional fields
+    char loc_part[64] = "";
+    if (has_location)
+        snprintf(loc_part, sizeof(loc_part), ",\"lat\":%.6f,\"lon\":%.6f", lat, lon);
+    char fw_part[128] = "";
+    if (firmware)
+        snprintf(fw_part, sizeof(fw_part), ",\"firmware\":\"%s\"", firmware);
+    snprintf(buf, sizeof(buf),
+        "{\"type\":\"node_ready\",\"time_ms\":%lu,\"node\":\"%s\",\"role\":\"%s\",\"pub\":\"%s\"%s%s}\n",
+        time_ms, node, role, hex, loc_part, fw_part);
     emitLine(buf);
 }
 

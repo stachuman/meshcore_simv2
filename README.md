@@ -17,7 +17,7 @@ Requires CMake 3.16+, a C++17 compiler, OpenSSL development libraries, Python 3.
 sudo apt install build-essential cmake libssl-dev liblua5.4-dev python3 python3-venv
 
 # Clone the repo
-git clone --recursive https://github.com/stachuman/meshcore_simv2.git
+git clone https://github.com/stachuman/meshcore_simv2.git
 cd meshcore_simv2
 
 # Set up Python virtual environment
@@ -25,9 +25,11 @@ python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 
-# Build (unoptimized for debugging)
-cmake -S . -B build
-cmake --build build
+# Clone all MeshCore firmware sources (from firmware.json registry)
+python3 tools/firmware.py init
+
+# Build orchestrator + all firmware plugins
+python3 tools/firmware.py build
 
 # Quick run - simulation and then visualization
 ./tools/run_sim.sh ./test/t34_delay_bench_butterfly
@@ -57,20 +59,25 @@ cmake --build build-release -j$(nproc)
 - Portable across x86_64 CPUs
 - Used by Docker builds
 
-If you already cloned without `--recursive`, initialize the MeshCore submodule:
+### Firmware Management
+
+All MeshCore firmware sources are tracked in `firmware.json`. Use `tools/firmware.py` to manage them:
 
 ```bash
-git submodule update --init
+python3 tools/firmware.py list                  # show registered sources
+python3 tools/firmware.py status                # detailed git/build status
+python3 tools/firmware.py add myfork https://github.com/user/MeshCore.git --branch dev
+python3 tools/firmware.py update                # git pull all sources
+python3 tools/firmware.py build --build-type Release -j$(nproc)
 ```
 
-To update MeshCore to the latest upstream version:
+To use a different MeshCore tree without the registry, point `MESHCORE_DIR` directly:
 
 ```bash
-cd MeshCore
-git pull origin main
-cd ..
-cmake --build build
+cmake -S . -B build -DMESHCORE_DIR=/path/to/MeshCore-fork
 ```
+
+For multi-firmware testing (running nodes with different MeshCore versions simultaneously), see [docs/MULTI_FIRMWARE.md](docs/MULTI_FIRMWARE.md).
 
 The Python venv must be active when running visualization or topology tools (`source venv/bin/activate`).
 
@@ -242,7 +249,7 @@ See [docs/TOPOLOGY_GENERATOR.md](docs/TOPOLOGY_GENERATOR.md) for full documentat
 
 ## Testing Different MeshCore Variants
 
-By default the simulator builds against the `MeshCore/` git submodule. To test a fork or feature branch, clone it and point `MESHCORE_DIR` to it. Use a separate build directory so both builds coexist.
+By default the simulator builds against the `MeshCore/` directory. To test a fork or feature branch, clone it and point `MESHCORE_DIR` to it. Use a separate build directory so both builds coexist.
 
 ```bash
 # 1. Clone your MeshCore fork alongside this repo
@@ -335,12 +342,11 @@ Open http://localhost:8000
 
 ### Docker image
 
-Build requires the Release orchestrator binary first:
+Build requires the Release orchestrator binary and firmware plugins first:
 
 ```bash
-# 1. Build the optimized orchestrator
-cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release
-cmake --build build-release --target orchestrator -j$(nproc)
+# 1. Build orchestrator + all firmware plugins (Release)
+python3 tools/firmware.py build --build-dir build-release --build-type Release -j$(nproc)
 
 # 2. Build the Docker image
 cd webapp
@@ -384,8 +390,8 @@ orchestrator/        Multi-node simulator engine
   Orchestrator.cpp   Main simulation loop, physics, collision detection
   JsonConfig.cpp     Config parser
   LuaEngine.cpp      Lua scripting bindings and event dispatch
-  CompanionNode.cpp  Companion mesh node factory
-  RepeaterNode.cpp   Repeater mesh node factory
+  FirmwarePlugin.cpp Plugin loader (dlopen/dlsym)
+  firmware/          Firmware plugin sources (node factories, exports)
 simple_repeater/     Standalone single-repeater binary
 companion_radio/     Standalone single-companion binary
 topology_generator/  ITM-based topology generation from live network data

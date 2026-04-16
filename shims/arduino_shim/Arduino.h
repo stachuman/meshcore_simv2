@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <assert.h>
 
 // Include ALL C++ STL headers that might be used BEFORE defining min/max macros.
 // This prevents the macros from breaking template code in standard headers.
@@ -87,12 +88,20 @@ public:
 
 #ifdef ORCHESTRATOR_BUILD
   extern HardwareSerial* _ctx_serial;
-  #define Serial (*_ctx_serial)
+  // Assert-before-deref; see shims/lib_shim/target.h for the pattern rationale.
+  #define Serial \
+      ((void)(assert(_ctx_serial != nullptr && "Serial used with no active node")), *_ctx_serial)
 #else
   extern HardwareSerial Serial;
 #endif
 
-// String class stub (minimal - only what MeshCore needs)
+// String class stub (minimal - only what MeshCore needs).
+//
+// On malloc failure the string ends up in a "not-OK" state (_buf==nullptr,
+// _len==0, `operator bool()` returns false) — matches Arduino's convention
+// so firmware that checks `if (str)` still works. In a simulator running
+// on a GB-scale host malloc shouldn't fail in practice; assert() surfaces
+// it loudly in Debug/ASan builds if it ever does.
 class String {
     char* _buf;
     size_t _len;
@@ -102,22 +111,42 @@ public:
         if (s) {
             _len = strlen(s);
             _buf = (char*)malloc(_len+1);
-            if (_buf) memcpy(_buf, s, _len+1);
-            else _len = 0;
+            if (_buf) {
+                memcpy(_buf, s, _len+1);
+            } else {
+                assert(false && "String(const char*): malloc failed");
+                _len = 0;  // NDEBUG fallback: become a valid-but-empty String
+            }
         }
     }
     String(const String& o) : _buf(nullptr), _len(0) {
         if (o._buf) {
             _len = o._len;
             _buf = (char*)malloc(_len+1);
-            if (_buf) memcpy(_buf, o._buf, _len+1);
-            else _len = 0;
+            if (_buf) {
+                memcpy(_buf, o._buf, _len+1);
+            } else {
+                assert(false && "String(const String&): malloc failed");
+                _len = 0;
+            }
         }
     }
     ~String() { free(_buf); }
     String& operator=(const String& o) {
-        if (this != &o) { free(_buf); _buf = nullptr; _len = 0;
-            if (o._buf) { _len = o._len; _buf = (char*)malloc(_len+1); memcpy(_buf, o._buf, _len+1); }
+        if (this != &o) {
+            free(_buf); _buf = nullptr; _len = 0;
+            if (o._buf) {
+                _buf = (char*)malloc(o._len + 1);
+                if (_buf) {
+                    _len = o._len;
+                    memcpy(_buf, o._buf, _len + 1);
+                } else {
+                    // BUGFIX: previously memcpy ran unconditionally; with
+                    // malloc returning nullptr that was a null-deref.
+                    assert(false && "String::operator=: malloc failed");
+                    _len = 0;
+                }
+            }
         }
         return *this;
     }

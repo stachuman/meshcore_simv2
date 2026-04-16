@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <cerrno>
 #include <string>
 #include <fstream>
 #include <sstream>
@@ -33,12 +34,13 @@
 #undef max
 
 static void usage(const char* prog) {
-    fprintf(stderr, "Usage: %s [-v|--verbose] [-i|--interactive] [--lua <script.lua>] [--lua-var key=value] <config.json>\n", prog);
+    fprintf(stderr, "Usage: %s [-v|--verbose] [-i|--interactive] [--seed N] [--lua <script.lua>] [--lua-var key=value] <config.json>\n", prog);
     fprintf(stderr, "   or: %s [-v|--verbose] --json '<json string>'\n", prog);
     fprintf(stderr, "   or: cat config.json | %s [-v|--verbose] -\n", prog);
     fprintf(stderr, "\nOptions:\n");
     fprintf(stderr, "  -v, --verbose       Human-readable progress output to stderr\n");
     fprintf(stderr, "  -i, --interactive   Step-on-demand REPL mode\n");
+    fprintf(stderr, "  --seed N            Override simulation.seed from config (uint64; default 42)\n");
 #ifdef ENABLE_LUA
     fprintf(stderr, "  -l, --lua <script>  Load and run Lua script (script-driven or with -i)\n");
     fprintf(stderr, "  --lua-var key=val   Set Lua variable (accessible as vars.key)\n");
@@ -52,6 +54,8 @@ int main(int argc, char* argv[]) {
     bool interactive = false;
     std::string lua_script;
     std::vector<std::pair<std::string, std::string>> lua_vars;
+    bool seed_override = false;
+    uint64_t seed_override_value = 0;
 
     // Collect non-flag arguments
     std::vector<const char*> args;
@@ -60,6 +64,17 @@ int main(int argc, char* argv[]) {
             verbose = true;
         } else if (strcmp(argv[i], "-i") == 0 || strcmp(argv[i], "--interactive") == 0) {
             interactive = true;
+        } else if (strcmp(argv[i], "--seed") == 0 && i + 1 < argc) {
+            const char* sval = argv[++i];
+            char* end = nullptr;
+            errno = 0;
+            unsigned long long parsed = strtoull(sval, &end, 0);
+            if (errno != 0 || end == sval || *end != '\0') {
+                fprintf(stderr, "Error: --seed requires a non-negative integer: %s\n", sval);
+                return 1;
+            }
+            seed_override_value = static_cast<uint64_t>(parsed);
+            seed_override = true;
         } else if ((strcmp(argv[i], "--lua") == 0 || strcmp(argv[i], "-l") == 0) && i + 1 < argc) {
             lua_script = argv[++i];
         } else if (strcmp(argv[i], "--lua-var") == 0 && i + 1 < argc) {
@@ -109,6 +124,20 @@ int main(int argc, char* argv[]) {
     }
 
     cfg.verbose = verbose;
+
+    // Apply CLI seed override (takes precedence over simulation.seed in JSON).
+    const char* seed_source = "default";
+    if (seed_override) {
+        cfg.seed = seed_override_value;
+        seed_source = "cli";
+    } else {
+        // Distinguish "came from JSON" from "struct default" by reparsing intent;
+        // simplest heuristic: if cfg.seed != 42 the config changed it.
+        if (cfg.seed != 42) seed_source = "config";
+    }
+    // Always log the effective seed so every run is reproducible from its log.
+    fprintf(stderr, "rng seed: %llu (%s)\n",
+            static_cast<unsigned long long>(cfg.seed), seed_source);
 
     Orchestrator orch;
 

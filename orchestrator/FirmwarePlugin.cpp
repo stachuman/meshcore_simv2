@@ -23,7 +23,8 @@ FirmwarePlugin::FirmwarePlugin(const std::string& name, const std::string& path)
     _version = reinterpret_cast<VersionFn>(dlsym(_handle, "fw_version"));
 
     if (!_create_repeater || !_create_companion) {
-        std::string err = dlerror() ? dlerror() : "symbol not found";
+        const char* dl_err = dlerror();
+        std::string err = dl_err ? dl_err : "symbol not found";
         dlclose(_handle);
         _handle = nullptr;
         throw std::runtime_error("Firmware plugin \"" + name + "\" missing required symbols: " + err);

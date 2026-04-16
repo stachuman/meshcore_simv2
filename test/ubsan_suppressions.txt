@@ -1,0 +1,15 @@
+# UBSan runtime suppressions for third-party code we don't modify.
+#
+# Load with UBSAN_OPTIONS=suppressions=/path/to/this/file (the test runner
+# sets this automatically for ASan builds).
+#
+# Format: one directive per line. Directive names come from
+# https://clang.llvm.org/docs/UndefinedBehaviorSanitizerFlagsList.html
+# followed by a glob pattern matched against the source filename.
+
+# ed25519 reference implementation performs left-shift on negative ints and
+# signed overflow as part of its constant-time arithmetic. These patterns
+# are well-defined on two's-complement targets (all hardware MeshCore runs
+# on) but technically UB under the C standard. Not our code to fix.
+shift-base:*/lib/ed25519/*
+signed-integer-overflow:*/lib/ed25519/*

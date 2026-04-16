@@ -209,7 +209,7 @@ async def extract_from_config(body: FromConfigRequest) -> TopologyEntry:
         if not isinstance(n, dict):
             continue
         clean = {}
-        for key in ("name", "role", "lat", "lon", "sf", "bw", "cr", "contact"):
+        for key in ("name", "role", "lat", "lon", "sf", "bw", "cr", "contact", "firmware"):
             if key in n:
                 clean[key] = n[key]
         topo_nodes.append(clean)

@@ -8,7 +8,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from server.config import Settings
-from server.routers import configs, simulations, topology, topologies, sweeps, interactive, topo_creator
+from server.routers import configs, simulations, topology, topologies, sweeps, interactive, topo_creator, firmware
 from server.services.sim_manager import SimManager
 from server.services.event_index import EventIndexCache
 from server.services.interactive_manager import InteractiveSessionManager
@@ -60,6 +60,7 @@ app.include_router(topologies.router, prefix="/api")
 app.include_router(sweeps.router, prefix="/api")
 app.include_router(interactive.router, prefix="/api")
 app.include_router(topo_creator.router, prefix="/api")
+app.include_router(firmware.router, prefix="/api")
 
 static_dir = Path(__file__).resolve().parent.parent / "static"
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")

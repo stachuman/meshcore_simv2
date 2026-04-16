@@ -1,8 +1,7 @@
 # MeshCore Simulator — ready-to-use image
 #
 # Build:
-#   cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release
-#   cmake --build build-release --target orchestrator -j$(nproc)
+#   python3 tools/firmware.py build --build-dir build-release --build-type Release -j$(nproc)
 #   cd webapp && docker compose build
 #
 # Run (local):
@@ -33,9 +32,10 @@ WORKDIR /app
 COPY webapp/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Pre-built orchestrator binary — strip debug symbols (~15% smaller)
+# Pre-built orchestrator binary + firmware plugins — strip debug symbols
 COPY build-release/orchestrator/orchestrator /usr/local/bin/orchestrator
-RUN strip --strip-all /usr/local/bin/orchestrator \
+COPY build-release/orchestrator/fw_*.so /usr/local/bin/
+RUN strip --strip-all /usr/local/bin/orchestrator /usr/local/bin/fw_*.so \
     && chmod +x /usr/local/bin/orchestrator \
     && apt-get purge -y --auto-remove binutils \
     && rm -rf /var/lib/apt/lists/*
@@ -45,6 +45,7 @@ COPY webapp/server/ ./server/
 COPY webapp/static/ ./static/
 COPY topology_generator/ ./topology_generator/
 COPY tools/ ./tools/
+COPY firmware.json /usr/local/bin/firmware.json
 
 # Non-root user for runtime
 RUN useradd --system --create-home --home-dir /home/app app \

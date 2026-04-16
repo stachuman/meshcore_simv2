@@ -18,7 +18,8 @@ void simStart(unsigned long time_ms, int n_nodes, int step_ms,
 void simEnd(unsigned long time_ms);
 void nodeReady(unsigned long time_ms, const char* node, const char* role,
                const uint8_t* pub_key, int key_len,
-               bool has_location = false, double lat = 0.0, double lon = 0.0);
+               bool has_location = false, double lat = 0.0, double lon = 0.0,
+               const char* firmware = nullptr);
 void tx(unsigned long time_ms, const char* node, const uint8_t* data, int len, uint32_t airtime_ms);
 void rx(unsigned long time_ms, const char* from, const char* to, float snr, float rssi,
         const uint8_t* data, int len, uint32_t airtime_ms = 0);

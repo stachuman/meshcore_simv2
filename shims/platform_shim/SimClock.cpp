@@ -1,4 +1,5 @@
 #include "SimClock.h"
+#include <cassert>
 #include <ctime>
 #include <thread>
 
@@ -9,6 +10,13 @@ SimClock* sim_clock_get_global() { return g_sim_clock; }
 
 // Arduino-compatible millis() and delay() free functions
 unsigned long millis() {
+#ifdef ORCHESTRATOR_BUILD
+    // Under the orchestrator, millis() without an activated node is a bug:
+    // it means firmware code ran outside any NodeContext::activate() scope
+    // (stray callback, leaked thread, etc). Assertion makes this loud in
+    // debug/ASan builds; production still returns 0 for safety.
+    assert(g_sim_clock != nullptr && "millis() called with no node activated — context leak?");
+#endif
     if (g_sim_clock) return g_sim_clock->getMillis();
     return 0;
 }
