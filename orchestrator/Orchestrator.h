@@ -14,6 +14,7 @@
 #include "NodeContext.h"
 #include "LinkModel.h"
 #include "EventLog.h"
+#include "FirmwarePlugin.h"
 
 struct OrchestratorConfig {
     unsigned long duration_ms = 300000;
@@ -51,6 +52,13 @@ struct OrchestratorConfig {
     };
     DelayTuningParams delay_tuning;
 
+    // Firmware plugin config
+    struct FirmwareConfig {
+        std::string default_firmware = "fw_default";
+        std::map<std::string, std::string> plugins;  // name -> path
+    };
+    FirmwareConfig firmware;
+
     struct NodeDef {
         std::string name;
         NodeRole role = NodeRole::Repeater;
@@ -62,6 +70,7 @@ struct OrchestratorConfig {
         bool has_location = false;
         AdversarialConfig adversarial;
         float tx_fail_prob = 0.0f;
+        std::string firmware;  // empty = use default
     };
     std::vector<NodeDef> nodes;
 
@@ -234,4 +243,10 @@ public:
 
     void setEventHook(EventHook hook) { _event_hook = std::move(hook); }
     void setLuaCallback(LuaCallbackHook hook) { _lua_callback = std::move(hook); }
+
+    // Firmware plugin registry — must be populated before configure()
+    FirmwareRegistry& firmwareRegistry() { return _firmware_registry; }
+
+private:
+    FirmwareRegistry _firmware_registry;
 };

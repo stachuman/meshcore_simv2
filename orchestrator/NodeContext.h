@@ -25,6 +25,7 @@
 #undef LittleFS
 
 struct MeshWrapper;
+class FirmwarePlugin;
 
 enum class NodeRole { Repeater, Companion };
 
@@ -80,6 +81,7 @@ struct NodeContext {
     unsigned long tx_busy_until = 0;
     unsigned long tx_busy_from = 0;
     AdversarialConfig adversarial;
+    std::string firmware_name;  // plugin name (e.g. "fw_default")
 
     NodeContext(const std::string& name, NodeRole role,
                 uint32_t epoch_base,
@@ -93,5 +95,5 @@ struct NodeContext {
     void activate();
 
     // Construct mesh (repeater or companion based on role), load identity, begin()
-    void initMesh(uint64_t global_seed);
+    void initMesh(uint64_t global_seed, FirmwarePlugin& fw);
 };

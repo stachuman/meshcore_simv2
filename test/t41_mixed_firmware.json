@@ -1,0 +1,42 @@
+{
+  "_name": "t41_mixed_firmware",
+  "_desc": "Mixed firmware: repeaters and companions running different firmware plugins (fw_default vs fw_scope). Messages traverse a chain of mixed-firmware repeaters. Verifies interoperability and firmware-specific feature detection.",
+  "_requires_plugins": ["fw_scope"],
+  "simulation": {
+    "duration_ms": 30000,
+    "step_ms": 5,
+    "warmup_ms": 5000,
+    "hot_start": true
+  },
+  "nodes": [
+    { "name": "alice", "role": "companion", "firmware": "fw_default" },
+    { "name": "R1",    "role": "repeater",  "firmware": "fw_default" },
+    { "name": "R2",    "role": "repeater",  "firmware": "fw_scope" },
+    { "name": "R3",    "role": "repeater",  "firmware": "fw_default" },
+    { "name": "bob",   "role": "companion", "firmware": "fw_scope" }
+  ],
+  "topology": {
+    "links": [
+      { "from": "alice", "to": "R1", "snr": 10.0, "rssi": -75.0, "bidir": true },
+      { "from": "R1",    "to": "R2", "snr": 10.0, "rssi": -75.0, "bidir": true },
+      { "from": "R2",    "to": "R3", "snr": 10.0, "rssi": -75.0, "bidir": true },
+      { "from": "R3",    "to": "bob","snr": 10.0, "rssi": -75.0, "bidir": true }
+    ]
+  },
+  "commands": [
+    { "at_ms": 6000,  "node": "alice", "command": "neighbors" },
+    { "at_ms": 6000,  "node": "bob",   "command": "neighbors" },
+    { "at_ms": 8000,  "node": "alice", "command": "msg bob hello from main firmware" },
+    { "at_ms": 20000, "node": "bob",   "command": "msg alice hello from scope firmware" },
+    { "at_ms": 28000, "node": "alice", "command": "stats" },
+    { "at_ms": 28000, "node": "bob",   "command": "stats" }
+  ],
+  "expect": [
+    { "type": "cmd_reply_contains", "node": "alice", "command": "neighbors", "value": "bob" },
+    { "type": "cmd_reply_contains", "node": "bob",   "command": "neighbors", "value": "alice" },
+    { "type": "cmd_reply_contains", "node": "alice", "command": "msg bob",   "value": "msg sent to bob" },
+    { "type": "cmd_reply_contains", "node": "bob",   "command": "msg alice", "value": "msg sent to alice" },
+    { "type": "cmd_reply_contains", "node": "bob",   "command": "stats",     "value": "1 direct" },
+    { "type": "cmd_reply_contains", "node": "alice", "command": "stats",     "value": "1 direct" }
+  ]
+}

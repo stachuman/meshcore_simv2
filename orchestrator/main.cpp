@@ -14,6 +14,10 @@
 #include <stdexcept>
 #include <vector>
 #include <utility>
+#include <climits>
+#include <unistd.h>
+#include <dirent.h>
+#include <algorithm>
 
 #include "SimController.h"
 #include "InteractiveRepl.h"
@@ -107,6 +111,54 @@ int main(int argc, char* argv[]) {
     cfg.verbose = verbose;
 
     Orchestrator orch;
+
+    // Load firmware plugins
+    try {
+        // Discover exe directory for auto-loading plugins
+        std::string exe_dir;
+        {
+            char buf[PATH_MAX];
+            ssize_t len = readlink("/proc/self/exe", buf, sizeof(buf) - 1);
+            if (len > 0) {
+                buf[len] = '\0';
+                exe_dir = buf;
+                size_t slash = exe_dir.rfind('/');
+                if (slash != std::string::npos) exe_dir = exe_dir.substr(0, slash);
+            }
+        }
+
+        // Auto-discover all fw_*.so plugins next to the orchestrator binary
+        if (!exe_dir.empty()) {
+            DIR* dir = opendir(exe_dir.c_str());
+            if (dir) {
+                std::vector<std::string> plugin_files;
+                struct dirent* entry;
+                while ((entry = readdir(dir)) != nullptr) {
+                    std::string name(entry->d_name);
+                    if (name.size() > 6 && name.substr(0, 3) == "fw_" &&
+                        name.substr(name.size() - 3) == ".so") {
+                        plugin_files.push_back(name);
+                    }
+                }
+                closedir(dir);
+                std::sort(plugin_files.begin(), plugin_files.end());
+                for (auto& fname : plugin_files) {
+                    std::string plugin_name = fname.substr(0, fname.size() - 3);
+                    orch.firmwareRegistry().load(plugin_name, exe_dir + "/" + fname);
+                }
+            }
+        }
+
+        // Load additional plugins from config (explicit paths)
+        for (auto& [name, path] : cfg.firmware.plugins) {
+            if (!orch.firmwareRegistry().get(name))
+                orch.firmwareRegistry().load(name, path);
+        }
+    } catch (const std::exception& e) {
+        fprintf(stderr, "Error: %s\n", e.what());
+        return 1;
+    }
+
     orch.configure(cfg);
 
 #ifdef ENABLE_LUA

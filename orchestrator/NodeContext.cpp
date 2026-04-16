@@ -6,13 +6,10 @@
 
 #include "NodeContext.h"
 #include "MeshWrapper.h"
+#include "FirmwarePlugin.h"
 
 static constexpr uint64_t FNV1A_OFFSET_BASIS = 0xcbf29ce484222325ULL;
 static constexpr uint64_t FNV1A_PRIME        = 0x100000001b3ULL;
-
-// Factory functions (defined in RepeaterNode.cpp / CompanionNode.cpp)
-std::unique_ptr<MeshWrapper> createRepeaterMesh(NodeContext& ctx);
-std::unique_ptr<MeshWrapper> createCompanionMesh(NodeContext& ctx);
 
 NodeContext::NodeContext(const std::string& name, NodeRole role,
                          uint32_t epoch_base,
@@ -46,7 +43,7 @@ void NodeContext::activate() {
     sim_clock_set_global(&own_clock);  // millis() returns this node's time
 }
 
-void NodeContext::initMesh(uint64_t global_seed) {
+void NodeContext::initMesh(uint64_t global_seed, FirmwarePlugin& fw) {
     activate();
 
     // Seed RNG deterministically from global seed XOR'd with node name hash.
@@ -61,8 +58,8 @@ void NodeContext::initMesh(uint64_t global_seed) {
     radio.seed(name_hash ^ global_seed ^ 0xDEADBEEF);  // different sequence from SimRNG
 
     if (role == NodeRole::Companion) {
-        mesh = createCompanionMesh(*this);
+        mesh = fw.createCompanionMesh(*this);
     } else {
-        mesh = createRepeaterMesh(*this);
+        mesh = fw.createRepeaterMesh(*this);
     }
 }

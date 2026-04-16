@@ -1,7 +1,9 @@
 {
   "_name": "t40_default_scope",
   "_desc": "Default flood scope: two regions (north/south) with bridge repeater. Cold start with scoped adverts. Intra-region messages deliver, cross-region discovery is blocked by scoping.",
+  "_requires_plugins": ["fw_scope"],
   "simulation": {
+    "firmware": { "default": "fw_scope" },
     "duration_ms": 210000,
     "step_ms": 5,
     "warmup_ms": 5000

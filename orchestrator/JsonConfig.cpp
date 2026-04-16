@@ -54,6 +54,15 @@ static OrchestratorConfig parseJson(const json& j) {
                 if (hw.contains("tx_to_rx_delay_ms")) cfg.tx_to_rx_delay_ms = hw["tx_to_rx_delay_ms"].get<float>();
             }
         }
+        if (sim.contains("firmware")) {
+            auto& fw = sim["firmware"];
+            if (fw.contains("default"))
+                cfg.firmware.default_firmware = fw["default"].get<std::string>();
+            if (fw.contains("plugins")) {
+                for (auto& [key, val] : fw["plugins"].items())
+                    cfg.firmware.plugins[key] = val.get<std::string>();
+            }
+        }
         if (sim.contains("delay_tuning")) {
             auto& dt = sim["delay_tuning"];
             cfg.delay_tuning.enabled = true;
@@ -88,6 +97,8 @@ static OrchestratorConfig parseJson(const json& j) {
                 def.lon = nd["lon"].get<double>();
                 def.has_location = true;
             }
+            if (nd.contains("firmware"))
+                def.firmware = nd["firmware"].get<std::string>();
             if (nd.contains("tx_fail_prob"))
                 def.tx_fail_prob = nd["tx_fail_prob"].get<float>();
             if (nd.contains("adversarial")) {

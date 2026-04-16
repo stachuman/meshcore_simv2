@@ -111,6 +111,7 @@ void Orchestrator::configure(const OrchestratorConfig& cfg) {
         ctx->lon = nd.lon;
         ctx->has_location = nd.has_location;
         ctx->radio.setTxFailProb(nd.tx_fail_prob);
+        ctx->firmware_name = nd.firmware.empty() ? cfg.firmware.default_firmware : nd.firmware;
         _nodes.push_back(std::move(ctx));
     }
 
@@ -1002,7 +1003,13 @@ unsigned long Orchestrator::initSimulation() {
 
     // Initialize all nodes
     for (auto& node : _nodes) {
-        node->initMesh(_seed);
+        FirmwarePlugin* fw = _firmware_registry.get(node->firmware_name);
+        if (!fw) {
+            fprintf(stderr, "Error: firmware plugin \"%s\" not loaded (node %s)\n",
+                    node->firmware_name.c_str(), node->name.c_str());
+            return 0;
+        }
+        node->initMesh(_seed, *fw);
         const char* role_str = (node->role == NodeRole::Companion) ? "companion" : "repeater";
         EventLog::nodeReady(0, node->name.c_str(), role_str,
                             node->mesh->pubKey(), 32,

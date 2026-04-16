@@ -20,6 +20,10 @@
 #include "MeshWrapper.h"
 #include "SimSerial.h"
 
+// HAS_SCOPE_SUPPORT is defined by CMake when the MeshCore tree has
+// NodePrefs::default_scope_name (present on default-scope branch,
+// absent on main/1.13).
+
 namespace {
 
 static int hex_to_bytes(uint8_t* out, const char* hex, size_t hex_len) {
@@ -100,9 +104,16 @@ public:
         _pending_acks[expected_ack] = is_flood;
     }
 
+    // sendFloodWithScope: scope-aware on default-scope branch, plain sendFlood otherwise.
+#ifdef HAS_SCOPE_SUPPORT
     void sendFloodWithScope(const TransportKey& scope, mesh::Packet* pkt, uint32_t delay_millis) {
         sendFloodScoped(scope, pkt, delay_millis);
     }
+#else
+    void sendFloodWithScope(const TransportKey&, mesh::Packet* pkt, uint32_t delay_millis) {
+        sendFlood(pkt, delay_millis);
+    }
+#endif
 };
 
 class CompanionMeshWrapper : public MeshWrapper {
@@ -160,6 +171,7 @@ public:
     }
 
     std::string handleCommand(uint32_t timestamp, const char* cmd) override {
+#ifdef HAS_SCOPE_SUPPORT
         if (strncmp(cmd, "scope ", 6) == 0) {
             const char* name = cmd + 6;
             NodePrefs* prefs = _mesh.getNodePrefs();
@@ -170,7 +182,6 @@ public:
             }
             strncpy(prefs->default_scope_name, name, sizeof(prefs->default_scope_name) - 1);
             prefs->default_scope_name[sizeof(prefs->default_scope_name) - 1] = '\0';
-            // Compute auto-key (same as firmware CMD_SET_DEFAULT_FLOOD_SCOPE / DEFAULT_FLOOD_SCOPE_NAME init)
             TransportKeyStore temp;
             TransportKey key;
             std::string hash_name = std::string("#") + name;
@@ -178,6 +189,7 @@ public:
             memcpy(prefs->default_scope_key, key.key, sizeof(key.key));
             return "default scope set to " + std::string(name);
         }
+#endif
         if (strncmp(cmd, "advert.zerohop", 14) == 0) {
             mesh::Packet* pkt = _mesh.createSelfAdvert(_mesh.getNodeName());
             if (pkt) {
@@ -188,16 +200,19 @@ public:
         }
         if (strncmp(cmd, "advert", 6) == 0) {
             mesh::Packet* pkt = _mesh.createSelfAdvert(_mesh.getNodeName());
-            if (pkt) {
-                NodePrefs* prefs = _mesh.getNodePrefs();
-                TransportKey scope;
-                memcpy(&scope.key, prefs->default_scope_key, sizeof(scope.key));
-                _mesh.sendFloodWithScope(scope, pkt, 0);
-                return scope.isNull()
-                    ? "advert sent (flood)"
-                    : "advert sent (flood, scoped: " + std::string(prefs->default_scope_name) + ")";
-            }
-            return "ERROR: createSelfAdvert failed";
+            if (!pkt) return "ERROR: createSelfAdvert failed";
+#ifdef HAS_SCOPE_SUPPORT
+            NodePrefs* prefs = _mesh.getNodePrefs();
+            TransportKey scope;
+            memcpy(&scope.key, prefs->default_scope_key, sizeof(scope.key));
+            _mesh.sendFloodWithScope(scope, pkt, (uint32_t)0);
+            return scope.isNull()
+                ? "advert sent (flood)"
+                : "advert sent (flood, scoped: " + std::string(prefs->default_scope_name) + ")";
+#else
+            _mesh.sendFlood(pkt, (uint32_t)0);
+            return "advert sent (flood)";
+#endif
         }
         if (strncmp(cmd, "msgc ", 5) == 0) {
             const char* text = cmd + 5;
