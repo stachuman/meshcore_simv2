@@ -117,7 +117,10 @@ class InteractiveSessionManager:
         self._response_queues[sid] = asyncio.Queue()
         self._cmd_locks[sid] = asyncio.Lock()
 
-        # Spawn orchestrator -i
+        # Spawn orchestrator -i.
+        # Any exception between here and the probe completion must release
+        # the event file, kill the process, and clean up per-session state;
+        # otherwise repeated startup failures leak FDs and zombie procs.
         try:
             proc = await asyncio.create_subprocess_exec(
                 self.orchestrator_path,
@@ -146,13 +149,53 @@ class InteractiveSessionManager:
         except FileNotFoundError:
             session.status = "closed"
             session.error = f"Orchestrator not found: {self.orchestrator_path}"
+            await self._cleanup_failed_startup(sid)
             raise RuntimeError(session.error)
         except Exception as e:
             session.status = "closed"
             session.error = str(e)
+            await self._cleanup_failed_startup(sid)
             raise
 
         return session
+
+    async def _cleanup_failed_startup(self, sid: str) -> None:
+        """Release resources reserved by create_session when startup fails.
+
+        Covers the edge case where create_session opened an events file or
+        spawned a process before a later error (probe write failure, etc).
+        Mirrors close_session() but tolerant of partial state.
+        """
+        # Event file
+        ef = self._event_files.pop(sid, None)
+        if ef:
+            try:
+                ef.close()
+            except OSError:
+                pass
+        # Subprocess (SIGTERM with short wait, then SIGKILL)
+        proc = self._processes.pop(sid, None)
+        if proc and proc.returncode is None:
+            try:
+                proc.terminate()
+                await asyncio.wait_for(proc.wait(), timeout=2)
+            except (asyncio.TimeoutError, ProcessLookupError):
+                try:
+                    proc.kill()
+                except ProcessLookupError:
+                    pass
+        # Reader task
+        task = self._reader_tasks.pop(sid, None)
+        if task and not task.done():
+            task.cancel()
+            try:
+                await task
+            except (asyncio.CancelledError, Exception):
+                pass
+        # Per-session queues/locks
+        self._response_queues.pop(sid, None)
+        self._cmd_locks.pop(sid, None)
+        self._ws_clients.pop(sid, None)
 
     def get_session(self, sid: str) -> Optional[InteractiveSession]:
         return self._sessions.get(sid)

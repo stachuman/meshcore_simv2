@@ -1,5 +1,5 @@
 {
-  "_source": "ITM topology generator, region=53.7,17.3,54.8,19.5",
+  "_source": "ITM topology generator, region=47.60,-122.42,47.70,-122.27",
   "simulation": {
     "duration_ms": 900000,
     "step_ms": 1,
@@ -13,484 +13,700 @@
   },
   "nodes": [
     {
-      "name": "GTC_JednosciNarodu_R",
+      "name": "Phinney_Solar_Repeat",
       "role": "repeater",
-      "lat": 54.0973,
-      "lon": 18.7814
+      "lat": 47.6811,
+      "lon": -122.352
     },
     {
-      "name": "GD_RPT_DIODAK",
+      "name": "Fremont01_KF7EGZ_Sol",
       "role": "repeater",
-      "lat": 54.2118,
-      "lon": 18.7229
+      "lat": 47.6563,
+      "lon": -122.356
     },
     {
-      "name": "Witomino_RPT",
+      "name": "dmatestbednode0",
       "role": "repeater",
-      "lat": 54.4983,
-      "lon": 18.5134
+      "lat": 47.6613,
+      "lon": -122.313
     },
     {
-      "name": "GTC_Rokicka_RPT",
+      "name": "Broadway_Hill_Park",
       "role": "repeater",
-      "lat": 54.0856,
-      "lon": 18.7604
+      "lat": 47.6231,
+      "lon": -122.319
     },
     {
-      "name": "Medusa_repeater",
+      "name": "The_Winchester_Repea",
       "role": "repeater",
-      "lat": 54.5628,
-      "lon": 18.4776
+      "lat": 47.6106,
+      "lon": -122.313
     },
     {
-      "name": "meshgopl_GDA_Oliwa",
+      "name": "Steve_",
       "role": "repeater",
-      "lat": 54.4115,
-      "lon": 18.5509
+      "lat": 47.615,
+      "lon": -122.293
     },
     {
-      "name": "ELBz_E_ATK10_RPT",
+      "name": "FrelardFrelay",
       "role": "repeater",
-      "lat": 54.1472,
-      "lon": 19.4039
+      "lat": 47.6599,
+      "lon": -122.357
     },
     {
-      "name": "GKW_TEST_RPT",
+      "name": "Upper_Queen_Anne",
       "role": "repeater",
-      "lat": 53.7273,
-      "lon": 18.9397
+      "lat": 47.6384,
+      "lon": -122.357
     },
     {
-      "name": "RPT_GRABOWEK_HUGO",
+      "name": "LetsMesh_Test_Node",
       "role": "repeater",
-      "lat": 54.5265,
-      "lon": 18.4961
+      "lat": 47.6067,
+      "lon": -122.326
     },
     {
-      "name": "Bojano_Lesoki_RPT",
+      "name": "DuckDuckGoose",
       "role": "repeater",
-      "lat": 54.4662,
-      "lon": 18.4042
+      "lat": 47.6794,
+      "lon": -122.341
     },
     {
-      "name": "GDA_CEDRYM_RPT",
+      "name": "Ballard_W7PEA",
       "role": "repeater",
-      "lat": 54.2739,
-      "lon": 18.8687
+      "lat": 47.6745,
+      "lon": -122.374
     },
     {
-      "name": "GKW_ZIARNPOL_RPT",
+      "name": "Dogpeater",
       "role": "repeater",
-      "lat": 53.73,
-      "lon": 18.9622
+      "lat": 47.6709,
+      "lon": -122.328
     },
     {
-      "name": "Chylonia_Solar_RPT",
+      "name": "NE_Queen_Anne_Rptr",
       "role": "repeater",
-      "lat": 54.5422,
-      "lon": 18.4641
+      "lat": 47.6366,
+      "lon": -122.348
     },
     {
-      "name": "GA_WICZ_RPT_01",
+      "name": "W7PEA_Repeater",
       "role": "repeater",
-      "lat": 54.4854,
-      "lon": 18.4048
+      "lat": 47.6745,
+      "lon": -122.374
     },
     {
-      "name": "BAN06M_V3",
+      "name": "pxi_nest",
       "role": "repeater",
-      "lat": 54.3853,
-      "lon": 18.3841
+      "lat": 47.6759,
+      "lon": -122.393
     },
     {
-      "name": "GD_MQTT_GW_DS",
+      "name": "First_Hill",
       "role": "repeater",
-      "lat": 54.4253,
-      "lon": 18.4888
+      "lat": 47.61,
+      "lon": -122.325
+    },
+    {
+      "name": "First_Hill_Skyline",
+      "role": "repeater",
+      "lat": 47.6064,
+      "lon": -122.326
+    },
+    {
+      "name": "Central_District",
+      "role": "repeater",
+      "lat": 47.6129,
+      "lon": -122.303
+    },
+    {
+      "name": "Summit__Harrison",
+      "role": "repeater",
+      "lat": 47.622,
+      "lon": -122.325
+    },
+    {
+      "name": "N7TOERPTR",
+      "role": "repeater",
+      "lat": 47.6831,
+      "lon": -122.398
+    },
+    {
+      "name": "GhostSat_Westlake",
+      "role": "repeater",
+      "lat": 47.6359,
+      "lon": -122.339
+    },
+    {
+      "name": "KG6GXY_Greenwood",
+      "role": "repeater",
+      "lat": 47.692,
+      "lon": -122.366
+    },
+    {
+      "name": "N_Capitol_Hill_20",
+      "role": "repeater",
+      "lat": 47.6233,
+      "lon": -122.314
+    },
+    {
+      "name": "Magnolia_Hill",
+      "role": "repeater",
+      "lat": 47.6458,
+      "lon": -122.408
+    },
+    {
+      "name": "House_of_Brimstone",
+      "role": "repeater",
+      "lat": 47.6102,
+      "lon": -122.369
+    },
+    {
+      "name": "Hankest_Extendus",
+      "role": "repeater",
+      "lat": 47.6905,
+      "lon": -122.28
+    },
+    {
+      "name": "University_District",
+      "role": "repeater",
+      "lat": 47.6687,
+      "lon": -122.291
+    },
+    {
+      "name": "1st_Hill_South_Repea",
+      "role": "repeater",
+      "lat": 47.6094,
+      "lon": -122.326
+    },
+    {
+      "name": "Forest_Glade",
+      "role": "repeater",
+      "lat": 47.6361,
+      "lon": -122.327
+    },
+    {
+      "name": "Eastlake_Colonnade",
+      "role": "repeater",
+      "lat": 47.6355,
+      "lon": -122.324
+    },
+    {
+      "name": "Belltown_DuneCat",
+      "role": "repeater",
+      "lat": 47.6166,
+      "lon": -122.349
+    },
+    {
+      "name": "Magnolia_W7UUL",
+      "role": "repeater",
+      "lat": 47.6513,
+      "lon": -122.388
+    },
+    {
+      "name": "Ravenna_Valley",
+      "role": "repeater",
+      "lat": 47.6817,
+      "lon": -122.302
+    },
+    {
+      "name": "searep001",
+      "role": "repeater",
+      "lat": 47.6495,
+      "lon": -122.37
+    },
+    {
+      "name": "80th_Street_Repeater",
+      "role": "repeater",
+      "lat": 47.6869,
+      "lon": -122.366
+    },
+    {
+      "name": "Union_Art_Coop__YA",
+      "role": "repeater",
+      "lat": 47.6132,
+      "lon": -122.318
+    },
+    {
+      "name": "Yesler_Terrace",
+      "role": "repeater",
+      "lat": 47.6014,
+      "lon": -122.323
+    },
+    {
+      "name": "Seattle_Center",
+      "role": "repeater",
+      "lat": 47.6225,
+      "lon": -122.352
+    },
+    {
+      "name": "LetsMesh_Test",
+      "role": "repeater",
+      "lat": 47.6027,
+      "lon": -122.331
+    },
+    {
+      "name": "3rdAveS__MainPioSqSE",
+      "role": "repeater",
+      "lat": 47.6003,
+      "lon": -122.33
+    },
+    {
+      "name": "Capitol_Hill_Prime",
+      "role": "repeater",
+      "lat": 47.6161,
+      "lon": -122.31
+    },
+    {
+      "name": "minitrue",
+      "role": "repeater",
+      "lat": 47.6843,
+      "lon": -122.341
+    },
+    {
+      "name": "Lower_Queen_Anne",
+      "role": "repeater",
+      "lat": 47.6242,
+      "lon": -122.354
+    },
+    {
+      "name": "Sycamorons_Repeater_",
+      "role": "repeater",
+      "lat": 47.6798,
+      "lon": -122.358
+    },
+    {
+      "name": "Portage_Bay",
+      "role": "repeater",
+      "lat": 47.6481,
+      "lon": -122.313
+    },
+    {
+      "name": "RooseveltRepeater",
+      "role": "repeater",
+      "lat": 47.6774,
+      "lon": -122.313
+    },
+    {
+      "name": "TangleTown_Repeater",
+      "role": "repeater",
+      "lat": 47.6727,
+      "lon": -122.329
+    },
+    {
+      "name": "Roosevelt_Tree_Top",
+      "role": "repeater",
+      "lat": 47.6807,
+      "lon": -122.315
+    },
+    {
+      "name": "K7WFB_MC_4631",
+      "role": "repeater",
+      "lat": 47.6407,
+      "lon": -122.351
+    },
+    {
+      "name": "RavennaPark",
+      "role": "repeater",
+      "lat": 47.6737,
+      "lon": -122.308
+    },
+    {
+      "name": "Ballard",
+      "role": "repeater",
+      "lat": 47.671,
+      "lon": -122.393
+    },
+    {
+      "name": "irlqt",
+      "role": "repeater",
+      "lat": 47.6178,
+      "lon": -122.323
+    },
+    {
+      "name": "K7FSX_Greenwood",
+      "role": "repeater",
+      "lat": 47.6906,
+      "lon": -122.347
+    },
+    {
+      "name": "K7FSX_Greenwood_Room",
+      "role": "repeater",
+      "lat": 47.6906,
+      "lon": -122.347
+    },
+    {
+      "name": "WA7DASR1",
+      "role": "repeater",
+      "lat": 47.6509,
+      "lon": -122.386
+    },
+    {
+      "name": "McDonalds_Free_WiFi",
+      "role": "repeater",
+      "lat": 47.6952,
+      "lon": -122.374
+    },
+    {
+      "name": "Licton_Springs_Chat",
+      "role": "repeater",
+      "lat": 47.6986,
+      "lon": -122.34
+    },
+    {
+      "name": "Crow_Repeater",
+      "role": "repeater",
+      "lat": 47.6566,
+      "lon": -122.362
+    },
+    {
+      "name": "Portage_Bay_G2_2",
+      "role": "repeater",
+      "lat": 47.6559,
+      "lon": -122.321
+    },
+    {
+      "name": "Chucks",
+      "role": "repeater",
+      "lat": 47.6909,
+      "lon": -122.366
+    },
+    {
+      "name": "Magnolia_Hill_2",
+      "role": "repeater",
+      "lat": 47.6411,
+      "lon": -122.393
+    },
+    {
+      "name": "Packet_town",
+      "role": "repeater",
+      "lat": 47.6694,
+      "lon": -122.326
+    },
+    {
+      "name": "devhackchat",
+      "role": "repeater",
+      "lat": 47.6613,
+      "lon": -122.313
+    },
+    {
+      "name": "Maple_Leaf_Manor",
+      "role": "repeater",
+      "lat": 47.6924,
+      "lon": -122.313
+    },
+    {
+      "name": "SEAMESH_CORE_R1",
+      "role": "repeater",
+      "lat": 47.6186,
+      "lon": -122.338
+    },
+    {
+      "name": "Interlake",
+      "role": "repeater",
+      "lat": 47.6587,
+      "lon": -122.338
+    },
+    {
+      "name": "SEAMESH_CORE_R2",
+      "role": "repeater",
+      "lat": 47.6187,
+      "lon": -122.338
+    },
+    {
+      "name": "First_Hill_Skyline_2",
+      "role": "repeater",
+      "lat": 47.6101,
+      "lon": -122.325
+    },
+    {
+      "name": "Lassiter_Repeater",
+      "role": "repeater",
+      "lat": 47.6874,
+      "lon": -122.35
+    },
+    {
+      "name": "DMASpaceMesh",
+      "role": "repeater",
+      "lat": 47.6146,
+      "lon": -122.317
+    },
+    {
+      "name": "QA_Repeater__Hive_0",
+      "role": "repeater",
+      "lat": 47.623,
+      "lon": -122.369
+    },
+    {
+      "name": "N7GRN5_Portage_Bay_r",
+      "role": "repeater",
+      "lat": 47.6465,
+      "lon": -122.319
+    },
+    {
+      "name": "Washington_Park",
+      "role": "repeater",
+      "lat": 47.6282,
+      "lon": -122.296
+    },
+    {
+      "name": "Stevens",
+      "role": "repeater",
+      "lat": 47.6286,
+      "lon": -122.302
     },
     {
       "name": "node",
       "role": "repeater",
-      "lat": 54.3323,
-      "lon": 18.9396
+      "lat": 47.6687,
+      "lon": -122.388
     },
     {
-      "name": "GDAJasien",
+      "name": "Roosevelt_Pocket_Mes",
       "role": "repeater",
-      "lat": 54.3421,
-      "lon": 18.5671
+      "lat": 47.6792,
+      "lon": -122.318
     },
     {
-      "name": "Chwaszczyno_RS",
+      "name": "Volunteer_Park_SW",
       "role": "repeater",
-      "lat": 54.432,
-      "lon": 18.4374
+      "lat": 47.6297,
+      "lon": -122.32
     },
     {
-      "name": "WEDOLINKAWwa_RPT",
+      "name": "Good_Coffee_Great_La",
       "role": "repeater",
-      "lat": 54.437,
-      "lon": 18.5785
+      "lat": 47.6796,
+      "lon": -122.341
     },
     {
-      "name": "GD_Cedrowa_RPT_0",
+      "name": "Cap_Hill_Broadway",
       "role": "repeater",
-      "lat": 54.3375,
-      "lon": 18.5835
+      "lat": 47.6238,
+      "lon": -122.321
     },
     {
-      "name": "GDYNIA_Wielkokacka_R",
+      "name": "Naked_in_Capitol_Hil",
       "role": "repeater",
-      "lat": 54.4944,
-      "lon": 18.5072
+      "lat": 47.6215,
+      "lon": -122.316
     },
     {
-      "name": "AE_Repeater",
+      "name": "Ballard_Locks_1W_Rep",
       "role": "repeater",
-      "lat": 54.3845,
-      "lon": 18.6236
+      "lat": 47.6688,
+      "lon": -122.396
     },
     {
-      "name": "RUMJ01",
+      "name": "Martin_Room",
       "role": "repeater",
-      "lat": 54.5591,
-      "lon": 18.4124
+      "lat": 47.6957,
+      "lon": -122.293
     },
     {
-      "name": "GKW_BAJKOWE_NW_RPT",
+      "name": "Taco_Tuesday",
       "role": "repeater",
-      "lat": 53.7458,
-      "lon": 18.9491
+      "lat": 47.6271,
+      "lon": -122.326
     },
     {
-      "name": "GDAROKITNICARPT2b",
+      "name": "N7GRN4_Portage_Bay_r",
       "role": "repeater",
-      "lat": 54.276,
-      "lon": 18.6835
+      "lat": 47.6465,
+      "lon": -122.319
     },
     {
-      "name": "GKW_RAK_01_RPT",
+      "name": "DMASpaceMeshRoom",
       "role": "repeater",
-      "lat": 53.726,
-      "lon": 19.005
+      "lat": 47.6144,
+      "lon": -122.319
     },
     {
-      "name": "Nowe_Tokary_RPT",
+      "name": "Mosswood_Loft",
       "role": "repeater",
-      "lat": 54.4103,
-      "lon": 18.3507
+      "lat": 47.6114,
+      "lon": -122.316
     },
     {
-      "name": "RPT_LOST_01",
+      "name": "Entropy_Temple",
       "role": "repeater",
-      "lat": 54.3382,
-      "lon": 18.6004
+      "lat": 47.6014,
+      "lon": -122.366
     },
     {
-      "name": "GDYNIA_Kukawka_RPT",
+      "name": "Crown_Hill",
       "role": "repeater",
-      "lat": 54.4463,
-      "lon": 18.462
+      "lat": 47.6962,
+      "lon": -122.373
     },
     {
-      "name": "GKW_BAJKOWE_RPT",
+      "name": "Kremwerk",
       "role": "repeater",
-      "lat": 53.7474,
-      "lon": 18.948
+      "lat": 47.6169,
+      "lon": -122.331
     },
     {
-      "name": "SQ2PPJ_Repeater_2",
+      "name": "RAWTCE",
       "role": "repeater",
-      "lat": 54.5398,
-      "lon": 18.4778
+      "lat": 47.6117,
+      "lon": -122.347
     },
     {
-      "name": "GDOsiekRPT",
+      "name": "MOST_Mesh_Room",
       "role": "repeater",
-      "lat": 54.3554,
-      "lon": 18.654
+      "lat": 47.6294,
+      "lon": -122.317
     },
     {
-      "name": "GA_Orlowo01_RPT_2",
+      "name": "SEA_Bryant_KM7ECH",
       "role": "repeater",
-      "lat": 54.4829,
-      "lon": 18.5362
+      "lat": 47.6649,
+      "lon": -122.285
     },
     {
-      "name": "GWE_Bojano_RPT",
+      "name": "RAVSHrpt1",
       "role": "repeater",
-      "lat": 54.4647,
-      "lon": 18.406
+      "lat": 47.6129,
+      "lon": -122.352
     },
     {
-      "name": "GDA_Karczemki_2",
+      "name": "searep001_2",
       "role": "repeater",
-      "lat": 54.3537,
-      "lon": 18.5083
+      "lat": 47.6495,
+      "lon": -122.37
     },
     {
-      "name": "RPT_GD_Suchanino",
+      "name": "Hot_Ratpeater_Summer",
       "role": "repeater",
-      "lat": 54.3552,
-      "lon": 18.6114
+      "lat": 47.617,
+      "lon": -122.32
     },
     {
-      "name": "GDA_Przymorze",
+      "name": "repeather",
       "role": "repeater",
-      "lat": 54.4065,
-      "lon": 18.5805
+      "lat": 47.6629,
+      "lon": -122.315
     },
     {
-      "name": "ELBp_Omni_RPT",
+      "name": "W7ZOORPTR2__CQCRorg",
       "role": "repeater",
-      "lat": 54.1496,
-      "lon": 19.4327
+      "lat": 47.6758,
+      "lon": -122.341
     },
     {
-      "name": "GDA_Skowarcz_V3HPV",
+      "name": "node_2",
       "role": "repeater",
-      "lat": 54.1796,
-      "lon": 18.6704
+      "lat": 47.6364,
+      "lon": -122.316
     },
     {
-      "name": "GDYNIA_Yagi_RPT",
+      "name": "bushwhacker_repeater",
       "role": "repeater",
-      "lat": 54.4981,
-      "lon": 18.4989
+      "lat": 47.6533,
+      "lon": -122.35
     },
     {
-      "name": "GKW_SP_RPT",
+      "name": "EnduroDriver_Phinney",
       "role": "repeater",
-      "lat": 53.7368,
-      "lon": 18.9344
+      "lat": 47.6805,
+      "lon": -122.357
     },
     {
-      "name": "SP2ZIE_Repeater",
+      "name": "Fremont01_Greenwood3",
       "role": "repeater",
-      "lat": 54.5238,
-      "lon": 18.5134
+      "lat": 47.6542,
+      "lon": -122.356
     },
     {
-      "name": "GDAPRGDANTYSZKA2b",
+      "name": "Magnolia_Central_30t",
       "role": "repeater",
-      "lat": 54.2671,
-      "lon": 18.6702
+      "lat": 47.6446,
+      "lon": -122.396
     },
     {
-      "name": "GD_PORT_RPT",
+      "name": "Eastlake",
       "role": "repeater",
-      "lat": 54.3801,
-      "lon": 18.6798
+      "lat": 47.6417,
+      "lon": -122.326
     },
     {
-      "name": "RTP_GDN_Traugutta_",
+      "name": "Cowen_West",
       "role": "repeater",
-      "lat": 54.3685,
-      "lon": 18.6262
+      "lat": 47.6733,
+      "lon": -122.314
     },
     {
-      "name": "GTC_ROKITKI_RPT",
+      "name": "searep002",
       "role": "repeater",
-      "lat": 54.0783,
-      "lon": 18.7346
+      "lat": 47.6495,
+      "lon": -122.37
     },
     {
-      "name": "GDYNIA_Chwarzno_RPT",
+      "name": "RavennaEckstein_CC",
       "role": "repeater",
-      "lat": 54.513,
-      "lon": 18.5338
+      "lat": 47.6765,
+      "lon": -122.304
     },
     {
-      "name": "Eagles_Nest",
+      "name": "W7ZOORPTRPHINNEY",
       "role": "repeater",
-      "lat": 54.2235,
-      "lon": 18.1235
+      "lat": 47.6777,
+      "lon": -122.354
     },
     {
-      "name": "Ryzy_RPT",
+      "name": "SteelPhinney",
       "role": "repeater",
-      "lat": 54.3872,
-      "lon": 18.6174
+      "lat": 47.6855,
+      "lon": -122.366
     },
     {
-      "name": "GKW_KOPERNIKA_II_RPT",
+      "name": "South_Cap_Hill_G2",
       "role": "repeater",
-      "lat": 53.7295,
-      "lon": 18.9307
+      "lat": 47.6123,
+      "lon": -122.321
     },
     {
-      "name": "Osowa_Repeater",
+      "name": "Ballard_East_Rebleat",
       "role": "repeater",
-      "lat": 54.4346,
-      "lon": 18.4669
+      "lat": 47.6685,
+      "lon": -122.366
     },
     {
-      "name": "GDA_Heweliusza",
+      "name": "Owl_Nest",
       "role": "repeater",
-      "lat": 54.3564,
-      "lon": 18.6502
+      "lat": 47.6622,
+      "lon": -122.357
     },
     {
-      "name": "ELBz_GDA_ATK20_RPT",
+      "name": "The_Hideout",
       "role": "repeater",
-      "lat": 54.1473,
-      "lon": 19.4035
+      "lat": 47.6094,
+      "lon": -122.326
     },
     {
-      "name": "GDYPartyzantw",
+      "name": "WallyCore_Repeater",
       "role": "repeater",
-      "lat": 54.5081,
-      "lon": 18.5405
+      "lat": 47.6649,
+      "lon": -122.334
     },
     {
-      "name": "BAN06MTestXiaoRPT",
+      "name": "facade00",
       "role": "repeater",
-      "lat": 54.3854,
-      "lon": 18.3844
+      "lat": 47.6963,
+      "lon": -122.341
     },
     {
-      "name": "GDYPartyzantow",
+      "name": "N1TJT_Repeater",
       "role": "repeater",
-      "lat": 54.5081,
-      "lon": 18.5385
+      "lat": 47.6238,
+      "lon": -122.316
     },
     {
-      "name": "RPT_hV4_tx27_b4000_",
+      "name": "Breadheads",
       "role": "repeater",
-      "lat": 54.276,
-      "lon": 18.6833
-    },
-    {
-      "name": "GD_Wrz_D_Soch_REP_V4",
-      "role": "repeater",
-      "lat": 54.3842,
-      "lon": 18.6235
-    },
-    {
-      "name": "GDANSKSUCHANINO_SM",
-      "role": "repeater",
-      "lat": 54.3539,
-      "lon": 18.6068
-    },
-    {
-      "name": "GDA_Przerobka",
-      "role": "repeater",
-      "lat": 54.3545,
-      "lon": 18.6919
-    },
-    {
-      "name": "GDA_BORKOWO_2_RPT",
-      "role": "repeater",
-      "lat": 54.2948,
-      "lon": 18.6005
-    },
-    {
-      "name": "RPT_BOROWIEC",
-      "role": "repeater",
-      "lat": 54.4099,
-      "lon": 18.4001
-    },
-    {
-      "name": "RTP_GD_K_Uroda_HLS_S",
-      "role": "repeater",
-      "lat": 54.389,
-      "lon": 18.6233
-    },
-    {
-      "name": "GDY_MKackKarwiny",
-      "role": "repeater",
-      "lat": 54.4752,
-      "lon": 18.5061
-    },
-    {
-      "name": "GWE_Dobrzewino2_RPT",
-      "role": "repeater",
-      "lat": 54.4559,
-      "lon": 18.3743
-    },
-    {
-      "name": "GDA_SW_WOJCIECH",
-      "role": "repeater",
-      "lat": 54.2869,
-      "lon": 18.6307
-    },
-    {
-      "name": "RPT_Skowarcz_V4X",
-      "role": "repeater",
-      "lat": 54.1791,
-      "lon": 18.6645
-    },
-    {
-      "name": "GDA__NDZW_B",
-      "role": "repeater",
-      "lat": 54.3748,
-      "lon": 18.5613
-    },
-    {
-      "name": "GDA_Karczemki",
-      "role": "repeater",
-      "lat": 54.352,
-      "lon": 18.5076
-    },
-    {
-      "name": "GDYNIA_Izerska_RPT",
-      "role": "repeater",
-      "lat": 54.4443,
-      "lon": 18.4615
-    },
-    {
-      "name": "GWroom",
-      "role": "repeater",
-      "lat": 54.4989,
-      "lon": 18.5107
-    },
-    {
-      "name": "GKW_REYMONTA_RPT",
-      "role": "repeater",
-      "lat": 53.7275,
-      "lon": 18.9392
-    },
-    {
-      "name": "GDYNIA_Wiczlino_RPT",
-      "role": "repeater",
-      "lat": 54.5026,
-      "lon": 18.42
-    },
-    {
-      "name": "ELBz_GDA_ATK20_RPT_2",
-      "role": "repeater",
-      "lat": 54.1475,
-      "lon": 19.4037
-    },
-    {
-      "name": "GWE_Dobrzewino_3_tes",
-      "role": "repeater",
-      "lat": 54.4558,
-      "lon": 18.3742
-    },
-    {
-      "name": "RPT_REKCIN",
-      "role": "repeater",
-      "lat": 54.2375,
-      "lon": 18.5553
-    },
-    {
-      "name": "GDA_W_WOJCIECH_testy",
-      "role": "repeater",
-      "lat": 54.2851,
-      "lon": 18.631
-    },
-    {
-      "name": "RPT_PRG_03",
-      "role": "repeater",
-      "lat": 54.2627,
-      "lon": 18.6302
-    },
-    {
-      "name": "PORD_Repeater_Test",
-      "role": "repeater",
-      "lat": 54.5352,
-      "lon": 18.4914
+      "lat": 47.6872,
+      "lon": -122.376
     },
     {
       "name": "alice",
@@ -512,459 +728,802 @@
   "topology": {
     "links": [
       {
-        "from": "ELBz_GDA_ATK20_RPT",
-        "to": "ELBz_GDA_ATK20_RPT_2",
-        "snr": 68.13,
-        "rssi": -45.89,
+        "from": "SEAMESH_CORE_R1",
+        "to": "SEAMESH_CORE_R2",
+        "snr": 75.43,
+        "rssi": -38.59,
         "snr_std_dev": 1.0,
         "bidir": true
       },
       {
-        "from": "GKW_TEST_RPT",
-        "to": "GKW_REYMONTA_RPT",
-        "snr": 64.38,
-        "rssi": -49.65,
+        "from": "LetsMesh_Test_Node",
+        "to": "First_Hill_Skyline",
+        "snr": 65.89,
+        "rssi": -48.13,
         "snr_std_dev": 1.0,
         "bidir": true
       },
       {
-        "from": "GDYPartyzantw",
-        "to": "GDYPartyzantow",
-        "snr": 54.13,
-        "rssi": -59.89,
+        "from": "Magnolia_W7UUL",
+        "to": "WA7DASR1",
+        "snr": 52.47,
+        "rssi": -61.55,
         "snr_std_dev": 1.0,
         "bidir": true
       },
       {
-        "from": "GKW_BAJKOWE_NW_RPT",
-        "to": "GKW_BAJKOWE_RPT",
-        "snr": 50.68,
-        "rssi": -63.34,
+        "from": "Volunteer_Park_SW",
+        "to": "MOST_Mesh_Room",
+        "snr": 49.22,
+        "rssi": -64.8,
         "snr_std_dev": 1.0,
         "bidir": true
       },
       {
-        "from": "GDA_Karczemki_2",
-        "to": "GDA_Karczemki",
-        "snr": 50.58,
-        "rssi": -63.44,
+        "from": "Forest_Glade",
+        "to": "Eastlake_Colonnade",
+        "snr": 48.95,
+        "rssi": -65.07,
         "snr_std_dev": 1.0,
         "bidir": true
       },
       {
-        "from": "Bojano_Lesoki_RPT",
-        "to": "GWE_Bojano_RPT",
-        "snr": 50.19,
-        "rssi": -63.83,
+        "from": "Broadway_Hill_Park",
+        "to": "N1TJT_Repeater",
+        "snr": 48.82,
+        "rssi": -65.2,
         "snr_std_dev": 1.0,
         "bidir": true
       },
       {
-        "from": "Ryzy_RPT",
-        "to": "RTP_GD_K_Uroda_HLS_S",
-        "snr": 43.66,
-        "rssi": -70.36,
+        "from": "N_Capitol_Hill_20",
+        "to": "Naked_in_Capitol_Hil",
+        "snr": 48.39,
+        "rssi": -65.63,
         "snr_std_dev": 1.0,
         "bidir": true
       },
       {
-        "from": "Ryzy_RPT",
-        "to": "GD_Wrz_D_Soch_REP_V4",
-        "snr": 40.65,
-        "rssi": -73.37,
+        "from": "LetsMesh_Test",
+        "to": "3rdAveS__MainPioSqSE",
+        "snr": 47.5,
+        "rssi": -66.52,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "DMASpaceMeshRoom",
+        "to": "Hot_Ratpeater_Summer",
+        "snr": 46.85,
+        "rssi": -67.17,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "DMASpaceMesh",
+        "to": "Mosswood_Loft",
+        "snr": 45.14,
+        "rssi": -68.88,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "EnduroDriver_Phinney",
+        "to": "W7ZOORPTRPHINNEY",
+        "snr": 44.67,
+        "rssi": -69.35,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "First_Hill_Skyline_2",
+        "to": "South_Cap_Hill_G2",
+        "snr": 44.6,
+        "rssi": -69.42,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "DMASpaceMeshRoom",
+        "to": "Mosswood_Loft",
+        "snr": 44.26,
+        "rssi": -69.76,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "RooseveltRepeater",
+        "to": "Roosevelt_Pocket_Mes",
+        "snr": 43.79,
+        "rssi": -70.23,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Magnolia_Hill_2",
+        "to": "Magnolia_Central_30t",
+        "snr": 43.3,
+        "rssi": -70.72,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Fremont01_KF7EGZ_Sol",
+        "to": "Crow_Repeater",
+        "snr": 43.28,
+        "rssi": -70.74,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Portage_Bay",
+        "to": "N7GRN5_Portage_Bay_r",
+        "snr": 42.67,
+        "rssi": -71.35,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "SEAMESH_CORE_R2",
+        "to": "Kremwerk",
+        "snr": 13.85,
+        "rssi": -100.17,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "GDYNIA_Wielkokacka_R",
-        "to": "GWroom",
-        "snr": 37.03,
-        "rssi": -76.99,
+        "from": "irlqt",
+        "to": "DMASpaceMesh",
+        "snr": 13.99,
+        "rssi": -100.04,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "GKW_KOPERNIKA_II_RPT",
-        "to": "GKW_REYMONTA_RPT",
-        "snr": 32.85,
-        "rssi": -81.17,
+        "from": "node",
+        "to": "Ballard_Locks_1W_Rep",
+        "snr": 40.4,
+        "rssi": -73.63,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "GKW_SP_RPT",
-        "to": "GKW_KOPERNIKA_II_RPT",
-        "snr": 36.26,
-        "rssi": -77.76,
+        "from": "University_District",
+        "to": "SEA_Bryant_KM7ECH",
+        "snr": 25.2,
+        "rssi": -88.82,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "Witomino_RPT",
-        "to": "GDYNIA_Yagi_RPT",
-        "snr": 34.81,
-        "rssi": -79.21,
+        "from": "First_Hill",
+        "to": "Union_Art_Coop__YA",
+        "snr": 18.28,
+        "rssi": -95.74,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "GKW_TEST_RPT",
-        "to": "GKW_SP_RPT",
-        "snr": 30.66,
-        "rssi": -83.36,
+        "from": "Central_District",
+        "to": "Capitol_Hill_Prime",
+        "snr": 17.78,
+        "rssi": -96.24,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "Osowa_Repeater",
-        "to": "GDYNIA_Izerska_RPT",
-        "snr": 12.59,
-        "rssi": -101.43,
+        "from": "NE_Queen_Anne_Rptr",
+        "to": "GhostSat_Westlake",
+        "snr": 18.64,
+        "rssi": -95.38,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "AE_Repeater",
-        "to": "RTP_GDN_Traugutta_",
-        "snr": 29.82,
-        "rssi": -84.2,
+        "from": "Union_Art_Coop__YA",
+        "to": "The_Hideout",
+        "snr": 11.19,
+        "rssi": -102.83,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "RPT_LOST_01",
-        "to": "GDANSKSUCHANINO_SM",
-        "snr": 26.9,
-        "rssi": -87.12,
+        "from": "Interlake",
+        "to": "WallyCore_Repeater",
+        "snr": 24.24,
+        "rssi": -89.78,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "GTC_Rokicka_RPT",
-        "to": "GTC_ROKITKI_RPT",
-        "snr": 18.43,
-        "rssi": -95.59,
+        "from": "Chucks",
+        "to": "Crown_Hill",
+        "snr": 21.18,
+        "rssi": -92.84,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "GTC_JednosciNarodu_R",
-        "to": "GTC_Rokicka_RPT",
-        "snr": 11.32,
-        "rssi": -102.7,
+        "from": "Chucks",
+        "to": "Breadheads",
+        "snr": 12.98,
+        "rssi": -101.04,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "RPT_GRABOWEK_HUGO",
-        "to": "SQ2PPJ_Repeater_2",
-        "snr": 30.81,
-        "rssi": -83.21,
+        "from": "First_Hill_Skyline_2",
+        "to": "Hot_Ratpeater_Summer",
+        "snr": 5.32,
+        "rssi": -108.7,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "ELBz_E_ATK10_RPT",
-        "to": "ELBp_Omni_RPT",
-        "snr": 24.17,
-        "rssi": -89.85,
+        "from": "pxi_nest",
+        "to": "N7TOERPTR",
+        "snr": 29.53,
+        "rssi": -84.49,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "Chylonia_Solar_RPT",
-        "to": "PORD_Repeater_Test",
-        "snr": 24.38,
-        "rssi": -89.64,
+        "from": "First_Hill",
+        "to": "Kremwerk",
+        "snr": 9.44,
+        "rssi": -104.58,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "meshgopl_GDA_Oliwa",
-        "to": "GDA_Przymorze",
-        "snr": 30.36,
-        "rssi": -83.67,
+        "from": "Ballard_East_Rebleat",
+        "to": "Owl_Nest",
+        "snr": 33.48,
+        "rssi": -80.54,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "RTP_GDN_Traugutta_",
-        "to": "GDA_Heweliusza",
-        "snr": 5.35,
-        "rssi": -108.67,
+        "from": "Crow_Repeater",
+        "to": "searep001_2",
+        "snr": 35.77,
+        "rssi": -78.25,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "Chwaszczyno_RS",
-        "to": "GDYNIA_Kukawka_RPT",
-        "snr": 26.71,
-        "rssi": -87.31,
+        "from": "80th_Street_Repeater",
+        "to": "McDonalds_Free_WiFi",
+        "snr": 21.05,
+        "rssi": -92.97,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "Witomino_RPT",
-        "to": "GDY_MKackKarwiny",
-        "snr": 16.97,
-        "rssi": -97.05,
+        "from": "DuckDuckGoose",
+        "to": "Lassiter_Repeater",
+        "snr": 16.34,
+        "rssi": -97.68,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "GKW_ZIARNPOL_RPT",
-        "to": "GKW_RAK_01_RPT",
-        "snr": 15.31,
-        "rssi": -98.72,
+        "from": "Hankest_Extendus",
+        "to": "Martin_Room",
+        "snr": 22.6,
+        "rssi": -91.42,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "Nowe_Tokary_RPT",
-        "to": "RPT_BOROWIEC",
-        "snr": 5.38,
-        "rssi": -108.64,
+        "from": "Fremont01_Greenwood3",
+        "to": "searep002",
+        "snr": 34.98,
+        "rssi": -79.04,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "GA_Orlowo01_RPT_2",
-        "to": "GDYNIA_Chwarzno_RPT",
-        "snr": 7.61,
-        "rssi": -106.41,
+        "from": "KG6GXY_Greenwood",
+        "to": "Lassiter_Repeater",
+        "snr": 28.48,
+        "rssi": -85.54,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "GDAPRGDANTYSZKA2b",
-        "to": "GDA_SW_WOJCIECH",
-        "snr": 24.16,
-        "rssi": -89.86,
+        "from": "Dogpeater",
+        "to": "repeather",
+        "snr": 19.52,
+        "rssi": -94.5,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "Nowe_Tokary_RPT",
-        "to": "BAN06MTestXiaoRPT",
-        "snr": 11.66,
-        "rssi": -102.36,
+        "from": "N_Capitol_Hill_20",
+        "to": "South_Cap_Hill_G2",
+        "snr": 31.1,
+        "rssi": -82.92,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "GD_PORT_RPT",
-        "to": "RTP_GD_K_Uroda_HLS_S",
-        "snr": 15.5,
-        "rssi": -98.52,
+        "from": "Ballard_W7PEA",
+        "to": "Sycamorons_Repeater_",
+        "snr": 32.48,
+        "rssi": -81.54,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "Chylonia_Solar_RPT",
-        "to": "RUMJ01",
-        "snr": 17.31,
-        "rssi": -96.71,
+        "from": "University_District",
+        "to": "RavennaPark",
+        "snr": 32.78,
+        "rssi": -81.25,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "GA_WICZ_RPT_01",
-        "to": "GWE_Dobrzewino_3_tes",
-        "snr": 16.93,
-        "rssi": -97.09,
+        "from": "Ravenna_Valley",
+        "to": "Maple_Leaf_Manor",
+        "snr": 29.36,
+        "rssi": -84.66,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "RPT_GD_Suchanino",
-        "to": "GDA__NDZW_B",
-        "snr": 6.86,
-        "rssi": -107.16,
+        "from": "K7FSX_Greenwood_Room",
+        "to": "SteelPhinney",
+        "snr": 12.5,
+        "rssi": -101.52,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "GDA_BORKOWO_2_RPT",
-        "to": "RPT_PRG_03",
-        "snr": 13.35,
-        "rssi": -100.67,
+        "from": "Upper_Queen_Anne",
+        "to": "searep001",
+        "snr": 9.16,
+        "rssi": -104.86,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "GKW_TEST_RPT",
-        "to": "GKW_RAK_01_RPT",
-        "snr": 17.18,
-        "rssi": -96.84,
+        "from": "minitrue",
+        "to": "TangleTown_Repeater",
+        "snr": 31.4,
+        "rssi": -82.62,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "Medusa_repeater",
-        "to": "SP2ZIE_Repeater",
+        "from": "The_Winchester_Repea",
+        "to": "Cap_Hill_Broadway",
+        "snr": 22.5,
+        "rssi": -91.52,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "minitrue",
+        "to": "Licton_Springs_Chat",
+        "snr": 16.62,
+        "rssi": -97.4,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Portage_Bay_G2_2",
+        "to": "Eastlake",
+        "snr": 26.98,
+        "rssi": -87.04,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Steve_",
+        "to": "Stevens",
+        "snr": 31.97,
+        "rssi": -82.05,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "dmatestbednode0",
+        "to": "N7GRN4_Portage_Bay_r",
+        "snr": 31.71,
+        "rssi": -82.31,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Packet_town",
+        "to": "RavennaEckstein_CC",
+        "snr": 2.04,
+        "rssi": -111.98,
+        "snr_std_dev": 0.5,
+        "loss": 0.0016,
+        "bidir": true
+      },
+      {
+        "from": "Entropy_Temple",
+        "to": "RAWTCE",
+        "snr": 31.11,
+        "rssi": -82.91,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Phinney_Solar_Repeat",
+        "to": "facade00",
+        "snr": 25.02,
+        "rssi": -89.0,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "W7ZOORPTRPHINNEY",
+        "to": "Breadheads",
+        "snr": 26.31,
+        "rssi": -87.71,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NE_Queen_Anne_Rptr",
+        "to": "Taco_Tuesday",
+        "snr": 30.52,
+        "rssi": -83.5,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Interlake",
+        "to": "N7GRN5_Portage_Bay_r",
+        "snr": 8.8,
+        "rssi": -105.22,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Roosevelt_Tree_Top",
+        "to": "W7ZOORPTR2__CQCRorg",
+        "snr": 28.07,
+        "rssi": -85.95,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "First_Hill_Skyline_2",
+        "to": "RAVSHrpt1",
+        "snr": 0.97,
+        "rssi": -113.05,
+        "snr_std_dev": 0.5,
+        "loss": 0.0038,
+        "bidir": true
+      },
+      {
+        "from": "The_Winchester_Repea",
+        "to": "MOST_Mesh_Room",
+        "snr": 8.9,
+        "rssi": -105.12,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Phinney_Solar_Repeat",
+        "to": "Dogpeater",
+        "snr": 29.81,
+        "rssi": -84.22,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Ballard_East_Rebleat",
+        "to": "Breadheads",
+        "snr": 19.91,
+        "rssi": -94.11,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Interlake",
+        "to": "Good_Coffee_Great_La",
+        "snr": 20.59,
+        "rssi": -93.43,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "TangleTown_Repeater",
+        "to": "K7FSX_Greenwood",
+        "snr": 28.74,
+        "rssi": -85.29,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Forest_Glade",
+        "to": "Seattle_Center",
+        "snr": 19.49,
+        "rssi": -94.53,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Forest_Glade",
+        "to": "bushwhacker_repeater",
+        "snr": 27.66,
+        "rssi": -86.36,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "1st_Hill_South_Repea",
+        "to": "Lower_Queen_Anne",
+        "snr": 27.55,
+        "rssi": -86.47,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Dogpeater",
+        "to": "University_District",
+        "snr": 26.53,
+        "rssi": -87.5,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Kremwerk",
+        "to": "Eastlake",
+        "snr": -3.52,
+        "rssi": -117.54,
+        "snr_std_dev": 0.5,
+        "loss": 0.1207,
+        "bidir": true
+      },
+      {
+        "from": "FrelardFrelay",
+        "to": "Ballard",
+        "snr": 25.19,
+        "rssi": -88.83,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "N7TOERPTR",
+        "to": "EnduroDriver_Phinney",
+        "snr": 26.35,
+        "rssi": -87.67,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Eastlake_Colonnade",
+        "to": "Fremont01_Greenwood3",
+        "snr": 25.81,
+        "rssi": -88.21,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Phinney_Solar_Repeat",
+        "to": "Maple_Leaf_Manor",
+        "snr": 22.96,
+        "rssi": -91.06,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Yesler_Terrace",
+        "to": "Entropy_Temple",
+        "snr": 26.18,
+        "rssi": -87.84,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Ballard_Locks_1W_Rep",
+        "to": "W7ZOORPTRPHINNEY",
+        "snr": 23.66,
+        "rssi": -90.36,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "1st_Hill_South_Repea",
+        "to": "QA_Repeater__Hive_0",
+        "snr": 10.01,
+        "rssi": -104.01,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Magnolia_Hill_2",
+        "to": "Owl_Nest",
+        "snr": 25.29,
+        "rssi": -88.73,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "devhackchat",
+        "to": "Stevens",
+        "snr": 24.92,
+        "rssi": -89.1,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Summit__Harrison",
+        "to": "Entropy_Temple",
         "snr": 22.53,
         "rssi": -91.49,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "GD_RPT_DIODAK",
-        "to": "RPT_Skowarcz_V4X",
-        "snr": 17.45,
-        "rssi": -96.57,
+        "from": "KG6GXY_Greenwood",
+        "to": "Roosevelt_Pocket_Mes",
+        "snr": 20.33,
+        "rssi": -93.69,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "GWE_Dobrzewino2_RPT",
-        "to": "GDYNIA_Wiczlino_RPT",
-        "snr": 14.48,
-        "rssi": -99.54,
+        "from": "Packet_town",
+        "to": "searep001_2",
+        "snr": 6.69,
+        "rssi": -107.33,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "GDA_Karczemki_2",
-        "to": "RPT_GD_Suchanino",
-        "snr": 0.78,
-        "rssi": -113.24,
-        "snr_std_dev": 0.5,
-        "loss": 0.0044,
-        "bidir": true
-      },
-      {
-        "from": "BAN06M_V3",
-        "to": "GD_MQTT_GW_DS",
-        "snr": 13.43,
-        "rssi": -100.6,
+        "from": "Washington_Park",
+        "to": "repeather",
+        "snr": 23.47,
+        "rssi": -90.55,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "GDAJasien",
-        "to": "GDA_Przerobka",
-        "snr": 18.07,
-        "rssi": -95.95,
+        "from": "House_of_Brimstone",
+        "to": "Volunteer_Park_SW",
+        "snr": 18.26,
+        "rssi": -95.76,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "GDA_Karczemki_2",
-        "to": "BAN06MTestXiaoRPT",
-        "snr": 16.34,
-        "rssi": -97.69,
+        "from": "Cap_Hill_Broadway",
+        "to": "Fremont01_Greenwood3",
+        "snr": 23.73,
+        "rssi": -90.29,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "GDAROKITNICARPT2b",
-        "to": "RPT_REKCIN",
-        "snr": 14.87,
-        "rssi": -99.15,
+        "from": "Crow_Repeater",
+        "to": "Volunteer_Park_SW",
+        "snr": 23.6,
+        "rssi": -90.42,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "RPT_hV4_tx27_b4000_",
-        "to": "GDANSKSUCHANINO_SM",
-        "snr": 14.05,
-        "rssi": -99.97,
+        "from": "NE_Queen_Anne_Rptr",
+        "to": "Cowen_West",
+        "snr": 11.79,
+        "rssi": -102.23,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "WEDOLINKAWwa_RPT",
-        "to": "GDOsiekRPT",
-        "snr": 0.09,
-        "rssi": -113.93,
-        "snr_std_dev": 0.5,
-        "loss": 0.0076,
-        "bidir": true
-      },
-      {
-        "from": "RPT_Skowarcz_V4X",
-        "to": "GDA_W_WOJCIECH_testy",
-        "snr": 11.65,
-        "rssi": -102.37,
+        "from": "RavennaPark",
+        "to": "Stevens",
+        "snr": 22.08,
+        "rssi": -91.94,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "GDA_Skowarcz_V3HPV",
-        "to": "GDA_SW_WOJCIECH",
-        "snr": 12.2,
-        "rssi": -101.82,
+        "from": "Magnolia_Hill",
+        "to": "Belltown_DuneCat",
+        "snr": 21.57,
+        "rssi": -92.45,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "RPT_LOST_01",
-        "to": "GDA_Skowarcz_V3HPV",
-        "snr": 6.35,
-        "rssi": -107.67,
+        "from": "N7TOERPTR",
+        "to": "K7WFB_MC_4631",
+        "snr": 20.96,
+        "rssi": -93.06,
         "snr_std_dev": 0.5,
         "bidir": true
       },
       {
-        "from": "GDA_CEDRYM_RPT",
-        "to": "GDAJasien",
-        "snr": 4.64,
-        "rssi": -109.38,
+        "from": "K7FSX_Greenwood_Room",
+        "to": "node_2",
+        "snr": 20.15,
+        "rssi": -93.87,
         "snr_std_dev": 0.5,
-        "loss": 0.0002,
         "bidir": true
       },
       {
-        "from": "node",
-        "to": "GD_Cedrowa_RPT_0",
-        "snr": 3.41,
-        "rssi": -110.61,
+        "from": "Roosevelt_Tree_Top",
+        "to": "SEAMESH_CORE_R1",
+        "snr": 19.31,
+        "rssi": -94.71,
         "snr_std_dev": 0.5,
-        "loss": 0.0005,
         "bidir": true
       },
       {
-        "from": "GTC_JednosciNarodu_R",
-        "to": "RPT_LOST_01",
-        "snr": -0.26,
-        "rssi": -114.28,
+        "from": "node_2",
+        "to": "Breadheads",
+        "snr": 2.35,
+        "rssi": -111.67,
         "snr_std_dev": 0.5,
-        "loss": 0.01,
+        "loss": 0.0013,
         "bidir": true
       },
       {
-        "from": "GD_MQTT_GW_DS",
-        "to": "Eagles_Nest",
-        "snr": 0.15,
-        "rssi": -113.87,
+        "from": "W7PEA_Repeater",
+        "to": "Naked_in_Capitol_Hil",
+        "snr": 15.38,
+        "rssi": -98.64,
         "snr_std_dev": 0.5,
-        "loss": 0.0072,
+        "bidir": true
+      },
+      {
+        "from": "Ballard",
+        "to": "N1TJT_Repeater",
+        "snr": 16.74,
+        "rssi": -97.28,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "1st_Hill_South_Repea",
+        "to": "K7FSX_Greenwood_Room",
+        "snr": 17.11,
+        "rssi": -96.91,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "The_Winchester_Repea",
+        "to": "KG6GXY_Greenwood",
+        "snr": -8.46,
+        "rssi": -122.48,
+        "snr_std_dev": 0.5,
+        "loss": 0.8776,
         "bidir": true
       },
       {
         "from": "alice",
-        "to": "Nowe_Tokary_RPT",
+        "to": "Owl_Nest",
         "snr": 10.0,
         "rssi": -70.0,
         "bidir": true
       },
       {
         "from": "bob",
-        "to": "GDA_Karczemki_2",
+        "to": "1st_Hill_South_Repea",
         "snr": 10.0,
         "rssi": -70.0,
         "bidir": true
       },
       {
         "from": "carol",
-        "to": "RPT_GD_Suchanino",
+        "to": "N7TOERPTR",
         "snr": 10.0,
         "rssi": -70.0,
         "bidir": true
       },
       {
         "from": "dave",
-        "to": "BAN06MTestXiaoRPT",
+        "to": "Magnolia_Hill_2",
         "snr": 10.0,
         "rssi": -70.0,
         "bidir": true

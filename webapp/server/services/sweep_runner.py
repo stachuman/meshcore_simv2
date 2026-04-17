@@ -218,7 +218,13 @@ class SweepRunner:
 
             try:
                 status_data = json.loads(status_path.read_text(encoding="utf-8"))
-            except (json.JSONDecodeError, OSError):
+            except (json.JSONDecodeError, OSError) as e:
+                # Don't crash startup on one bad record, but log loud enough
+                # that a user investigating missing sweeps can find the cause.
+                logger.warning(
+                    "sweep_runner: skipping sweep %s — cannot read %s (%s)",
+                    sweep_id, status_path, e
+                )
                 continue
 
             raw_status = status_data.get("status", "failed")

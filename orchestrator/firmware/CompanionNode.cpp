@@ -410,7 +410,7 @@ public:
             return buf;
         }
         if (strncmp(cmd, "ver", 3) == 0) {
-            return "sim-companion v1.0 (MeshCore simulator)";
+            return FIRMWARE_VERSION " (companion)";
         }
         return "ERROR: unknown command: " + std::string(cmd);
     }

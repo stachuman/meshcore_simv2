@@ -89,6 +89,11 @@ endif()
 # Each plugin is a shared library containing ALL MeshCore sources + node factories.
 # Shim symbols are resolved from the host binary at dlopen time.
 function(add_firmware_plugin PLUGIN_NAME MESHCORE_PATH)
+    # Override FIRMWARE_VERSION to include plugin name in ver output
+    set(FW_DEFS ${COMMON_DEFS})
+    list(FILTER FW_DEFS EXCLUDE REGEX "^FIRMWARE_VERSION=")
+    list(APPEND FW_DEFS "FIRMWARE_VERSION=\"sim-v1.0 [${PLUGIN_NAME}]\"")
+
     # Include paths: shims first, then this MeshCore version
     set(FW_INCLUDES
         ${CMAKE_SOURCE_DIR}/shims/arduino_shim
@@ -116,7 +121,7 @@ function(add_firmware_plugin PLUGIN_NAME MESHCORE_PATH)
     )
     target_include_directories(${PLUGIN_NAME}_rep PRIVATE
         ${FW_INCLUDES} ${MESHCORE_PATH}/examples/simple_repeater)
-    target_compile_definitions(${PLUGIN_NAME}_rep PRIVATE ${COMMON_DEFS} ORCHESTRATOR_BUILD)
+    target_compile_definitions(${PLUGIN_NAME}_rep PRIVATE ${FW_DEFS} ORCHESTRATOR_BUILD)
     set_target_properties(${PLUGIN_NAME}_rep PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
     # Detect scope support: check if NodePrefs has default_scope_name
@@ -135,7 +140,7 @@ function(add_firmware_plugin PLUGIN_NAME MESHCORE_PATH)
     )
     target_include_directories(${PLUGIN_NAME}_comp PRIVATE
         ${FW_INCLUDES} ${MESHCORE_PATH}/examples/companion_radio)
-    target_compile_definitions(${PLUGIN_NAME}_comp PRIVATE ${COMMON_DEFS} ORCHESTRATOR_BUILD ${_COMP_EXTRA_DEFS})
+    target_compile_definitions(${PLUGIN_NAME}_comp PRIVATE ${FW_DEFS} ORCHESTRATOR_BUILD ${_COMP_EXTRA_DEFS})
     set_target_properties(${PLUGIN_NAME}_comp PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
     # Shared library — contains MeshCore + ed25519 + node factories + plugin exports
@@ -167,7 +172,7 @@ function(add_firmware_plugin PLUGIN_NAME MESHCORE_PATH)
         ${FW_INCLUDES}
         ${CMAKE_CURRENT_SOURCE_DIR}/third_party
     )
-    target_compile_definitions(${PLUGIN_NAME} PRIVATE ${COMMON_DEFS} ORCHESTRATOR_BUILD)
+    target_compile_definitions(${PLUGIN_NAME} PRIVATE ${FW_DEFS} ORCHESTRATOR_BUILD)
     target_link_libraries(${PLUGIN_NAME} PRIVATE ${PLUGIN_NAME}_rep ${PLUGIN_NAME}_comp)
     set_target_properties(${PLUGIN_NAME} PROPERTIES PREFIX "" SUFFIX ".so")
     # -Bsymbolic: bind internal symbol references directly, preventing

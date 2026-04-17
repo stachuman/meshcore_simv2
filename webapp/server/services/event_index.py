@@ -573,7 +573,16 @@ class EventIndexCache:
                     return self._cache[sim_id]
 
             logger.info("EventIndexCache: loading sim_id=%s from %s", sim_id, events_path)
-            index = EventIndex(events_path)
+            try:
+                index = EventIndex(events_path)
+            except Exception:
+                # Ensure the per-sim load lock doesn't stay in _loading forever
+                # if EventIndex construction fails (corrupted NDJSON, I/O error
+                # etc). Without this, every subsequent get() for this sim_id
+                # re-uses a stale lock AND _loading grows without bound.
+                with self._lock:
+                    self._loading.pop(sim_id, None)
+                raise
 
             with self._lock:
                 # Evict LRU entries if at capacity

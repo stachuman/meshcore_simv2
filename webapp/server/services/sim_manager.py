@@ -25,6 +25,21 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 
+def _truncate_preserve_ends(s: str, head: int = 800, tail: int = 1200) -> str:
+    """Truncate a long string keeping both ends.
+
+    Orchestrator stderr typically has useful context near the start (config
+    warnings, node setup) AND near the end (the actual failure / assertion
+    name). Pure tail truncation loses the first half of that context.
+    """
+    if s is None:
+        return ""
+    if len(s) <= head + tail:
+        return s
+    omitted = len(s) - head - tail
+    return f"{s[:head]}\n... [{omitted} bytes truncated] ...\n{s[-tail:]}"
+
+
 @dataclass
 class SimRecord:
     """In-memory record of a simulation's state."""
@@ -283,6 +298,14 @@ class SimManager:
 
                 # Extract duration_ms from config for progress estimation
                 duration_ms = self._extract_duration_ms(record.config)
+                if duration_ms is None:
+                    # Without duration, _parse_stderr falls back to verbose-mode
+                    # parsing only (no percent complete). Surface this so users
+                    # know why the progress bar stays at 0 / jumps.
+                    logger.info(
+                        "sim_id=%s: simulation.duration_ms missing or invalid; "
+                        "progress bar will be coarse (verbose mode only)", sim_id
+                    )
 
                 # Pipe stdout (NDJSON events) to file
                 stdout_task = asyncio.create_task(
@@ -316,7 +339,8 @@ class SimManager:
                 else:
                     record.status = "failed"
                     record.error = (
-                        stderr_output[-2000:] if stderr_output else "Unknown error"
+                        _truncate_preserve_ends(stderr_output, head=800, tail=1200)
+                        if stderr_output else "Unknown error"
                     )
                     self._notify_progress(
                         sim_id, {"status": "failed", "error": record.error}
@@ -483,7 +507,13 @@ class SimManager:
             try:
                 q.put_nowait(data)
             except asyncio.QueueFull:
-                pass  # drop if subscriber is slow
+                # Slow subscriber — drop update but log so stuck progress
+                # bars are diagnosable. Rate-limit by only logging on full
+                # queue (won't flood on steady-state slowness).
+                logger.warning(
+                    "SSE queue full for sim_id=%s; dropping progress update "
+                    "(slow client?)", sim_id
+                )
 
     @staticmethod
     def _extract_duration_ms(config: dict) -> Optional[int]:
@@ -505,7 +535,10 @@ class SimManager:
         try:
             with open(path) as f:
                 return json.load(f)
-        except (json.JSONDecodeError, OSError):
+        except (json.JSONDecodeError, OSError) as e:
+            # Don't fail the whole scan on one bad record, but surface it
+            # so corruption is visible in the server log.
+            logger.warning("sim_manager: cannot parse %s (%s) — treating as empty", path, e)
             return {}
 
     @staticmethod

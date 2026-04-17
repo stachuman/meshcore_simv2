@@ -35,7 +35,7 @@ SF=10
 BW=250000
 CR=1
 FREQ=915.0
-REGION="47.0,-123.0,48.0,-121.5"
+REGION="47.60,-122.42,47.70,-122.27"
 
 
 VARIANT="$1"; shift
@@ -138,12 +138,12 @@ echo "  Output: $CSV_FILE"
 echo ""
 
 SWEEP_DEFAULTS=(
-    --tx-base  "2.3:2.6:0.3"
-    --tx-slope "0.3:0.6:0.3"
-    --tx-pow   "1.1:2.1:0.5"
-    --dtx-base  "1.1:1.1:0.0"
-    --dtx-slope "0.5:0.5:0.0"
-    --dtx-pow   "1.5:2.0:0.5"
+    --tx-base  "1.8:2.4:0.3"
+    --tx-slope "0.0:0.4:0.2"
+    --tx-pow   "0.7:1.9:0.4"
+    --dtx-base  "0.8:1.4:0.3"
+    --dtx-slope "0.2:0.6:0.2"
+    --dtx-pow   "0.7:1.9:0.4"
     --rx-base  "0.0"
     --rx-slope "0.0"
     --rx-pow   "1.0"

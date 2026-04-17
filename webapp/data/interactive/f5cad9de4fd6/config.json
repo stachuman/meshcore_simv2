@@ -1,0 +1,467 @@
+{
+  "_name": "t42_scope_mixed_bridge",
+  "_desc": "Mixed firmware scoped network: same topology as t40 (north/south regions with bridge), but BRIDGE runs fw_default (no scope support). Tests whether a non-scoped bridge leaks packets across regions that scoped repeaters would normally block.",
+  "_requires_plugins": [
+    "fw_scope"
+  ],
+  "simulation": {
+    "firmware": {
+      "default": "fw_scope"
+    },
+    "duration_ms": 210000,
+    "step_ms": 5,
+    "warmup_ms": 5000
+  },
+  "nodes": [
+    {
+      "name": "alice-N",
+      "role": "companion"
+    },
+    {
+      "name": "RN1",
+      "role": "repeater"
+    },
+    {
+      "name": "RN2",
+      "role": "repeater"
+    },
+    {
+      "name": "bob-N",
+      "role": "companion"
+    },
+    {
+      "name": "BRIDGE",
+      "role": "repeater",
+      "firmware": "fw_default"
+    },
+    {
+      "name": "RS1",
+      "role": "repeater"
+    },
+    {
+      "name": "carol-S",
+      "role": "companion"
+    },
+    {
+      "name": "RS2",
+      "role": "repeater"
+    },
+    {
+      "name": "dave-S",
+      "role": "companion"
+    }
+  ],
+  "topology": {
+    "links": [
+      {
+        "from": "alice-N",
+        "to": "RN1",
+        "snr": 10,
+        "rssi": -80,
+        "bidir": true
+      },
+      {
+        "from": "RN1",
+        "to": "RN2",
+        "snr": 10,
+        "rssi": -80,
+        "bidir": true
+      },
+      {
+        "from": "bob-N",
+        "to": "RN2",
+        "snr": 10,
+        "rssi": -80,
+        "bidir": true
+      },
+      {
+        "from": "RN2",
+        "to": "BRIDGE",
+        "snr": 10,
+        "rssi": -80,
+        "bidir": true
+      },
+      {
+        "from": "BRIDGE",
+        "to": "RS1",
+        "snr": 10,
+        "rssi": -80,
+        "bidir": true
+      },
+      {
+        "from": "carol-S",
+        "to": "RS1",
+        "snr": 10,
+        "rssi": -80,
+        "bidir": true
+      },
+      {
+        "from": "RS1",
+        "to": "RS2",
+        "snr": 10,
+        "rssi": -80,
+        "bidir": true
+      },
+      {
+        "from": "dave-S",
+        "to": "RS2",
+        "snr": 10,
+        "rssi": -80,
+        "bidir": true
+      }
+    ]
+  },
+  "commands": [
+    {
+      "at_ms": 0,
+      "node": "RN1",
+      "command": "region put north"
+    },
+    {
+      "at_ms": 0,
+      "node": "RN2",
+      "command": "region put north"
+    },
+    {
+      "at_ms": 0,
+      "node": "RS1",
+      "command": "region put south"
+    },
+    {
+      "at_ms": 0,
+      "node": "RS2",
+      "command": "region put south"
+    },
+    {
+      "at_ms": 5,
+      "node": "RN1",
+      "command": "region allowf north"
+    },
+    {
+      "at_ms": 5,
+      "node": "RN2",
+      "command": "region allowf north"
+    },
+    {
+      "at_ms": 5,
+      "node": "RS1",
+      "command": "region allowf south"
+    },
+    {
+      "at_ms": 5,
+      "node": "RS2",
+      "command": "region allowf south"
+    },
+    {
+      "at_ms": 15,
+      "node": "RN1",
+      "command": "region default north"
+    },
+    {
+      "at_ms": 15,
+      "node": "RN2",
+      "command": "region default north"
+    },
+    {
+      "at_ms": 15,
+      "node": "RS1",
+      "command": "region default south"
+    },
+    {
+      "at_ms": 15,
+      "node": "RS2",
+      "command": "region default south"
+    },
+    {
+      "at_ms": 20,
+      "node": "RN1",
+      "command": "region save"
+    },
+    {
+      "at_ms": 20,
+      "node": "RN2",
+      "command": "region save"
+    },
+    {
+      "at_ms": 20,
+      "node": "RS1",
+      "command": "region save"
+    },
+    {
+      "at_ms": 20,
+      "node": "RS2",
+      "command": "region save"
+    },
+    {
+      "at_ms": 25,
+      "node": "alice-N",
+      "command": "scope north"
+    },
+    {
+      "at_ms": 25,
+      "node": "bob-N",
+      "command": "scope north"
+    },
+    {
+      "at_ms": 25,
+      "node": "carol-S",
+      "command": "scope south"
+    },
+    {
+      "at_ms": 25,
+      "node": "dave-S",
+      "command": "scope south"
+    },
+    {
+      "at_ms": 6000,
+      "node": "RN1",
+      "command": "advert"
+    },
+    {
+      "at_ms": 10000,
+      "node": "RN2",
+      "command": "advert"
+    },
+    {
+      "at_ms": 14000,
+      "node": "BRIDGE",
+      "command": "advert"
+    },
+    {
+      "at_ms": 18000,
+      "node": "RS1",
+      "command": "advert"
+    },
+    {
+      "at_ms": 22000,
+      "node": "RS2",
+      "command": "advert"
+    },
+    {
+      "at_ms": 26000,
+      "node": "alice-N",
+      "command": "advert"
+    },
+    {
+      "at_ms": 30000,
+      "node": "bob-N",
+      "command": "advert"
+    },
+    {
+      "at_ms": 34000,
+      "node": "carol-S",
+      "command": "advert"
+    },
+    {
+      "at_ms": 38000,
+      "node": "dave-S",
+      "command": "advert"
+    },
+    {
+      "at_ms": 44000,
+      "node": "RN1",
+      "command": "advert"
+    },
+    {
+      "at_ms": 48000,
+      "node": "RN2",
+      "command": "advert"
+    },
+    {
+      "at_ms": 52000,
+      "node": "BRIDGE",
+      "command": "advert"
+    },
+    {
+      "at_ms": 56000,
+      "node": "RS1",
+      "command": "advert"
+    },
+    {
+      "at_ms": 60000,
+      "node": "RS2",
+      "command": "advert"
+    },
+    {
+      "at_ms": 64000,
+      "node": "alice-N",
+      "command": "advert"
+    },
+    {
+      "at_ms": 68000,
+      "node": "bob-N",
+      "command": "advert"
+    },
+    {
+      "at_ms": 72000,
+      "node": "carol-S",
+      "command": "advert"
+    },
+    {
+      "at_ms": 76000,
+      "node": "dave-S",
+      "command": "advert"
+    },
+    {
+      "at_ms": 82000,
+      "node": "RN1",
+      "command": "advert"
+    },
+    {
+      "at_ms": 86000,
+      "node": "RN2",
+      "command": "advert"
+    },
+    {
+      "at_ms": 90000,
+      "node": "BRIDGE",
+      "command": "advert"
+    },
+    {
+      "at_ms": 94000,
+      "node": "RS1",
+      "command": "advert"
+    },
+    {
+      "at_ms": 98000,
+      "node": "RS2",
+      "command": "advert"
+    },
+    {
+      "at_ms": 102000,
+      "node": "alice-N",
+      "command": "advert"
+    },
+    {
+      "at_ms": 106000,
+      "node": "bob-N",
+      "command": "advert"
+    },
+    {
+      "at_ms": 110000,
+      "node": "carol-S",
+      "command": "advert"
+    },
+    {
+      "at_ms": 114000,
+      "node": "dave-S",
+      "command": "advert"
+    },
+    {
+      "at_ms": 120000,
+      "node": "RN1",
+      "command": "neighbors"
+    },
+    {
+      "at_ms": 120000,
+      "node": "RN2",
+      "command": "neighbors"
+    },
+    {
+      "at_ms": 120000,
+      "node": "BRIDGE",
+      "command": "neighbors"
+    },
+    {
+      "at_ms": 120000,
+      "node": "RS1",
+      "command": "neighbors"
+    },
+    {
+      "at_ms": 120000,
+      "node": "RS2",
+      "command": "neighbors"
+    },
+    {
+      "at_ms": 130000,
+      "node": "alice-N",
+      "command": "msg bob-N hello from north"
+    },
+    {
+      "at_ms": 145000,
+      "node": "carol-S",
+      "command": "msg dave-S hello from south"
+    },
+    {
+      "at_ms": 165000,
+      "node": "alice-N",
+      "command": "msg carol-S cross-region test"
+    },
+    {
+      "at_ms": 200000,
+      "node": "alice-N",
+      "command": "stats"
+    },
+    {
+      "at_ms": 200000,
+      "node": "bob-N",
+      "command": "stats"
+    },
+    {
+      "at_ms": 200000,
+      "node": "carol-S",
+      "command": "stats"
+    },
+    {
+      "at_ms": 200000,
+      "node": "dave-S",
+      "command": "stats"
+    }
+  ],
+  "expect": [
+    {
+      "type": "cmd_reply_not_contains",
+      "node": "RN1",
+      "command": "neighbors",
+      "contains": ""
+    },
+    {
+      "type": "cmd_reply_not_contains",
+      "node": "RN2",
+      "command": "neighbors",
+      "contains": ""
+    },
+    {
+      "type": "cmd_reply_not_contains",
+      "node": "BRIDGE",
+      "command": "neighbors",
+      "contains": ""
+    },
+    {
+      "type": "cmd_reply_not_contains",
+      "node": "RS1",
+      "command": "neighbors",
+      "contains": ""
+    },
+    {
+      "type": "cmd_reply_not_contains",
+      "node": "RS2",
+      "command": "neighbors",
+      "contains": ""
+    },
+    {
+      "type": "cmd_reply_contains",
+      "node": "alice-N",
+      "command": "msg bob-N",
+      "contains": ""
+    },
+    {
+      "type": "cmd_reply_contains",
+      "node": "carol-S",
+      "command": "msg dave-S",
+      "contains": ""
+    },
+    {
+      "type": "cmd_reply_contains",
+      "node": "bob-N",
+      "command": "stats",
+      "contains": ""
+    },
+    {
+      "type": "cmd_reply_contains",
+      "node": "dave-S",
+      "command": "stats",
+      "contains": ""
+    }
+  ]
+}

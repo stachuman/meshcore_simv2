@@ -250,9 +250,11 @@ function interactiveFollowViewport(nowMs) {
 }
 
 function startInteractivePoll() {
-    setInterval(async () => {
+    let failCount = 0;
+    const iv = setInterval(async () => {
         try {
             const m = await fetchJSON(`${API_PREFIX}/meta`);
+            failCount = 0;
             if (m.time_max > S.meta.time_max || m.event_count > S.meta.event_count) {
                 const oldNodes = S.meta.nodes;
                 S.meta = m;
@@ -274,7 +276,14 @@ function startInteractivePoll() {
                 updateFollowIndicator();
             }
         } catch (e) {
-            // Ignore polling errors (session may have ended)
+            failCount++;
+            if (e.message && e.message.startsWith('404')) {
+                clearInterval(iv);
+                console.warn('Interactive session gone, stopped polling');
+            } else if (failCount >= 5) {
+                clearInterval(iv);
+                console.warn('Too many polling failures, stopped polling');
+            }
         }
     }, 2000);
 }
