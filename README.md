@@ -1,6 +1,6 @@
 # MeshCore Real Sim
 
-A single-process network simulator for [MeshCore](https://github.com/ripplebiz/MeshCore) LoRa mesh networks. Runs unmodified MeshCore firmware code against a configurable virtual radio layer with realistic RF propagation, collisions, and half-duplex constraints.
+A single-process network simulator for [MeshCore](https://github.com/ripplebiz/MeshCore) LoRa mesh networks. Runs unmodified MeshCore firmware code against a configurable virtual radio layer with realistic RF propagation, collisions, and half-duplex constraints. Supports **running multiple firmware versions simultaneously in the same simulation** — useful for testing backward compatibility and mixed-version meshes.
 
 ![Swim-lane event visualization](main.png)
 
@@ -278,34 +278,53 @@ Key topology generator flags:
 
 See [docs/TOPOLOGY_GENERATOR.md](docs/TOPOLOGY_GENERATOR.md) for full documentation.
 
-## Testing Different MeshCore Variants
+## Multi-firmware support
 
-By default the simulator builds against the `MeshCore/` directory. To test a fork or feature branch, clone it and point `MESHCORE_DIR` to it. Use a separate build directory so both builds coexist.
+Nodes in a single simulation can run **different MeshCore firmware versions simultaneously**. Each firmware version is compiled into its own shared-library plugin (`fw_<name>.so`); nodes pick their plugin per-config via the `firmware` field. This is the core feature for testing backward compatibility, rollout transitions, and mixed-version mesh behavior.
+
+### Example: v1.13 and default-scope running side by side
 
 ```bash
-# 1. Clone your MeshCore fork alongside this repo
-git clone https://github.com/YOUR_USER/MeshCore.git ../MeshCore-fork
+# Clone the variants alongside this repo (firmware trees are gitignored; use
+# whatever MeshCore branches/forks you care about)
+git clone -b v1.13          https://github.com/ripplebiz/MeshCore.git MeshCore-1.13
+git clone -b default-scope  https://github.com/ripplebiz/MeshCore.git MeshCore-default-scope
 
-# 2. Build the simulator against the fork (separate build dir)
+# Build the orchestrator with two extra plugins on top of fw_default
+cmake -S . -B build \
+    -DFIRMWARE_PLUGINS="v113=$(pwd)/MeshCore-1.13;scope=$(pwd)/MeshCore-default-scope"
+cmake --build build -j$(nproc)
+```
+
+This produces three plugins next to the orchestrator binary: `fw_default.so`, `fw_v113.so`, `fw_scope.so`. A config can then mix them:
+
+```json
+"nodes": [
+  { "name": "alice", "role": "companion", "firmware": "fw_v113" },
+  { "name": "relay", "role": "repeater",  "firmware": "fw_scope" },
+  { "name": "bob",   "role": "companion" }
+]
+```
+
+Alice runs v1.13, relay runs the default-scope branch, bob runs whatever `fw_default` was built from — all three exchange packets over the same virtual radio. A test can require specific plugins via the top-level `_requires_plugins` field; the test runner skips (with a clear message) when they aren't built.
+
+See [docs/MULTI_FIRMWARE.md](docs/MULTI_FIRMWARE.md) for the full story: per-plugin include isolation, how `dlopen` keeps symbol tables separate, version-string detection, and troubleshooting.
+
+### A-vs-B comparison against a single fork
+
+For a simpler "my fork vs. stock" test (not mixed simulation), build a separate tree with `MESHCORE_DIR`:
+
+```bash
+git clone https://github.com/YOUR_USER/MeshCore.git ../MeshCore-fork
 cmake -S . -B build-fork -DMESHCORE_DIR=$(pwd)/../MeshCore-fork
 cmake --build build-fork
 
-# 3. Run the same test against both builds to compare behavior
-build/orchestrator/orchestrator test/t06_msg_stats.json 2>/tmp/stock.txt
+build/orchestrator/orchestrator      test/t06_msg_stats.json 2>/tmp/stock.txt
 build-fork/orchestrator/orchestrator test/t06_msg_stats.json 2>/tmp/fork.txt
 diff /tmp/stock.txt /tmp/fork.txt
 ```
 
-To switch your fork to a different branch and rebuild:
-
-```bash
-cd ../MeshCore-fork
-git checkout my-feature-branch
-cd ../meshcore_simv2
-cmake --build build-fork
-```
-
-No need to re-run `cmake -S ...` -- the `MESHCORE_DIR` path is cached. Just rebuild after changing the MeshCore sources.
+`MESHCORE_DIR` is cached — after switching branches in the fork tree, just `cmake --build build-fork` again, no reconfigure needed.
 
 ## Radio Physics Model
 
