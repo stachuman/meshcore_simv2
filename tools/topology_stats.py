@@ -5,8 +5,10 @@ Shows per-repeater neighbor counts (SNR > 0), distribution histogram,
 and summary statistics useful for understanding DelayTuning table coverage.
 
 Usage:
-  python3 tools/topology_stats.py simulation/gdansk_test.json
+  # Any orchestrator config (generated, test fixture, or webapp-exported) works:
   python3 tools/topology_stats.py simulation/real_network.json --snr-threshold 3
+
+See prepare_gdansk_test.sh or topology_generator for ways to produce one.
 """
 
 import argparse

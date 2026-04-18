@@ -6,6 +6,14 @@ Standalone Python scripts for preparing simulation inputs.
 
 Converts a real MeshCore network's `topology.json` (exported node list + directed SNR edges) into orchestrator config format.
 
+**Prerequisite:** `simulation/topology.json` is not committed to the repo. Generate one first (fetches live data from the MeshCore API):
+
+```bash
+python3 -m topology_generator --region 53.7,17.3,54.8,19.5 -o simulation/topology.json
+```
+
+Then convert:
+
 ```bash
 # Basic: convert topology with default filtering
 python3 tools/convert_topology.py simulation/topology.json -o simulation/real_network.json

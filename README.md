@@ -6,11 +6,42 @@ A single-process network simulator for [MeshCore](https://github.com/ripplebiz/M
 
 ![Geographic topology map](map.png)
 
+## Repository layout
+
+```
+orchestrator/          Multi-node simulator engine (C++) — main tool
+  Orchestrator.cpp     Simulation loop, physics, collision detection
+  JsonConfig.cpp       Config parser
+  LuaEngine.cpp        Lua scripting bindings and event dispatch
+  FirmwarePlugin.cpp   Plugin loader (dlopen/dlsym)
+  firmware/            Firmware plugin sources (node factories, exports)
+shims/                 Platform shim layer (Arduino, FS, crypto, radio)
+simple_repeater/       Standalone single-repeater binary
+companion_radio/       Standalone single-companion binary
+
+MeshCore/              MeshCore firmware sources (not in repo; fetched by
+                       `tools/firmware.py init`, never modified)
+MeshCore-*/            Alternate firmware trees (e.g. -1.13, -default-scope)
+                       used for multi-firmware testing — see docs/MULTI_FIRMWARE.md
+
+topology_generator/    Python module — ITM-based topology generation from live network
+tools/                 Python helpers — convert, inject, grid-generate, run, analyze
+visualization/         Python + HTML — swim-lane + map viewer (visualize.py)
+webapp/                Browser UI (FastAPI + vanilla JS + Docker)
+
+test/                  t*.json test configs, run_tests.sh harness, Lua integration tests
+simulation/            Generated topology + scenario configs (most regeneratable;
+                       see "Working with Real Topologies" below)
+docs/                  Config format, radio model, Lua API, multi-firmware guide
+delay_optimization_v2/ Experimental sweep harness for delay parameter tuning
+                       across network densities; produces CSV result tables
+```
+
 ## Building
 
 Requires CMake 3.16+, a C++17 compiler, OpenSSL development libraries, Python 3.10+, and liblua5.4-dev (for Lua scripting, enabled by default).
 
-### Quick Start (Unoptimized Development Build)
+### First-time setup (unoptimized development build)
 
 ```bash
 # Install system dependencies (Debian/Ubuntu)
@@ -96,7 +127,7 @@ This produces three binaries:
 - `build/simple_repeater/simple_repeater` -- standalone single-repeater binary
 - `build/companion_radio/companion_radio` -- standalone single-companion binary
 
-## Quick Start
+## Running simulations
 
 ### Run a test config
 
@@ -381,25 +412,3 @@ The `-v meshcore-data:/app/data` volume persists simulation data across containe
 
 **Note:** The image is x86_64. The target machine must have an Intel/AMD CPU (most QNAP/Synology NAS models do).
 
-## Project Structure
-
-```
-MeshCore/            MeshCore firmware sources (read-only, never modified)
-shims/               Platform shim layer (Arduino, FS, crypto, radio)
-orchestrator/        Multi-node simulator engine
-  Orchestrator.cpp   Main simulation loop, physics, collision detection
-  JsonConfig.cpp     Config parser
-  LuaEngine.cpp      Lua scripting bindings and event dispatch
-  FirmwarePlugin.cpp Plugin loader (dlopen/dlsym)
-  firmware/          Firmware plugin sources (node factories, exports)
-simple_repeater/     Standalone single-repeater binary
-companion_radio/     Standalone single-companion binary
-topology_generator/  ITM-based topology generation from live network data
-simulation/          Real-world topology data and generated configs
-delay_optimization_v2/ Lua-based delay parameter sweep scripts and results
-test/                Test configs (t*.json), runner, and Lua integration tests
-tools/               Injection, generation, analysis, and run scripts
-visualization/       Interactive event visualizer
-webapp/              Web UI (FastAPI + vanilla JS, Docker-ready)
-docs/                Config format, model, and Lua scripting documentation
-```

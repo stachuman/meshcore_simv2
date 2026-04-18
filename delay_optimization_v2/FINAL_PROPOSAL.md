@@ -61,8 +61,8 @@ Measured across 4 Seattle-area topologies (~165 nodes each, 15-min simulations, 
 3. **`dtx_base = 1.1, dtx_slope = 0.4, dtx_pow = 1.5`**
    Direct (path-routed) packets need more base delay than expected. ACK return paths benefit from moderate back-off even at low density.
 
-4. **`rx_delay = 0`**
-   Score-based RX queueing was tested across the sweep and never helped. Optimal at zero across every density and every metric.
+4. **`rx_delay = 0`** *(not yet verified — follow-up sweep needed)*
+   rx_delay was held fixed at zero throughout this sweep and was never actually varied. Zero matches the current MeshCore firmware default (`_prefs.rx_delay_base = 0.0f; // turn off by default, was 10.0`). A dedicated sweep (`run_sweep_rxdelay.sh`) is planned to test `rx_base ∈ {0, 5, 10, 15, 20}` to confirm whether delivery rate is truly invariant under rx_delay or whether score-based RX queueing can help.
 
 ### Comparison to firmware defaults
 

@@ -147,7 +147,7 @@ SWEEP_DEFAULTS=(
     --rx-base  "0.0"
     --rx-slope "0.0"
     --rx-pow   "1.0"
-    --clamp-max 15.0
+    --clamp-max 100000.0
     --seeds 6
     --orchestrator "$ORCH_PATH"
     -j 6

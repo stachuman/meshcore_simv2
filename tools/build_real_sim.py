@@ -4,6 +4,9 @@
 Thin wrapper: runs convert_topology.py for topology conversion, then
 inject_test.py for companion placement and message schedules.
 
+Generate a topology first (not committed to the repo):
+  python3 -m topology_generator --region 53.7,17.3,54.8,19.5 -o simulation/topology.json
+
 Usage:
   python3 tools/build_real_sim.py simulation/topology.json \
     --companions 10 --sf 8 --bw 125000 --cr 4 \

@@ -26,6 +26,18 @@ The orchestrator reads a single JSON file that defines the network, radio links,
 
 ---
 
+## Metadata Fields (optional)
+
+Top-level fields prefixed with `_` are metadata — ignored by the orchestrator but used by the test runner and webapp.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `_name` | string | Human-readable test name |
+| `_desc` | string | Test description / purpose |
+| `_requires_plugins` | array | List of firmware plugin names (e.g. `["fw_scope"]`) required by this config. The test runner (`run_tests.sh`) skips tests whose required plugins aren't built. |
+
+---
+
 ## Sections
 
 ### `simulation`
@@ -77,6 +89,42 @@ Hardware turnaround delays for RX↔TX transitions. Models SX1262 transceiver (H
 
 **⚠️ Important:** To accurately model the 1ms RX→TX delay, `step_ms` must be **≤ 1ms**. The orchestrator validates this at startup and emits a warning if `step_ms > 1`, automatically clamping to 1ms.
 
+### simulation.firmware (optional)
+
+Multi-firmware support. Allows running nodes with different MeshCore firmware versions in the same simulation. Requires firmware plugins built via `tools/firmware.py build`.
+
+```json
+{
+  "simulation": {
+    "firmware": {
+      "default": "fw_scope"
+    }
+  }
+}
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `default` | string | `"fw_default"` | Default firmware plugin for all nodes. Must start with `fw_`. |
+| `plugins` | object | *(omit)* | Additional plugin name-to-path mappings (rarely needed; plugins are auto-discovered from `fw_*.so` files next to the orchestrator binary). |
+
+**Available plugins** depend on what was built. Use `python3 tools/firmware.py list` to see registered firmware sources and their plugin names.
+
+### simulation.delay_tuning (optional)
+
+Runtime delay parameter overrides for sweep/optimization scripts. Used by `delay_optimization_v2/` tooling.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `tx_base` | float | 0.0 | TX delay base |
+| `tx_slope` | float | 0.0 | TX delay slope (scales with neighbor count) |
+| `dtx_base` | float | 0.0 | Direct TX delay base |
+| `dtx_slope` | float | 0.0 | Direct TX delay slope |
+| `rx_base` | float | 0.0 | RX delay base |
+| `rx_slope` | float | 0.0 | RX delay slope |
+| `clamp_min` | float | 0.0 | Minimum delay clamp |
+| `clamp_max` | float | 0.0 | Maximum delay clamp |
+
 **Typical setup**: For message-passing tests, use `hot_start: true` with `warmup_ms` long enough for the hot-start advert exchange to complete. Commands should fire after warmup ends.
 
 ### `nodes`
@@ -93,10 +141,13 @@ Array of node definitions. Each node becomes an independent MeshCore instance.
 | `role` | string | `"repeater"` | `"repeater"` or `"companion"`. Repeaters forward packets; companions send/receive messages. |
 | `lat` | float | *(omit)* | Latitude (WGS84). Optional. Passed through to `node_ready` output event for analysis/visualization. |
 | `lon` | float | *(omit)* | Longitude (WGS84). Optional. Must appear together with `lat`. |
+| `firmware` | string | *(global)* | Per-node firmware plugin override. Must start with `fw_`. Falls back to `simulation.firmware.default`. |
 | `radio.sf` | int | *(global)* | Per-node override for LoRa spreading factor (7-12). Falls back to `simulation.radio.sf`. |
 | `radio.bw` | int | *(global)* | Per-node override for bandwidth in Hz. Falls back to `simulation.radio.bw`. |
 | `radio.cr` | int | *(global)* | Per-node override for coding rate (1-4). Falls back to `simulation.radio.cr`. |
 | `tx_fail_prob` | float | 0.0 | TX failure probability [0.0-1.0]. Models SPI/hardware errors per RadioLib error path. When `startSendRaw()` fails, the radio transitions to IDLE and the packet is dropped (or requeued with MeshCore PR #2141). Generates `tx_fail` NDJSON events. |
+
+Radio parameters (`sf`, `bw`, `cr`) can also be specified flat at node level (e.g. `"sf": 10`) instead of nested under `"radio"`. Both forms are accepted.
 
 **Adversarial testing** (optional per-node):
 
@@ -191,10 +242,16 @@ This is equivalent to writing one command per repeater node. Useful for applying
 | `msgc <text>` | companion | Send message on public channel (channel 0, flood). No ack support. |
 | `advert` | companion | Broadcast self-advert (flood) |
 | `advert.zerohop` | companion | Broadcast self-advert (zero-hop only) |
-| `reset_path <name>` | companion | Clear learned direct route to named contact. Forces next `msg` to use flood routing (re-discovers path). Equivalent to MeshCore's `CMD_RESET_PATH` binary frame. |
+| `reset_path <name>` | companion | Clear learned direct route to named contact. Forces next `msg` to use flood routing (re-discovers path). |
+| `path <name>` | companion | Show routing path to a contact (flood, direct 0-hop, or direct N-hop with relay hashes). |
+| `disc_path <name>` | companion | Force path discovery to a contact by sending a telemetry request as flood. |
+| `scope <name>` | companion | Set default scope for outgoing floods (fw_scope only). Use `scope none` to clear. |
+| `list [N]` | companion | List recent contacts with last-seen timestamps. Optional N limits to N most recent. |
 | `neighbors` | companion | List known contacts |
 | `stats` | companion | Print message send/receive counters |
 | `import <hex>` | companion | Import a contact from hex-encoded advert |
+| `clock` | companion | Show simulated RTC time (UTC) and epoch value. |
+| `ver` | both | Show firmware version. Includes plugin name, e.g. `sim-v1.0 [fw_scope]`. |
 | `get rxdelay` | repeater | Query RX delay base (float, default 0.0) |
 | `set rxdelay <f>` | repeater | Set RX delay base (>= 0). Disables autotune. |
 | `get txdelay` | repeater | Query TX delay factor (float, default 0.5) |
@@ -366,6 +423,14 @@ High `collision` relative to `tx` indicates congestion; high `drop` relative to 
 ## Converting Real Topology Data
 
 `tools/convert_topology.py` converts a real MeshCore network's `topology.json` (node list + directed SNR edges) into this config format.
+
+Generate `simulation/topology.json` first (not committed; fetches live data):
+
+```bash
+python3 -m topology_generator --region 53.7,17.3,54.8,19.5 -o simulation/topology.json
+```
+
+Then convert:
 
 ```bash
 python3 tools/convert_topology.py simulation/topology.json \

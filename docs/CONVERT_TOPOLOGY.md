@@ -2,6 +2,16 @@
 
 Converts raw MeshCore topology data (`topology.json`) into orchestrator config format.
 
+## Prerequisite
+
+The input `simulation/topology.json` is **not committed** — generate one first (fetches live data from the MeshCore API):
+
+```bash
+python3 -m topology_generator --region 53.7,17.3,54.8,19.5 -o simulation/topology.json
+```
+
+See [TOPOLOGY_GENERATOR.md](TOPOLOGY_GENERATOR.md) for the full set of generator flags.
+
 ## Basic Usage
 
 ```bash

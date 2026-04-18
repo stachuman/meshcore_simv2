@@ -4,6 +4,9 @@
 This is the format exported from MeshCore network scanners, with nodes
 keyed by prefix and directed edges with SNR, source, confidence.
 
+Generate a topology first (not committed to the repo):
+  python3 -m topology_generator --region 53.7,17.3,54.8,19.5 -o simulation/topology.json
+
 Usage:
   python3 tools/raw_topology_stats.py simulation/topology.json
   python3 tools/raw_topology_stats.py simulation/topology.json --snr-threshold 3 --exclude-inferred
