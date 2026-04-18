@@ -4,16 +4,25 @@ build-*/
 # MeshCore firmware trees (local clones, not tracked)
 MeshCore/
 MeshCore-*/
+
+# Python + build artifacts
 __pycache__/
 *.pyc
 *.o
 *.a
-*.obsidian
+*.tar.gz
+
+# Editor / AI-assistant local state
 .claude/
 .obsidian/
+.engram/
 superpowers/
-*.tar.gz
 
 # Generated simulation outputs
 simulation/real_network.json
 *.ndjson
+
+# Webapp runtime data (configs, simulations, topologies, interactive sessions).
+# Directory itself is kept via .gitkeep; the webapp populates it at runtime.
+webapp/data/*
+!webapp/data/.gitkeep
