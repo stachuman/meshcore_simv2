@@ -120,17 +120,49 @@
   .conn-disconnected { background: #fee2e2; color: var(--error); }
   .conn-connecting { background: #fef3c7; color: var(--warning); }
 
-  /* Visualization iframe */
+  /* Visualization iframe(s) */
   .ia-viz-wrap {
     flex: 1;
     min-height: 150px;
     position: relative;
     overflow: hidden;
+    display: flex;
+    flex-direction: row;
   }
   .ia-viz-wrap iframe {
-    width: 100%;
+    flex: 1;
+    min-width: 0;
     height: 100%;
     border: none;
+  }
+  .ia-viz-wrap .ia-viz-pane {
+    flex: 1 1 50%;
+    min-width: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+  /* Vertical split handle between swim-lane and map */
+  .ia-split-handle {
+    width: 6px;
+    cursor: col-resize;
+    background: var(--border);
+    flex-shrink: 0;
+    transition: background 0.15s;
+    position: relative;
+  }
+  .ia-split-handle:hover,
+  .ia-split-handle.active { background: var(--accent); }
+  .ia-split-handle::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 1px;
+    transform: translateY(-50%);
+    height: 32px;
+    width: 4px;
+    border-left: 1px solid rgba(0,0,0,0.15);
+    border-right: 1px solid rgba(0,0,0,0.15);
   }
 
   /* Resize handle */
@@ -394,7 +426,7 @@
       <button class="btn btn-sm" id="btn-summary">Summary</button>
     </div>
 
-    <!-- Canvas visualization (iframe) -->
+    <!-- Visualization iframes: swim-lane (left) and live map (right) -->
     <div class="ia-viz-wrap" id="viz-wrap">
       <div class="ia-startup-overlay" id="startup-overlay">
         <div class="spinner"></div>
@@ -402,6 +434,8 @@
         <div class="startup-phase" id="startup-phase"></div>
       </div>
       <iframe id="viz-iframe" title="Swim-lane visualization"></iframe>
+      <div class="ia-split-handle" id="split-handle"></div>
+      <iframe id="map-iframe" title="Live map"></iframe>
     </div>
 
     <!-- Resize handle -->
@@ -482,6 +516,22 @@
   } else {
     showSessionUI();
   }
+
+  // ── Cleanup on navigation / tab close ──
+  // When the user leaves the interactive view, terminate the backing
+  // orchestrator session immediately rather than waiting for the 60s
+  // idle timer. Uses `fetch keepalive` so the request survives page
+  // unload in modern browsers. pagehide fires on navigation, tab close,
+  // and bfcache transitions — the union of all "leaving this page" cases.
+  window.addEventListener('pagehide', () => {
+    if (!sessionId || sessionClosed) return;
+    try {
+      fetch('/api/interactive/' + sessionId, {
+        method: 'DELETE',
+        keepalive: true,
+      });
+    } catch (_) { /* best-effort — page is unloading */ }
+  });
 
   // ── Create flow ──────────────────────────────────────
   function showCreateFlow() {
@@ -1068,14 +1118,73 @@
     document.getElementById('cmd-bar').style.opacity = '0.5';
   }
 
-  // ── Visualization iframe ────────────────────────────
+  // ── Visualization iframes (swim-lane + live map) ────
   let vizIframeLoaded = false;
   function initVizIframe() {
     if (vizIframeLoaded) return;
     vizIframeLoaded = true;
-    const iframe = document.getElementById('viz-iframe');
-    iframe.src = '/static/visualize.html?interactive=' + encodeURIComponent(sessionId);
+    document.getElementById('viz-iframe').src =
+      '/static/visualize.html?interactive=' + encodeURIComponent(sessionId);
+    document.getElementById('map-iframe').src =
+      '/static/map_live.html?interactive=' + encodeURIComponent(sessionId);
   }
+
+  // ── Horizontal split drag between the two iframes ──
+  (function setupSplitDrag() {
+    const handle = document.getElementById('split-handle');
+    const left = document.getElementById('viz-iframe');
+    const right = document.getElementById('map-iframe');
+    let startX, startLeftW, startRightW;
+
+    handle.addEventListener('mousedown', e => {
+      e.preventDefault();
+      startX = e.clientX;
+      startLeftW = left.offsetWidth;
+      startRightW = right.offsetWidth;
+      handle.classList.add('active');
+      // Cover iframes so mousemove isn't swallowed by them
+      left.style.pointerEvents = 'none';
+      right.style.pointerEvents = 'none';
+      document.addEventListener('mousemove', onDrag);
+      document.addEventListener('mouseup', onUp);
+    });
+
+    function onDrag(e) {
+      const dx = e.clientX - startX;
+      const newLeft = Math.max(120, startLeftW + dx);
+      const newRight = Math.max(120, startRightW - dx);
+      left.style.flex = '0 0 ' + newLeft + 'px';
+      right.style.flex = '1 1 ' + newRight + 'px';
+    }
+    function onUp() {
+      handle.classList.remove('active');
+      left.style.pointerEvents = '';
+      right.style.pointerEvents = '';
+      document.removeEventListener('mousemove', onDrag);
+      document.removeEventListener('mouseup', onUp);
+    }
+  })();
+
+  // ── Iframe message relay ────────────────────────────
+  // Sibling iframes can't message each other directly; the parent is the
+  // hub. Relayed message types:
+  //   mlv-focus-node  (swim-lane → map): center map on a node
+  //   mlv-scrub-time  (map → swim-lane): center swim-lane viewport on a time
+  //   mlv-trace-pkt   (swim-lane → map): trace a packet's flood tree on map
+  window.addEventListener('message', (e) => {
+    if (!e.data || typeof e.data !== 'object') return;
+    const mapIframe = document.getElementById('map-iframe');
+    const vizIframe = document.getElementById('viz-iframe');
+    if (e.data.type === 'mlv-focus-node' || e.data.type === 'mlv-trace-pkt') {
+      if (mapIframe && mapIframe.contentWindow) {
+        mapIframe.contentWindow.postMessage(e.data, '*');
+      }
+    } else if (e.data.type === 'mlv-scrub-time') {
+      if (vizIframe && vizIframe.contentWindow) {
+        vizIframe.contentWindow.postMessage(e.data, '*');
+      }
+    }
+  });
 
   // ── Resize handle ──────────────────────────────────
   (function setupResize() {

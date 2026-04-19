@@ -91,6 +91,19 @@ async def get_session(sid: str, request: Request):
     }
 
 
+@router.get("/{sid}/config")
+async def get_session_config(sid: str, request: Request):
+    """Return the full simulation config (nodes + topology.links) for an
+    interactive session. Used by live visualizations (e.g. map_live.html)
+    that need per-link SNR information not carried by runtime NDJSON events.
+    """
+    manager = request.app.state.interactive_manager
+    session = manager.get_session(sid)
+    if not session:
+        raise HTTPException(404, "Session not found")
+    return session.config
+
+
 @router.delete("/{sid}")
 async def delete_session(sid: str, request: Request):
     """Close and delete an interactive session."""

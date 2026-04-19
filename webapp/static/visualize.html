@@ -1228,7 +1228,9 @@ canvas.addEventListener('click', async (e) => {
         // Clicked on node label — use rendered scrollY
         const laneIdx = Math.floor((e.offsetY - S.headerH + S.renderedScrollY) / S.laneH);
         if (laneIdx >= 0 && laneIdx < S.nodes.length) {
-            showNodeDetail(S.nodes[laneIdx].name);
+            const n = S.nodes[laneIdx].name;
+            showNodeDetail(n);
+            emitFocusNode(n);                      // cross-iframe: center map on node
         }
         return;
     }
@@ -1244,6 +1246,40 @@ canvas.addEventListener('click', async (e) => {
         } else {
             showEventDetail(hit);
         }
+        // Center the sibling map view on the TX source (or fall back to
+        // the receiver for pure RX/collision/drop events).
+        const focusNode = hit.node || hit.from || hit.to;
+        if (focusNode) emitFocusNode(focusNode);
+    }
+});
+
+// Post a focus-node hint to the parent window so sibling iframes (e.g. the
+// live map) can sync their view. No-op when loaded standalone.
+function emitFocusNode(name) {
+    if (!name || window.parent === window) return;
+    try {
+        window.parent.postMessage({ type: 'mlv-focus-node', node: name }, '*');
+    } catch (_) { /* ignore */ }
+}
+
+// ── Cross-iframe time sync ──────────────────────────────────────────
+// The live map's scrubber posts {type: 'mlv-scrub-time', t: ms} when the
+// user drags it. Center our viewport on that moment so both views share
+// context. No-op when loaded standalone or before meta has loaded.
+async function centerViewportOnTime(t) {
+    if (!S.meta) return;
+    const span = S.viewTo - S.viewFrom;
+    S.viewFrom = t - span * 0.5;
+    S.viewTo = S.viewFrom + span;
+    clampViewport();
+    await loadViewport();
+    render();
+}
+
+window.addEventListener('message', (e) => {
+    if (!e.data || typeof e.data !== 'object') return;
+    if (e.data.type === 'mlv-scrub-time' && typeof e.data.t === 'number') {
+        centerViewportOnTime(e.data.t);
     }
 });
 
@@ -1434,6 +1470,12 @@ function resolveHash(hash, pkMap) {
 // ── Trace mode ─────────────────────────────────────────────────
 async function tracePkt(pkt) {
     S.tracePkt = pkt;
+    // Post a trace hint to the parent so sibling iframes (live map) can
+    // render the same flood-propagation tree alongside the swim-lane.
+    if (window.parent !== window) {
+        try { window.parent.postMessage({ type: 'mlv-trace-pkt', pkt }, '*'); }
+        catch (_) { /* ignore */ }
+    }
     const data = await fetchJSON(`${API_PREFIX}/deep_trace/${pkt}`);
     S.deepTrace = data;  // {root_pkt, hops: [{pkt, events, relay_from?}]}
 

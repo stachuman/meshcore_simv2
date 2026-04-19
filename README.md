@@ -6,6 +6,8 @@ A single-process network simulator for [MeshCore](https://github.com/ripplebiz/M
 
 ![Geographic topology map](map.png)
 
+![Interactive simulation view — live map, scrubber, and analytical overlays](interactive.png)
+
 ## Repository layout
 
 ```
@@ -375,10 +377,50 @@ A browser-based UI for the full simulation workflow -- from topology creation th
 - **Topology Editor** -- selection-driven node/link editing with an interactive map, SNR-colored links, drag-to-reposition
 - **Scenario Editor** -- visual config builder: define nodes, links, commands, message schedules, and assertions
 - **Batch Simulations** -- run simulations with real-time progress via SSE, view results in swim-lane and map visualizations
-- **Interactive Simulations** -- WebSocket-based step-through mode: send commands, step the clock, observe events live
+- **Interactive Simulations** -- step-through investigation with swim-lane + live map side-by-side, scrubbable history, per-TX outcome overlays, collision/radio-busy heatmaps, TX effectiveness bars, and animated flood-propagation trees. See below for details.
 - **Config Library** -- save, duplicate, import/export simulation configs
 
 No database (filesystem-only storage), no build step (CDN-served JS libraries).
+
+### Interactive simulation view
+
+Live step-through investigation of a running sim with a swim-lane and map side-by-side. Send commands, advance the clock, watch the network react event-by-event. Screenshot at the top of this README.
+
+**Live visualization:**
+- Swim-lane timeline (left) with per-node event lanes, airtime bars, packet tracing, and filterable event log
+- Geographic map (right) with live node state (idle / TX / RX / collision flashes)
+- Per-TX overlay lines colored by outcome:
+  - *green solid* = delivered to this receiver
+  - *orange dashed* = collision (with dark halo for visibility; tooltip shows interferer + capture margin)
+  - *red dashed* = SNR below demod threshold
+  - *magenta dashed* = stochastic link-loss roll
+  - *gray dashed* = receiver was half-duplex busy
+- Hover any overlay for per-receiver SNR / margin / interferer details
+
+**History + scrubbable replay:**
+- Rolling 2-minute event buffer in the frontend, with a density timeline (histogram of events/bucket) below the map
+- Click or drag the timeline to scrub to any past moment — the map freezes, overlays re-render as they were at that time
+- "Resume live" button returns to following the current frontier
+- Scrub-time syncs with the swim-lane viewport automatically
+
+**Analytical overlays** (toggle independently in the map legend):
+- *Radio busy — bars* — per-node % of radio occupation (TX + RX), vertical bar at each node with color thresholds (green <10%, amber 10-30%, red >30%)
+- *Radio busy — heatmap* — same data as diffuse blue→purple spatial blobs, distinct palette so it composes cleanly with other overlays
+- *Collision heatmap* — amber→red hot zones on nodes that suffered collisions, plus an exact per-node collision count badge (log-scaled intensity so small counts stay visible)
+- *TX effectiveness* — % of each node's transmissions that reached ≥1 neighbor, inverse color (green = healthy, red = wasted airtime); answers "is this node talking into the void?"
+
+**Flood-propagation tree:**
+- Click any TX overlay (on the map or in the swim-lane) to trace its full hop-by-hop spread
+- Animated expansion at real sim-time pacing: ★ marks the root sender, numbered ● dots appear at each arrival node in order with timing labels ("Hop 3 at relay1 +412 ms")
+- Cyan lines for relay hops, purple lines for response (PATH-return) hops
+- "Clear trace" button or click another TX to replace
+
+**Cross-view sync:**
+- Click a TX box / node label in the swim-lane → the map flies to that node with a pulse ring
+- Drag the map's time scrubber → swim-lane viewport recenters on the scrubbed time
+- Trace a packet in either view → the other view renders the same tree
+
+Sessions auto-terminate when you navigate away; a 60-second idle fallback handles unclean shutdowns.
 
 ### Run locally (development)
 

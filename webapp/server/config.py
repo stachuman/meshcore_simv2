@@ -29,8 +29,13 @@ class Settings:
         self.MAX_INTERACTIVE_SESSIONS: int = int(
             os.environ.get("MAX_INTERACTIVE_SESSIONS", "4")
         )
+        # Safety net for sessions whose WebSocket closed without a clean
+        # DELETE (e.g. browser crash, hard tab-kill). Normal navigation
+        # away from the interactive view triggers an explicit DELETE via
+        # the `pagehide` handler in interactive.html, so this timeout is
+        # only the fallback for unclean shutdowns.
         self.INTERACTIVE_IDLE_TIMEOUT_S: int = int(
-            os.environ.get("INTERACTIVE_IDLE_TIMEOUT_S", "300")
+            os.environ.get("INTERACTIVE_IDLE_TIMEOUT_S", "60")
         )
 
     @classmethod

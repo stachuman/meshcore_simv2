@@ -1,0 +1,1885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Live Map — MeshCore Sim</title>
+<link rel="stylesheet" href="/static/css/common.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- leaflet-heat: L.heatLayer for collision hot zones (and future radio-busy heatmap variant).
+     ~3KB, same author as Leaflet, no runtime deps. -->
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script src="/static/js/api.js"></script>
+<style>
+  html, body { height: 100%; margin: 0; }
+  body { display: flex; flex-direction: column; overflow: hidden; }
+
+  .mlv-status {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 12px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .mlv-status .sep { color: var(--text-dim); }
+  .mlv-status .conn { padding: 2px 8px; border-radius: 3px; font-weight: 600; }
+  .mlv-status .conn-connected    { background: #dcfce7; color: var(--success); }
+  .mlv-status .conn-disconnected { background: #fee2e2; color: var(--error); }
+  .mlv-status .conn-connecting   { background: #fef3c7; color: var(--warning); }
+  .mlv-status .spacer { flex: 1; }
+
+  /* Legend panel anchored inside the map as a Leaflet control */
+  .mlv-legend-panel {
+    background: rgba(255,255,255,0.94);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 6px 8px;
+    font-size: 10px;
+    color: var(--text);
+    line-height: 1.5;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+    max-width: 220px;
+  }
+  .mlv-legend-panel .section-title {
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    font-size: 9px;
+    margin-top: 4px;
+    margin-bottom: 2px;
+  }
+  .mlv-legend-panel .section-title:first-child { margin-top: 0; }
+  .mlv-legend-panel .row {
+    display: flex; align-items: center; gap: 5px;
+    white-space: nowrap;
+  }
+  .mlv-legend-panel .row-pair {
+    display: flex; gap: 10px;
+  }
+  .mlv-legend-panel .dot {
+    display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .mlv-legend-panel .bar {
+    display: inline-block; width: 18px; height: 3px;
+    flex-shrink: 0;
+    border-radius: 1px;
+  }
+  .mlv-legend-panel .bar.dashed {
+    background-image: linear-gradient(to right, currentColor 55%, transparent 55%) !important;
+    background-size: 6px 100%;
+    background-color: transparent !important;
+  }
+  .mlv-legend-panel .bar.halo {
+    box-shadow: 0 0 0 2px rgba(30,27,75,0.55);
+  }
+  .mlv-legend-panel .snr-gradient {
+    display: inline-block;
+    width: 80px; height: 6px; border-radius: 2px; flex-shrink: 0;
+    background: linear-gradient(to right,
+      hsl(0, 75%, 38%),
+      hsl(45, 75%, 42%),
+      hsl(90, 75%, 46%),
+      hsl(130, 75%, 50%));
+  }
+  .mlv-legend-panel .snr-labels {
+    display: flex; justify-content: space-between;
+    width: 80px; font-size: 8.5px; color: var(--text-muted);
+    margin-top: -1px;
+  }
+  /* Overlays toggles at the bottom of the legend */
+  .mlv-legend-panel .overlay-toggle {
+    display: flex; align-items: center; gap: 4px;
+    cursor: pointer;
+  }
+  .mlv-legend-panel .overlay-toggle input { margin: 0; cursor: pointer; }
+
+  /* ── Airtime utilization bars (per-node, pixel-offset satellite) ─── */
+  /* Pixel offset from the node marker is handled via Leaflet's iconAnchor
+     option (CSS transform would conflict with Leaflet's positioning
+     transform on the same element). */
+  .mlv-airtime-bar { pointer-events: none; }
+  .mlv-airtime-bar .bar-bg {
+    width: 8px; height: 34px;
+    background: rgba(255,255,255,0.8);
+    border: 1px solid rgba(0,0,0,0.3);
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.45);
+  }
+  .mlv-airtime-bar .bar-fill {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: #22c55e;
+    transition: height 0.3s ease, background-color 0.3s ease;
+  }
+  .mlv-airtime-bar .bar-label {
+    position: absolute;
+    left: 12px; top: 1px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text);
+    background: rgba(255,255,255,0.9);
+    padding: 1px 4px;
+    border-radius: 2px;
+    white-space: nowrap;
+    line-height: 1.3;
+  }
+
+  /* ── TX effectiveness bar (mirror of airtime, left side of node) ─ */
+  /* Semantics are flipped from airtime: HIGH effectiveness = green =
+     good, LOW = red = problem. Uses the same bar scaffolding as airtime
+     so visual weight is matched. */
+  .mlv-eff-bar { pointer-events: none; }
+  .mlv-eff-bar .bar-bg {
+    width: 8px; height: 34px;
+    background: rgba(255,255,255,0.8);
+    border: 1px solid rgba(0,0,0,0.3);
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.45);
+  }
+  .mlv-eff-bar .bar-fill {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: #22c55e;
+    transition: height 0.3s ease, background-color 0.3s ease;
+  }
+  .mlv-eff-bar .bar-label {
+    position: absolute;
+    right: 12px; top: 1px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text);
+    background: rgba(255,255,255,0.9);
+    padding: 1px 4px;
+    border-radius: 2px;
+    white-space: nowrap;
+    line-height: 1.3;
+  }
+  .mlv-eff-bar .bar-label.dim { color: var(--text-dim); font-weight: 500; }
+
+  /* ── Flood-propagation tree (P5.3) ─────────────────────────────── */
+  /* Visually distinct from the per-packet outcome overlays: thick cyan
+     lines with glowing edges, numbered hop dots at each arrival node.
+     Traces are ephemeral — triggered by clicking a TX, cleared by the
+     Clear-trace button or a new click. */
+  .mlv-hop-dot { pointer-events: none; }
+  .mlv-hop-dot .dot {
+    width: 20px; height: 20px;
+    background: #0ea5e9;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    box-shadow: 0 0 0 1.5px rgba(0,0,0,0.45), 0 0 8px rgba(14,165,233,0.5);
+  }
+  .mlv-hop-dot.response .dot {
+    background: #8b5cf6;                                  /* purple for response hops */
+    box-shadow: 0 0 0 1.5px rgba(0,0,0,0.45), 0 0 8px rgba(139,92,246,0.5);
+  }
+  .mlv-root-dot { pointer-events: none; }
+  .mlv-root-dot .dot {
+    width: 24px; height: 24px;
+    background: #fbbf24;
+    border: 3px solid #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #7c2d12;
+    font-size: 13px; font-weight: 800;
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.5), 0 0 12px rgba(251,191,36,0.7);
+  }
+
+  /* Clear-trace button sits in the scrubber row, hidden unless active */
+  .mlv-clear-trace-btn {
+    padding: 3px 10px;
+    border-radius: 3px;
+    border: 1px solid var(--accent);
+    background: var(--bg-secondary);
+    color: var(--accent);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    user-select: none;
+  }
+  .mlv-clear-trace-btn:hover { background: var(--accent); color: #fff; }
+
+  /* ── Collision count badge (pairs with the heat layer) ──────────── */
+  .mlv-collision-badge { pointer-events: none; }
+  .mlv-collision-badge .badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 10px;
+    background: #dc2626;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    border: 1.5px solid rgba(255,255,255,0.9);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.35);
+    text-align: center;
+    min-width: 14px;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+  }
+
+  #map { flex: 1; min-height: 0; background: #e8edf2; }
+  /* Muted OSM base tiles: desaturated and slightly softened, but still
+     legible so streets/labels remain readable as reference geography.
+     Overlays pop on top by their own weight+opacity, not by crushing the
+     background to gray. */
+  #map .leaflet-tile-pane { filter: saturate(0.5) brightness(0.98) contrast(0.85); }
+
+  /* ── Scrubber (history / replay at a past time) ─────────── */
+  .mlv-scrubber {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 10px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .mlv-live-btn {
+    padding: 3px 10px;
+    border-radius: 3px;
+    border: 1px solid var(--success);
+    background: var(--success);
+    color: #fff;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    user-select: none;
+  }
+  .mlv-live-btn.scrubbed {
+    background: var(--warning);
+    border-color: var(--warning);
+  }
+  .mlv-live-btn:disabled {
+    background: var(--bg-tertiary);
+    border-color: var(--border);
+    color: var(--text-dim);
+    cursor: not-allowed;
+  }
+  .mlv-timeline {
+    flex: 1;
+    min-width: 0;
+    position: relative;
+    height: 22px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    cursor: crosshair;
+    user-select: none;
+  }
+  .mlv-timeline canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  .mlv-scrub-handle {
+    position: absolute;
+    top: -3px; bottom: -3px;
+    width: 2px;
+    background: var(--error);
+    pointer-events: none;
+    display: none;
+  }
+  .mlv-scrub-handle.visible { display: block; }
+  .mlv-scrub-handle::before {
+    content: '';
+    position: absolute;
+    left: -4px;
+    top: -2px;
+    width: 10px;
+    height: 8px;
+    background: var(--error);
+    border-radius: 2px 2px 0 0;
+  }
+  .mlv-scrub-label {
+    min-width: 90px;
+    text-align: right;
+    white-space: nowrap;
+    color: var(--text);
+    font-family: var(--font-mono);
+  }
+
+  .mlv-placeholder {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 12px;
+    color: var(--text-muted);
+    text-align: center;
+    padding: 24px;
+  }
+  /* HTML `hidden` attribute is overridden by our `display: flex` above;
+     restore the hide behavior explicitly. */
+  .mlv-placeholder[hidden] { display: none; }
+  .mlv-placeholder .big { font-size: 14px; color: var(--text); font-weight: 600; }
+  .mlv-placeholder .small { font-size: 11px; }
+
+  /* Leaflet tweaks */
+  .leaflet-container { font: inherit; }
+  .leaflet-tooltip.mlv-label {
+    background: rgba(255,255,255,0.92);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 10px;
+    padding: 2px 5px;
+    box-shadow: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="mlv-status">
+  <span class="conn conn-connecting" id="conn">Connecting</span>
+  <span class="sep">|</span>
+  <span id="node-count">0 nodes</span>
+  <span class="sep">|</span>
+  <span id="link-count">0 links</span>
+  <span class="sep">|</span>
+  <span id="time-ms">t=0 ms</span>
+  <span class="sep">|</span>
+  <span id="event-count">0 events</span>
+  <span class="spacer"></span>
+</div>
+
+<div class="mlv-scrubber" id="scrubber">
+  <button class="mlv-live-btn" id="btn-live" title="Resume live updates">● Live</button>
+  <div class="mlv-timeline" id="timeline" title="Click to scrub to a past moment; drag the handle to adjust">
+    <canvas id="density-canvas"></canvas>
+    <div class="mlv-scrub-handle" id="scrub-handle"></div>
+  </div>
+  <button class="mlv-clear-trace-btn" id="btn-clear-trace" style="display:none" title="Remove the flood-propagation tree">✕ Clear trace</button>
+  <span class="mlv-scrub-label" id="scrub-label">—</span>
+</div>
+
+<div id="map"></div>
+
+<div id="no-coords" class="mlv-placeholder" hidden>
+  <div class="big">Map not available</div>
+  <div class="small">
+    This simulation's nodes don't have lat/lon coordinates configured.<br>
+    The map view requires geographic node positions.<br>
+    Open the scenario editor to add coordinates, or use a topology-generator config.
+  </div>
+</div>
+
+<script>
+// ── Parse session id from URL ──────────────────────────────────────────
+const sid = new URLSearchParams(window.location.search).get('interactive');
+if (!sid) {
+  document.body.innerHTML = '<div class="mlv-placeholder"><div class="big">Missing session id</div>' +
+    '<div class="small">Load as <code>/static/map_live.html?interactive=&lt;session_id&gt;</code></div></div>';
+  throw new Error('missing ?interactive=<sid>');
+}
+
+// ── DOM refs ───────────────────────────────────────────────────────────
+const $ = (id) => document.getElementById(id);
+const connEl = $('conn');
+const nodeCountEl = $('node-count');
+const linkCountEl = $('link-count');
+const timeMsEl = $('time-ms');
+const eventCountEl = $('event-count');
+const mapEl = $('map');
+const noCoordsEl = $('no-coords');
+
+function setConn(state) {
+  connEl.className = 'conn conn-' + state;
+  connEl.textContent = state.charAt(0).toUpperCase() + state.slice(1);
+}
+
+// ── Styling helpers ────────────────────────────────────────────────────
+// Continuous SNR gradient across the meaningful LoRa range.
+// Below -10 dB: clamped to hard red (link effectively dead).
+// -10 -> +25 dB: hue interpolates red -> orange -> yellow -> green.
+// Above +25 dB: clamped to strong green.
+function snrColor(snr) {
+  if (snr === null || snr === undefined || !Number.isFinite(snr)) return '#9ca3af';
+  const t = Math.max(0, Math.min(1, (snr + 10) / 35));  // map [-10, +25] -> [0, 1]
+  const hue = t * 130;       // 0 = red, 60 = yellow, 130 = green
+  const light = 38 + t * 12; // slightly brighter as quality improves
+  return 'hsl(' + hue.toFixed(1) + ', 75%, ' + light.toFixed(1) + '%)';
+}
+function roleColor(role) {
+  return role === 'companion' ? '#16a34a' : '#2563eb';
+}
+
+// Node-state color overrides (higher-priority wins during overlap).
+// State persists for FALLBACK_HOLD_MS after the last event of its kind on
+// that node, or until a higher-priority event overrides it, or until a
+// newer event on the same node replaces it. Long enough to inspect
+// visually without being tied to the step-response timing (which arrives
+// within milliseconds of the step events themselves).
+const FALLBACK_HOLD_MS = 8000;
+const STATE_STYLE = {
+  idle:      { priority: 0 },
+  rx:        { priority: 1, fill: '#60a5fa', stroke: '#2563eb', weight: 3 },
+  dropped:   { priority: 1, fill: '#d1d5db', stroke: '#6b7280', weight: 2 },
+  weak:      { priority: 1, fill: '#fde68a', stroke: '#d97706', weight: 2 },
+  halfdup:   { priority: 1, fill: '#e5e7eb', stroke: '#6b7280', weight: 2 },
+  collision: { priority: 2, fill: '#fca5a5', stroke: '#dc2626', weight: 3 },
+  tx:        { priority: 3, fill: '#fbbf24', stroke: '#ea580c', weight: 4 /* holdMs set from airtime */ },
+};
+
+// Per-TX receiver-outcome overlay styles. Drawn from sender to each receiver
+// when that receiver fires its per-receiver outcome event (rx/collision/drop).
+// Solid for success, dashed for failure — so a packet successfully reaching
+// several nodes while colliding at one looks visually distinct at a glance.
+const TX_OUTCOME = {
+  rx:              { color: '#16a34a', weight: 6, opacity: 0.95, dashArray: null  }, // delivered
+  collision:       { color: '#ea580c', weight: 6, opacity: 0.90, dashArray: '8,6' }, // interferer won or both lost
+  drop_weak:       { color: '#dc2626', weight: 4, opacity: 0.85, dashArray: '3,4' }, // SNR below threshold
+  drop_loss:       { color: '#c026d3', weight: 4, opacity: 0.85, dashArray: '3,4' }, // stochastic link-loss roll
+  drop_halfduplex: { color: '#64748b', weight: 4, opacity: 0.80, dashArray: '8,4' }, // receiver was TX
+};
+// How long overlay lines linger after a TX. Two concerns:
+//   - late-arriving per-receiver events (they land shortly after the TX but
+//     we don't want to miss any by tearing the layer down prematurely),
+//   - visual observability: collisions in particular are small events that
+//     the user needs time to actually spot on the map before they vanish.
+// Set generously; overlays are reset on sim_end too, so no leak.
+const TX_OVERLAY_GRACE_MS = 5000;
+const TX_OVERLAY_MIN_MS = 6000;
+
+// ── State ──────────────────────────────────────────────────────────────
+let leafletMap = null;
+let markersByName = {};      // name -> L.circleMarker
+let nodeMeta = {};           // name -> { role, lat, lon, baseFill }
+let nodeCurrentState = {};   // name -> { key, priority, timerId }
+let eventCount = 0;
+// Active TX overlays: one L.layerGroup per in-flight packet, each carrying
+// a per-receiver polyline overlay added as outcome events arrive. Keyed by
+// the pkt hash from orchestrator events.
+let activeTx = {};           // pkt_hash -> { sender, layer, overlays, timerId }
+
+// ── History + scrubber ────────────────────────────────────────────────
+const HISTORY_MAX_MS = 120000; // keep 2 minutes of event history in memory
+let eventHistory = [];         // time-sorted array of raw event objects
+let timelineLatestMs = 0;      // max time_ms seen; timeline right edge
+let viewTime = null;           // null -> live mode; number -> scrubbed to that time_ms
+let scrubbed = false;          // convenience flag (viewTime !== null)
+
+// ── Analytical overlays (P5) ──────────────────────────────────────────
+// Each overlay toggle is independently on/off via the legend checkboxes.
+// Overlays pull from eventHistory — they respect scrub mode (re-aggregate
+// over the window ending at viewTime).
+const OVERLAY_WINDOW_MS = 10000;  // "recent" window for rate-style overlays
+const COLLISION_WINDOW_MS = 30000; // collisions are sparser; longer window helps the heatmap stay meaningful
+const overlays = {
+  airtime: false,        // per-node TX+RX busy bars (right of node)
+  airtimeHeat: false,    // per-node TX+RX busy heat layer (distinct palette)
+  collisionHeat: false,  // per-node collision-count heat layer + badges
+  txEff: false,          // per-node TX effectiveness bars (left of node)
+};
+let airtimeMarkers = {};     // name -> L.marker (divIcon) alongside each node
+let airtimeHeatLayer = null; // L.heatLayer or null (radio-busy variant)
+let collisionHeatLayer = null; // L.heatLayer or null
+let collisionBadges = {};      // name -> L.marker (divIcon) numeric badges
+let txEffMarkers = {};         // name -> L.marker (divIcon) effectiveness bars
+let overlayRefreshTimer = null;
+
+// ── Initial load: fetch config, render topology ────────────────────────
+(async function init() {
+  setConn('connecting');
+  let cfg;
+  try {
+    cfg = await fetchJSON('/api/interactive/' + sid + '/config');
+  } catch (e) {
+    setConn('disconnected');
+    connEl.textContent = 'Config load failed';
+    throw e;
+  }
+
+  const cfgNodes = Array.isArray(cfg.nodes) ? cfg.nodes : [];
+  const cfgLinks = (cfg.topology && Array.isArray(cfg.topology.links)) ? cfg.topology.links : [];
+
+  const withCoords = cfgNodes.filter(n => Number.isFinite(n.lat) && Number.isFinite(n.lon));
+  if (withCoords.length === 0) {
+    mapEl.style.display = 'none';
+    noCoordsEl.hidden = false;
+    // Still open WS so we at least show time + event counter.
+    openWebSocket();
+    return;
+  }
+
+  initLeaflet(withCoords);
+  drawNodes(cfgNodes);
+  drawLinks(cfgLinks);
+  nodeCountEl.textContent = Object.keys(markersByName).length + ' nodes';
+  linkCountEl.textContent = cfgLinks.length + ' links';
+
+  openWebSocket();
+})();
+
+// ── Leaflet init ───────────────────────────────────────────────────────
+function initLeaflet(nodes) {
+  const lats = nodes.map(n => n.lat), lons = nodes.map(n => n.lon);
+  const avgLat = lats.reduce((a,b)=>a+b,0) / lats.length;
+  const avgLon = lons.reduce((a,b)=>a+b,0) / lons.length;
+
+  leafletMap = L.map('map', { preferCanvas: true }).setView([avgLat, avgLon], 10);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 18,
+    attribution: '&copy; OpenStreetMap',
+  }).addTo(leafletMap);
+
+  // Fit bounds with a little padding
+  if (nodes.length > 1) {
+    const b = L.latLngBounds(nodes.map(n => [n.lat, n.lon]));
+    leafletMap.fitBounds(b, { padding: [30, 30] });
+  }
+
+  addLegendControl();
+}
+
+// Legend anchored bottom-right inside the map. Covers everything we actually
+// render: node role + transient state flashes, static link SNR gradient,
+// and the per-receiver outcome overlay styles.
+function addLegendControl() {
+  const ctrl = L.control({ position: 'bottomright' });
+  ctrl.onAdd = function () {
+    const div = L.DomUtil.create('div', 'mlv-legend-panel');
+    div.innerHTML = `
+      <div class="section-title">Nodes</div>
+      <div class="row-pair">
+        <div class="row"><span class="dot" style="background:#2563eb"></span>repeater</div>
+        <div class="row"><span class="dot" style="background:#16a34a"></span>companion</div>
+      </div>
+      <div class="row-pair">
+        <div class="row"><span class="dot" style="background:#fbbf24; box-shadow: 0 0 0 2px #ea580c"></span>TX</div>
+        <div class="row"><span class="dot" style="background:#60a5fa"></span>RX</div>
+      </div>
+      <div class="row-pair">
+        <div class="row"><span class="dot" style="background:#fca5a5; box-shadow: 0 0 0 2px #dc2626"></span>collision</div>
+        <div class="row"><span class="dot" style="background:#fde68a"></span>weak</div>
+      </div>
+
+      <div class="section-title">Static link (SNR)</div>
+      <div class="row"><span class="snr-gradient"></span></div>
+      <div class="snr-labels"><span>&minus;10 dB</span><span>+25 dB</span></div>
+
+      <div class="section-title">Packet outcome (during TX)</div>
+      <div class="row"><span class="bar" style="background:#16a34a"></span>delivered</div>
+      <div class="row"><span class="bar dashed halo" style="color:#ea580c"></span>collision (dark halo)</div>
+      <div class="row"><span class="bar dashed" style="color:#dc2626"></span>SNR below threshold</div>
+      <div class="row"><span class="bar dashed" style="color:#c026d3"></span>stochastic loss</div>
+      <div class="row"><span class="bar dashed" style="color:#64748b"></span>half-duplex</div>
+
+      <div class="section-title">Analytical overlays</div>
+
+      <label class="overlay-toggle" title="Vertical bar to the RIGHT of each node = fraction of the last ${Math.round(OVERLAY_WINDOW_MS/1000)}s the radio was busy (TX + RX). Green &lt;10%, amber 10-30%, red &gt;30%.">
+        <input type="checkbox" id="toggle-airtime">
+        <span>Radio busy — bars</span>
+      </label>
+      <div class="row" style="font-size:9px; color:var(--text-muted); margin-left:18px; margin-top:-2px;">
+        right bar &rarr; % of last ${Math.round(OVERLAY_WINDOW_MS/1000)}s busy
+      </div>
+
+      <label class="overlay-toggle" title="Diffuse blue-purple heat weighted by radio busy %. Independent of the bars — enable either or both.">
+        <input type="checkbox" id="toggle-airtime-heat">
+        <span>Radio busy — heatmap</span>
+      </label>
+      <div class="row" style="font-size:9px; color:var(--text-muted); margin-left:18px; margin-top:-2px;">
+        blue &rarr; purple blobs (50% busy = full hot)
+      </div>
+
+      <label class="overlay-toggle" title="Hot zones where collisions occur, plus a red count badge above each affected node. Aggregated over the last ${Math.round(COLLISION_WINDOW_MS/1000)}s.">
+        <input type="checkbox" id="toggle-collision-heat">
+        <span>Collision heatmap</span>
+      </label>
+      <div class="row" style="font-size:9px; color:var(--text-muted); margin-left:18px; margin-top:-2px;">
+        heat blob + <span style="display:inline-block;padding:0 5px;border-radius:8px;background:#dc2626;color:#fff;font-size:9px;font-weight:700;border:1px solid rgba(255,255,255,0.9)">N</span> count badge
+      </div>
+
+      <label class="overlay-toggle" title="Vertical bar to the LEFT of each node = fraction of this node's TXes in the last ${Math.round(OVERLAY_WINDOW_MS/1000)}s that reached at least one neighbor. Green 100% (healthy), red 0% (wasted airtime).">
+        <input type="checkbox" id="toggle-tx-eff">
+        <span>TX effectiveness</span>
+      </label>
+      <div class="row" style="font-size:9px; color:var(--text-muted); margin-left:18px; margin-top:-2px;">
+        left bar &rarr; % of TXes received by &ge;1 neighbor
+      </div>
+    `;
+    // Prevent map drag/zoom events when interacting with the legend
+    L.DomEvent.disableClickPropagation(div);
+    L.DomEvent.disableScrollPropagation(div);
+    return div;
+  };
+  ctrl.addTo(leafletMap);
+}
+
+function drawNodes(cfgNodes) {
+  for (const n of cfgNodes) {
+    if (!Number.isFinite(n.lat) || !Number.isFinite(n.lon)) continue;
+    const role = n.role || 'repeater';
+    const baseFill = roleColor(role);
+    const marker = L.circleMarker([n.lat, n.lon], {
+      radius: 7,
+      color: baseFill,
+      weight: 2,
+      fillColor: baseFill,
+      fillOpacity: 0.85,
+    }).addTo(leafletMap);
+    marker.bindTooltip(n.name, { permanent: false, className: 'mlv-label' });
+    markersByName[n.name] = marker;
+    nodeMeta[n.name] = { role, lat: n.lat, lon: n.lon, baseFill };
+  }
+}
+
+function drawLinks(cfgLinks) {
+  // Static topology links act as a background reference — muted so that
+  // per-TX overlays (drawn on top with higher opacity) dominate the view.
+  // SNR color is preserved so you can still read link quality at a glance.
+  for (const lk of cfgLinks) {
+    const a = nodeMeta[lk.from], b = nodeMeta[lk.to];
+    if (!a || !b) continue;
+    L.polyline([[a.lat, a.lon], [b.lat, b.lon]], {
+      color: snrColor(lk.snr),
+      weight: 3,
+      opacity: 0.35,
+      interactive: false,
+    }).addTo(leafletMap);
+  }
+}
+
+// ── Node state transitions ─────────────────────────────────────────────
+function resetNodeStyle(name) {
+  const m = markersByName[name];
+  const meta = nodeMeta[name];
+  if (!m || !meta) return;
+  m.setStyle({
+    color: meta.baseFill,
+    weight: 2,
+    fillColor: meta.baseFill,
+    fillOpacity: 0.85,
+  });
+  const cur = nodeCurrentState[name];
+  if (cur && cur.timerId) clearTimeout(cur.timerId);
+  delete nodeCurrentState[name];
+}
+
+// Apply a visual state to a node. Higher-priority state wins over a still-
+// active lower-priority one (so a TX indicator can't be overwritten by
+// a later RX on the same node). State persists until either:
+//   - a higher-priority event fires on the same node, or
+//   - another event of equal-or-higher priority fires on the same node
+//     (replacing the prior state), or
+//   - holdMs (default FALLBACK_HOLD_MS) elapses.
+function applyState(name, stateKey, holdMs) {
+  const m = markersByName[name];
+  const meta = nodeMeta[name];
+  if (!m || !meta) return;
+  const style = STATE_STYLE[stateKey];
+  if (!style) return;
+
+  const cur = nodeCurrentState[name];
+  if (cur && cur.priority > style.priority) return;  // don't downgrade
+
+  if (cur && cur.timerId) clearTimeout(cur.timerId);
+
+  m.setStyle({
+    color: style.stroke || meta.baseFill,
+    weight: style.weight || 2,
+    fillColor: style.fill || meta.baseFill,
+    fillOpacity: 0.95,
+  });
+
+  // In scrubbed mode, states are frozen at the viewed moment — no decay.
+  let timerId = null;
+  if (!scrubbed) {
+    const effectiveHold = holdMs || FALLBACK_HOLD_MS;
+    timerId = setTimeout(() => resetNodeStyle(name), effectiveHold);
+  }
+  nodeCurrentState[name] = { key: stateKey, priority: style.priority, timerId };
+}
+
+// Called on each step-boundary response — clears all transient per-node
+// flashes so the next step starts from a clean slate.
+function resetAllStates() {
+  for (const name of Object.keys(nodeCurrentState)) resetNodeStyle(name);
+}
+
+// ── TX overlay lifecycle ───────────────────────────────────────────────
+// Register a new in-flight TX. Subsequent per-receiver outcome events
+// with matching pkt will draw colored overlay lines onto this layer.
+// The layer is torn down after airtime + grace; sim_end also clears all.
+function onTxStart(ev) {
+  const pkt = ev.pkt;
+  if (!pkt || !leafletMap) return;
+  const sender = ev.node;
+  if (!nodeMeta[sender]) return;
+
+  // Defensive: same pkt hash seen twice → drop the old overlay set
+  if (activeTx[pkt]) removeActiveTx(pkt);
+
+  const layer = L.layerGroup().addTo(leafletMap);
+  let timerId = null;
+  if (!scrubbed) {
+    const lifetimeMs = Math.max(TX_OVERLAY_MIN_MS, (ev.airtime_ms || 0) + TX_OVERLAY_GRACE_MS);
+    timerId = setTimeout(() => removeActiveTx(pkt), lifetimeMs);
+  }
+  activeTx[pkt] = { sender, layer, overlays: new Map(), timerId };
+}
+
+function addTxOverlay(pkt, receiver, outcomeKey, extra) {
+  const entry = activeTx[pkt];
+  if (!entry) return;                 // tx not seen yet, or already expired
+  const style = TX_OUTCOME[outcomeKey];
+  if (!style) return;
+  const a = nodeMeta[entry.sender];
+  const b = nodeMeta[receiver];
+  if (!a || !b) return;
+
+  // Same receiver may appear twice per pkt (unlikely but safe): replace
+  const prior = entry.overlays.get(receiver);
+  if (prior) {
+    entry.layer.removeLayer(prior.main);
+    if (prior.halo) entry.layer.removeLayer(prior.halo);
+  }
+
+  const latlngs = [[a.lat, a.lon], [b.lat, b.lon]];
+
+  // Collisions get a dark halo drawn first so the orange dashes stay
+  // visible against any background (muted base tiles, or on top of
+  // other overlays / static links). Other outcomes are vivid enough on
+  // their own that a halo would just add visual noise.
+  let halo = null;
+  if (outcomeKey === 'collision') {
+    halo = L.polyline(latlngs, {
+      color: '#1e1b4b',
+      weight: style.weight + 4,
+      opacity: 0.55,
+      interactive: false,
+      lineCap: 'round',
+    });
+    entry.layer.addLayer(halo);
+  }
+
+  const line = L.polyline(latlngs, {
+    color: style.color,
+    weight: style.weight,
+    opacity: style.opacity,
+    dashArray: style.dashArray,
+    interactive: true,
+    lineCap: 'round',
+  });
+  // Tooltip gives the why at a glance — especially useful for collisions.
+  let tip = entry.sender + ' → ' + receiver + ': ' + outcomeKey;
+  if (extra && extra.interferer) {
+    tip += ' (interferer=' + extra.interferer +
+           ', margin=' + (extra.snr_margin != null ? extra.snr_margin.toFixed(1) : '?') + ' dB)';
+  } else if (extra && extra.snr != null) {
+    tip += ' (SNR=' + extra.snr.toFixed(1) + ' dB)';
+  }
+  tip += ' — click to trace flood';
+  line.bindTooltip(tip, { sticky: true, className: 'mlv-label' });
+  // Click any overlay line to kick off a flood-propagation trace for
+  // its underlying packet. Prevents map pan at the same time.
+  line.on('click', (e) => {
+    L.DomEvent.stopPropagation(e);
+    startTrace(pkt);
+  });
+  entry.layer.addLayer(line);
+  entry.overlays.set(receiver, { main: line, halo });
+}
+
+function removeActiveTx(pkt) {
+  const entry = activeTx[pkt];
+  if (!entry) return;
+  if (entry.timerId) clearTimeout(entry.timerId);
+  if (entry.layer) leafletMap.removeLayer(entry.layer);
+  delete activeTx[pkt];
+}
+
+function removeAllActiveTx() {
+  for (const pkt of Object.keys(activeTx)) removeActiveTx(pkt);
+}
+
+// ── History buffer ─────────────────────────────────────────────────────
+// Keep a time-sorted ring of recent events so the scrubber can freeze
+// the map at any past moment within HISTORY_MAX_MS of the latest event.
+function pushToHistory(ev) {
+  const t = ev.time_ms;
+  if (typeof t !== 'number') return;
+  eventHistory.push(ev);
+  if (t > timelineLatestMs) timelineLatestMs = t;
+  // Trim events older than the cutoff (cheap — scans front of sorted array)
+  const cutoff = timelineLatestMs - HISTORY_MAX_MS;
+  while (eventHistory.length > 0 && eventHistory[0].time_ms < cutoff) {
+    eventHistory.shift();
+  }
+  updateTimelineLabel();
+  updateTimelineDensity();
+}
+
+// ── Focus-on-node (driven by sibling iframes via postMessage) ───────────
+// Pans (and zooms in if necessary) to the requested node, and draws a
+// short-lived concentric ring to make the focus target unambiguous even
+// when the map was already near the right center.
+function focusOnNode(name) {
+  const meta = nodeMeta[name];
+  if (!meta || !leafletMap) return;
+  const targetZoom = Math.max(leafletMap.getZoom(), 12);
+  leafletMap.flyTo([meta.lat, meta.lon], targetZoom, { duration: 0.6 });
+
+  // Expanding ring pulse for visual confirmation.
+  const pulse = L.circleMarker([meta.lat, meta.lon], {
+    radius: 10,
+    color: '#2563eb',
+    weight: 3,
+    fill: false,
+    opacity: 0.95,
+    interactive: false,
+  }).addTo(leafletMap);
+  const startTs = Date.now();
+  const DURATION = 900;
+  function animate() {
+    const t = (Date.now() - startTs) / DURATION;
+    if (t >= 1) { leafletMap.removeLayer(pulse); return; }
+    pulse.setRadius(10 + t * 22);
+    pulse.setStyle({ opacity: 0.95 * (1 - t) });
+    requestAnimationFrame(animate);
+  }
+  requestAnimationFrame(animate);
+}
+
+// Listen for focus hints from the parent relay (swim-lane iframe in the
+// interactive view posts these when the user clicks a TX box or a node
+// label; the parent page forwards them here).
+window.addEventListener('message', (e) => {
+  const d = e.data;
+  if (!d || typeof d !== 'object') return;
+  if (d.type === 'mlv-focus-node' && typeof d.node === 'string') {
+    focusOnNode(d.node);
+  } else if (d.type === 'mlv-trace-pkt' && typeof d.pkt === 'string') {
+    startTrace(d.pkt);
+  }
+});
+
+// ── Flood-propagation tree (P5.3) ──────────────────────────────────────
+// Click any TX overlay line on the map (or trace a pkt in the swim-lane,
+// which sends us an mlv-trace-pkt via the parent relay) to expand the
+// hop-by-hop flood tree animated in sim-time order. The "Clear trace"
+// button removes it; a second click on another TX replaces it.
+let currentTrace = null;  // { pkt, layer, timers[] }
+const btnClearTrace = $('btn-clear-trace');
+
+btnClearTrace.addEventListener('click', clearTrace);
+
+function clearTrace() {
+  if (!currentTrace) return;
+  for (const tid of currentTrace.timers) clearTimeout(tid);
+  if (currentTrace.layer) leafletMap.removeLayer(currentTrace.layer);
+  currentTrace = null;
+  btnClearTrace.style.display = 'none';
+}
+
+async function startTrace(rootPkt) {
+  if (!rootPkt) return;
+  clearTrace();  // anything previously drawn goes away
+  let data;
+  try {
+    data = await fetchJSON('/api/interactive/' + sid + '/deep_trace/' + rootPkt);
+  } catch (err) {
+    console.warn('deep_trace failed for', rootPkt, err);
+    return;
+  }
+  if (!data || !Array.isArray(data.hops) || data.hops.length === 0) return;
+  renderTrace(data);
+}
+
+function renderTrace(data) {
+  const layer = L.layerGroup().addTo(leafletMap);
+  currentTrace = { pkt: data.root_pkt, layer, timers: [] };
+  btnClearTrace.style.display = '';
+
+  // Index hops by pkt hash for parent-lookup
+  const hopByPkt = {};
+  for (const hop of data.hops) hopByPkt[hop.pkt] = hop;
+
+  // Locate the root: hop whose pkt matches data.root_pkt
+  const rootHop = hopByPkt[data.root_pkt];
+  if (!rootHop) return;
+  const rootTxEv = (rootHop.events || []).find(e => e.type === 'tx');
+  if (!rootTxEv || !rootTxEv.node) return;
+  const rootTimeMs = rootTxEv.time_ms;
+
+  // Draw the root marker immediately
+  drawRootDot(layer, rootTxEv.node);
+
+  // Schedule each downstream hop at its sim-time-delta from the root.
+  // Playback speed is 1× so the visual pacing matches what actually
+  // happened; for very fast floods (<1s span) everything appears almost
+  // together, which is accurate.
+  let hopNumber = 0;
+  for (const hop of data.hops) {
+    if (hop.pkt === data.root_pkt) continue;  // root already drawn
+    const parentPkt = hop.relay_from || hop.response_from;
+    const parentHop = parentPkt ? hopByPkt[parentPkt] : null;
+    if (!parentHop) continue;
+
+    const thisTx = (hop.events || []).find(e => e.type === 'tx');
+    const parentTx = (parentHop.events || []).find(e => e.type === 'tx');
+    if (!thisTx || !parentTx) continue;
+
+    hopNumber++;
+    const delayMs = Math.max(0, thisTx.time_ms - rootTimeMs);
+    const isResponse = 'response_from' in hop;
+    const capturedHop = hopNumber;
+    const capturedSrc = parentTx.node;
+    const capturedDst = thisTx.node;
+    const timerId = setTimeout(() => {
+      if (!currentTrace || currentTrace.layer !== layer) return;  // cleared
+      drawHopEdge(layer, capturedSrc, capturedDst, capturedHop, isResponse, thisTx.time_ms - rootTimeMs);
+    }, delayMs);
+    currentTrace.timers.push(timerId);
+  }
+}
+
+function drawRootDot(layer, nodeName) {
+  const meta = nodeMeta[nodeName];
+  if (!meta) return;
+  const marker = L.marker([meta.lat, meta.lon], {
+    icon: L.divIcon({
+      className: 'mlv-root-dot',
+      html: '<div class="dot" title="Root: ' + nodeName + '">★</div>',
+      iconSize: [24, 24],
+      iconAnchor: [12, 12],
+    }),
+    interactive: false,
+    zIndexOffset: 800,
+  });
+  marker.addTo(layer);
+}
+
+function drawHopEdge(layer, fromName, toName, hopNum, isResponse, dtMs) {
+  const a = nodeMeta[fromName];
+  const b = nodeMeta[toName];
+  if (!a || !b) return;
+  const color = isResponse ? '#8b5cf6' : '#0ea5e9';
+  // Dark halo for visibility against any background (same trick as collisions)
+  layer.addLayer(L.polyline([[a.lat, a.lon], [b.lat, b.lon]], {
+    color: '#0f172a',
+    weight: 9,
+    opacity: 0.35,
+    interactive: false,
+    lineCap: 'round',
+  }));
+  layer.addLayer(L.polyline([[a.lat, a.lon], [b.lat, b.lon]], {
+    color,
+    weight: 5,
+    opacity: 0.95,
+    interactive: false,
+    lineCap: 'round',
+  }));
+  // Numbered hop dot at the arrival node
+  const dotMarker = L.marker([b.lat, b.lon], {
+    icon: L.divIcon({
+      className: 'mlv-hop-dot' + (isResponse ? ' response' : ''),
+      html: '<div class="dot" title="Hop ' + hopNum + ' at ' + toName +
+            ' (+' + Math.round(dtMs) + ' ms)">' + hopNum + '</div>',
+      iconSize: [20, 20],
+      iconAnchor: [10, 10],
+    }),
+    interactive: false,
+    zIndexOffset: 700,
+  });
+  layer.addLayer(dotMarker);
+}
+
+// ── Scrubber: freeze the map at a past moment ──────────────────────────
+// Option-1 semantics: drag/click timeline → set viewTime = T → map is
+// replayed from history as-of T, frozen (no decay timers). "● Live"
+// button returns to following the live tail.
+
+const scrubberEl = $('scrubber');
+const btnLive = $('btn-live');
+const timelineEl = $('timeline');
+const densityCanvas = $('density-canvas');
+const scrubHandle = $('scrub-handle');
+const scrubLabel = $('scrub-label');
+const densityCtx = densityCanvas.getContext('2d');
+
+// Resize canvas buffer to match its CSS-sized container. CSS handles the
+// display size (`width: 100%; height: 100%`), we just need to sync the
+// backing buffer + DPR transform so drawing stays sharp.
+// Runs on container resize via ResizeObserver (iframe split drags don't
+// fire window.resize on the iframe content, so polling/window events are
+// not enough).
+function sizeDensityCanvas() {
+  const cssW = timelineEl.clientWidth;
+  const cssH = timelineEl.clientHeight;
+  if (cssW <= 0 || cssH <= 0) return;
+  const dpr = window.devicePixelRatio || 1;
+  densityCanvas.width = Math.max(1, Math.floor(cssW * dpr));
+  densityCanvas.height = Math.max(1, Math.floor(cssH * dpr));
+  densityCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  updateTimelineDensity();
+  positionScrubHandle();
+}
+window.addEventListener('resize', sizeDensityCanvas);
+if (window.ResizeObserver) {
+  new ResizeObserver(sizeDensityCanvas).observe(timelineEl);
+} else {
+  // Fallback for ancient browsers
+  setTimeout(sizeDensityCanvas, 50);
+}
+
+function timelineTimeRange() {
+  // [oldest, latest] — empty history => [0, 0]
+  if (eventHistory.length === 0) return [0, 0];
+  return [Math.max(0, timelineLatestMs - HISTORY_MAX_MS), timelineLatestMs];
+}
+
+function updateTimelineLabel() {
+  if (scrubbed) return;
+  const [, latest] = timelineTimeRange();
+  scrubLabel.textContent = latest > 0 ? 't=' + latest + ' ms' : '—';
+}
+
+function positionScrubHandle() {
+  if (!scrubbed) { scrubHandle.classList.remove('visible'); return; }
+  const [from, to] = timelineTimeRange();
+  const span = to - from;
+  if (span <= 0) return;
+  const rect = timelineEl.getBoundingClientRect();
+  const frac = Math.max(0, Math.min(1, (viewTime - from) / span));
+  scrubHandle.style.left = (frac * rect.width) + 'px';
+  scrubHandle.classList.add('visible');
+}
+
+// Render event density as a histogram behind the scrubbable timeline.
+// Bucket events into ~1 bucket per 4 px of timeline width; bar height
+// uses log scale so dense spikes don't flatten quieter regions.
+function updateTimelineDensity() {
+  if (!densityCanvas.width) return;
+  // Use the timeline's CSS width as the drawing frame, not the canvas's own
+  // size — they briefly diverge during a resize transition and we want the
+  // bars clipped to the visible container, never outside it.
+  const w = timelineEl.clientWidth;
+  const h = timelineEl.clientHeight;
+  if (w <= 0 || h <= 0) return;
+  densityCtx.clearRect(0, 0, w, h);
+
+  const [from, to] = timelineTimeRange();
+  const span = to - from;
+  if (span <= 0 || eventHistory.length === 0) return;
+
+  const BUCKETS = Math.max(10, Math.floor(w / 3));
+  const counts = new Uint32Array(BUCKETS);
+  let maxC = 0;
+  for (const ev of eventHistory) {
+    const t = ev.time_ms;
+    if (t < from || t > to) continue;
+    let idx = Math.floor(((t - from) / span) * BUCKETS);
+    if (idx >= BUCKETS) idx = BUCKETS - 1;
+    counts[idx]++;
+    if (counts[idx] > maxC) maxC = counts[idx];
+  }
+  if (maxC === 0) return;
+
+  const bw = w / BUCKETS;
+  densityCtx.fillStyle = 'rgba(37, 99, 235, 0.55)';
+  const logMax = Math.log1p(maxC);
+  for (let i = 0; i < BUCKETS; i++) {
+    if (counts[i] === 0) continue;
+    const frac = Math.log1p(counts[i]) / logMax;
+    const barH = Math.max(2, frac * (h - 2));
+    densityCtx.fillRect(i * bw, h - barH, Math.max(1, bw - 0.3), barH);
+  }
+}
+
+// Replay history events up to T, reconstructing state as-of that moment.
+// Depends on the `scrubbed` flag causing applyState/onTxStart to skip
+// their decay timers so the result stays frozen.
+function replayAt(T) {
+  // Clean slate on the map before rebuilding
+  for (const name of Object.keys(markersByName)) resetNodeStyle(name);
+  removeAllActiveTx();
+
+  // Identify tx packets still in-flight at T (lifetime hasn't expired)
+  const inflightPkts = new Set();
+  for (const ev of eventHistory) {
+    if (ev.time_ms > T) break;
+    if (ev.type === 'tx') {
+      const end = ev.time_ms + Math.max(TX_OVERLAY_MIN_MS, (ev.airtime_ms || 0) + TX_OVERLAY_GRACE_MS);
+      if (end > T) inflightPkts.add(ev.pkt);
+      else inflightPkts.delete(ev.pkt);  // expired; later tx may reuse hash
+    }
+  }
+
+  // Node-state lookback: only apply state flashes that would still be
+  // "fresh" at T (within FALLBACK_HOLD_MS). Lets old states decay naturally.
+  const stateFrom = T - FALLBACK_HOLD_MS;
+
+  for (const ev of eventHistory) {
+    if (ev.time_ms > T) break;
+    const type = ev.type;
+
+    if (type === 'tx') {
+      // Only replay if still in-flight (overlay-wise) at T — this skips
+      // ancient TX events and avoids creating then-destroying layers.
+      if (!inflightPkts.has(ev.pkt)) {
+        // Still paint node state if the TX node flash is recent enough
+        if (ev.time_ms >= stateFrom) applyState(ev.node, 'tx', 0);
+        continue;
+      }
+      // Reapply both node state and overlay layer
+      applyState(ev.node, 'tx', 0);
+      onTxStart(ev);
+      continue;
+    }
+
+    if (type === 'rx' || type === 'collision' ||
+        type === 'drop_weak' || type === 'drop_loss' || type === 'drop_halfduplex') {
+      const matches = inflightPkts.has(ev.pkt);
+      const inStateWindow = ev.time_ms >= stateFrom;
+      if (!matches && !inStateWindow) continue;
+      // Node state: only if recent enough
+      if (inStateWindow) {
+        const nodeStateKey =
+          type === 'rx' ? 'rx' :
+          type === 'collision' ? 'collision' :
+          type === 'drop_weak' ? 'weak' :
+          type === 'drop_loss' ? 'dropped' :
+          'halfdup';
+        applyState(ev.to, nodeStateKey);
+      }
+      // Overlay: only if matching TX is still in-flight
+      if (matches) {
+        const outcome =
+          type === 'rx' ? 'rx' :
+          type === 'collision' ? 'collision' :
+          type;
+        addTxOverlay(ev.pkt, ev.to, outcome, {
+          interferer: ev.interferer,
+          snr_margin: ev.snr_margin,
+          snr: ev.snr,
+        });
+      }
+    }
+  }
+}
+
+function enterScrubbedMode(T) {
+  scrubbed = true;
+  viewTime = T;
+  // Cancel any live decay timers so they don't clobber the replayed view
+  for (const name of Object.keys(nodeCurrentState)) {
+    const ns = nodeCurrentState[name];
+    if (ns.timerId) { clearTimeout(ns.timerId); ns.timerId = null; }
+  }
+  for (const pkt of Object.keys(activeTx)) {
+    const entry = activeTx[pkt];
+    if (entry.timerId) { clearTimeout(entry.timerId); entry.timerId = null; }
+  }
+  replayAt(T);
+  // UI
+  btnLive.classList.add('scrubbed');
+  btnLive.textContent = '▶ Resume live';
+  scrubLabel.textContent = 'scrub t=' + T + ' ms';
+  timeMsEl.textContent = 't=' + T + ' ms (scrubbed)';
+  positionScrubHandle();
+  emitScrubTime(T);
+}
+
+// Post a scrub-time hint so sibling iframes (swim-lane) can re-center on
+// the same moment. Rate-limited via rAF so a fast drag doesn't flood
+// the parent with messages.
+let _scrubEmitPending = false;
+let _scrubEmitLast = null;
+function emitScrubTime(t) {
+  if (window.parent === window) return;
+  _scrubEmitLast = t;
+  if (_scrubEmitPending) return;
+  _scrubEmitPending = true;
+  requestAnimationFrame(() => {
+    _scrubEmitPending = false;
+    try {
+      window.parent.postMessage({ type: 'mlv-scrub-time', t: _scrubEmitLast }, '*');
+    } catch (_) { /* ignore */ }
+  });
+}
+
+function exitScrubbedMode() {
+  scrubbed = false;
+  viewTime = null;
+  // Clear the replayed visuals; live events resume populating from now
+  for (const name of Object.keys(markersByName)) resetNodeStyle(name);
+  removeAllActiveTx();
+  btnLive.classList.remove('scrubbed');
+  btnLive.textContent = '● Live';
+  scrubHandle.classList.remove('visible');
+  updateTimelineLabel();
+  timeMsEl.textContent = 't=' + timelineLatestMs + ' ms';
+}
+
+// Map a pointer X (relative to timeline) to a time_ms in [from, to]
+function xToTimelineMs(px) {
+  const rect = timelineEl.getBoundingClientRect();
+  const [from, to] = timelineTimeRange();
+  const span = to - from;
+  if (span <= 0 || rect.width <= 0) return to;
+  const frac = Math.max(0, Math.min(1, px / rect.width));
+  return Math.round(from + frac * span);
+}
+
+// ── Scrubber interactions ──────────────────────────────────────────────
+btnLive.addEventListener('click', () => {
+  if (scrubbed) exitScrubbedMode();
+});
+
+let draggingScrubber = false;
+timelineEl.addEventListener('mousedown', (e) => {
+  if (eventHistory.length === 0) return;
+  draggingScrubber = true;
+  const rect = timelineEl.getBoundingClientRect();
+  const T = xToTimelineMs(e.clientX - rect.left);
+  enterScrubbedMode(T);
+});
+window.addEventListener('mousemove', (e) => {
+  if (!draggingScrubber) return;
+  const rect = timelineEl.getBoundingClientRect();
+  const T = xToTimelineMs(e.clientX - rect.left);
+  if (T !== viewTime) {
+    viewTime = T;
+    replayAt(T);
+    scrubLabel.textContent = 'scrub t=' + T + ' ms';
+    timeMsEl.textContent = 't=' + T + ' ms (scrubbed)';
+    positionScrubHandle();
+    emitScrubTime(T);
+  }
+});
+window.addEventListener('mouseup', () => { draggingScrubber = false; });
+
+// ── Analytical overlays: radio busy (TX + RX) bars ────────────────────
+// Aggregates per-node busy time over a rolling OVERLAY_WINDOW_MS window
+// ending at "now" (live) or viewTime (scrubbed). Renders as a small
+// vertical bar next to each node marker, color-coded by utilization level.
+//
+// FUTURE (requested): offer a heatmap rendering mode as an alternative to
+// the bar+% style. User wants BOTH — bars remain useful, heatmap adds
+// spatial "hot zones" visible at a glance for dense topologies. Shape:
+// add a second toggle ("Radio busy heatmap") that, when enabled, renders
+// a Leaflet heat layer (e.g. leaflet-heat plugin or a custom canvas
+// overlay) weighted by each node's utilization. The two toggles should
+// be independent — user can enable either, both, or neither.
+
+function windowEnd() {
+  return scrubbed ? viewTime : timelineLatestMs;
+}
+
+// "Radio busy" = TX + RX occupancy. Half-duplex prevents TX and RX from
+// overlapping at the same node, so summing them never exceeds 100%.
+// - tx events contribute to the SENDER's busy (node = sender)
+// - rx / drop_halfduplex events contribute to the RECEIVER's busy (node = to)
+//   (these are the two receiver-side events that carry airtime_ms; collision
+//    and drop_weak/loss imply receiver occupancy too, but their duration
+//    isn't in the event itself — omitted for simplicity in this first pass)
+function computeAirtimeStats() {
+  const endMs = windowEnd();
+  const idealStart = endMs - OVERLAY_WINDOW_MS;
+  // Clip to 0: can't divide by "time that hasn't simulated yet"
+  const startMs = Math.max(0, idealStart);
+  const durationMs = endMs - startMs;
+  if (durationMs <= 0) return { _durationMs: 0, _txMs: {}, _rxMs: {} };
+
+  const txMs = {};  // per node — transmitter-active time
+  const rxMs = {};  // per node — receiver-active time
+  const clip = (evStart, evDuration, bucket, node) => {
+    if (!node || !evDuration) return;
+    const a = Math.max(evStart, startMs);
+    const b = Math.min(evStart + evDuration, endMs);
+    if (b <= a) return;
+    bucket[node] = (bucket[node] || 0) + (b - a);
+  };
+
+  for (const ev of eventHistory) {
+    if (typeof ev.time_ms !== 'number') continue;
+    if (ev.type === 'tx') {
+      clip(ev.time_ms, ev.airtime_ms || 0, txMs, ev.node);
+    } else if (ev.type === 'rx' || ev.type === 'drop_halfduplex') {
+      clip(ev.time_ms, ev.airtime_ms || 0, rxMs, ev.to);
+    }
+  }
+
+  const result = { _durationMs: durationMs, _txMs: txMs, _rxMs: rxMs };
+  for (const name of Object.keys(nodeMeta)) {
+    const busy = (txMs[name] || 0) + (rxMs[name] || 0);
+    result[name] = Math.min(1, busy / durationMs);
+  }
+  return result;
+}
+
+function airtimeColor(util) {
+  if (util < 0.10) return '#22c55e';      // green — quiet
+  if (util < 0.30) return '#f59e0b';      // amber — busy
+  return '#dc2626';                        // red — saturated
+}
+
+function ensureAirtimeMarkers() {
+  if (!leafletMap) return;
+  for (const name of Object.keys(nodeMeta)) {
+    if (airtimeMarkers[name]) continue;
+    const meta = nodeMeta[name];
+    const m = L.marker([meta.lat, meta.lon], {
+      icon: L.divIcon({
+        className: 'mlv-airtime-bar',
+        html: '<div class="bar-bg"><div class="bar-fill"></div></div><div class="bar-label">—</div>',
+        iconSize: [48, 34],
+        // iconAnchor: coords of the latlng within the icon box. Negative X
+        // shifts the icon to the right of the latlng; +17 Y centers vertically.
+        iconAnchor: [-14, 17],
+      }),
+      interactive: false,
+      keyboard: false,
+      zIndexOffset: -100,        // keep below regular node markers
+    });
+    airtimeMarkers[name] = m;
+  }
+}
+
+function updateAirtimeBars() {
+  if (!overlays.airtime) return;
+  const stats = computeAirtimeStats();
+  const durationMs = stats._durationMs || 0;
+  const txMs = stats._txMs || {};
+  const rxMs = stats._rxMs || {};
+  for (const name of Object.keys(airtimeMarkers)) {
+    const m = airtimeMarkers[name];
+    const el = m.getElement();
+    if (!el) continue;
+    const util = stats[name] || 0;
+    const pct = Math.round(util * 100);
+    const fill = el.querySelector('.bar-fill');
+    const label = el.querySelector('.bar-label');
+    if (fill) {
+      fill.style.height = (util * 100) + '%';
+      fill.style.background = airtimeColor(util);
+    }
+    if (label) {
+      label.textContent = pct + '%';
+      label.style.color = util > 0.30 ? '#dc2626' : (util > 0.10 ? '#b45309' : 'var(--text-muted)');
+    }
+    // Hover tooltip splits out TX vs RX so you can see what's driving it
+    const tx = txMs[name] || 0;
+    const rx = rxMs[name] || 0;
+    el.title = name + ': ' + pct + '% busy (TX ' + Math.round(tx) + ' ms'
+             + ', RX ' + Math.round(rx) + ' ms'
+             + ' / window ' + Math.round(durationMs) + ' ms)';
+  }
+}
+
+function setAirtimeOverlay(on) {
+  overlays.airtime = on;
+  if (on) {
+    ensureAirtimeMarkers();
+    for (const m of Object.values(airtimeMarkers)) m.addTo(leafletMap);
+    updateAirtimeBars();
+    if (!overlayRefreshTimer) {
+      overlayRefreshTimer = setInterval(refreshOverlays, 1000);
+    }
+  } else {
+    for (const m of Object.values(airtimeMarkers)) {
+      if (leafletMap.hasLayer(m)) leafletMap.removeLayer(m);
+    }
+    if (overlayRefreshTimer && !anyOverlayOn()) {
+      clearInterval(overlayRefreshTimer);
+      overlayRefreshTimer = null;
+    }
+  }
+}
+
+function anyOverlayOn() {
+  return Object.values(overlays).some(v => v);
+}
+
+function refreshOverlays() {
+  if (overlays.airtime) updateAirtimeBars();
+  if (overlays.airtimeHeat) updateAirtimeHeat();
+  if (overlays.collisionHeat) updateCollisionHeat();
+  if (overlays.txEff) updateTxEffBars();
+  // Future: flood-propagation tree, etc.
+}
+
+// ── Collision heatmap ──────────────────────────────────────────────────
+// For each collision event in the rolling window, count which receiver
+// was the victim, then render a heat layer weighted by those counts.
+// The "to" field of a collision event is the receiver where the collision
+// occurred, so a single collision at node X between two senders produces
+// TWO events (mirror pairs) — we count both, which is the right thing to
+// do because X suffered the reception loss in both reports.
+function computeCollisionStats() {
+  const endMs = windowEnd();
+  const startMs = Math.max(0, endMs - COLLISION_WINDOW_MS);
+  if (endMs <= startMs) return { _perNode: {}, _total: 0, _max: 0 };
+  const perNode = {};
+  let total = 0;
+  for (const ev of eventHistory) {
+    if (ev.type !== 'collision') continue;
+    if (typeof ev.time_ms !== 'number') continue;
+    if (ev.time_ms < startMs || ev.time_ms > endMs) continue;
+    const name = ev.to;
+    if (!name || !nodeMeta[name]) continue;
+    perNode[name] = (perNode[name] || 0) + 1;
+    total++;
+  }
+  let max = 0;
+  for (const n of Object.keys(perNode)) if (perNode[n] > max) max = perNode[n];
+  return { _perNode: perNode, _total: total, _max: max };
+}
+
+function updateCollisionHeat() {
+  if (!overlays.collisionHeat || !leafletMap) return;
+  const stats = computeCollisionStats();
+  const perNode = stats._perNode;
+  const maxCount = stats._max;
+
+  // Build [lat, lng, intensity] tuples. Intensity uses log normalization
+  // against the busiest node so low-count nodes don't disappear into the
+  // gradient's transparent end. e.g. with max=9: count=1 -> 0.30 intensity
+  // instead of 0.11, count=3 -> 0.60 instead of 0.33. Much better visual
+  // dynamic range when most nodes have a few collisions and one has many.
+  const points = [];
+  const logMax = Math.log1p(Math.max(1, maxCount));
+  for (const name of Object.keys(perNode)) {
+    const meta = nodeMeta[name];
+    if (!meta) continue;
+    const norm = logMax > 0 ? Math.log1p(perNode[name]) / logMax : 0;
+    points.push([meta.lat, meta.lon, norm]);
+  }
+
+  if (collisionHeatLayer) {
+    collisionHeatLayer.setLatLngs(points);
+  } else {
+    collisionHeatLayer = L.heatLayer(points, {
+      // Smaller radius + less blur means neighboring nodes don't bleed
+      // their heat into one another — each node reads as its own blob.
+      radius: 26,
+      blur: 14,
+      minOpacity: 0.40,
+      gradient: {
+        0.0:  'rgba(254, 240, 138, 0)',
+        0.20: '#fcd34d',                 // amber — any collisions visible
+        0.50: '#f97316',                 // orange — mid-pack
+        0.80: '#dc2626',                 // red — heavy
+        1.0:  '#7f1d1d',                 // deep red — hottest
+      },
+    });
+    collisionHeatLayer.addTo(leafletMap);
+  }
+
+  // Numeric badge per hot node — removes the "is that 15% or 45%?"
+  // ambiguity the gradient alone creates. Shows exact collision count.
+  for (const name of Object.keys(nodeMeta)) {
+    const count = perNode[name] || 0;
+    updateCollisionBadge(name, count);
+  }
+}
+
+function updateCollisionBadge(name, count) {
+  if (count <= 0) {
+    if (collisionBadges[name]) {
+      leafletMap.removeLayer(collisionBadges[name]);
+      delete collisionBadges[name];
+    }
+    return;
+  }
+  const existing = collisionBadges[name];
+  if (existing) {
+    const el = existing.getElement();
+    const badge = el && el.querySelector('.badge');
+    if (badge) badge.textContent = count;
+    return;
+  }
+  const meta = nodeMeta[name];
+  if (!meta) return;
+  const m = L.marker([meta.lat, meta.lon], {
+    icon: L.divIcon({
+      className: 'mlv-collision-badge',
+      html: '<div class="badge">' + count + '</div>',
+      iconSize: [30, 20],
+      // Badge sits just above the node marker (latlng → bottom-center of badge)
+      iconAnchor: [15, 28],
+    }),
+    interactive: false,
+    keyboard: false,
+    zIndexOffset: 400,  // above regular node markers
+  }).addTo(leafletMap);
+  collisionBadges[name] = m;
+}
+
+function removeAllCollisionBadges() {
+  for (const name of Object.keys(collisionBadges)) {
+    leafletMap.removeLayer(collisionBadges[name]);
+  }
+  collisionBadges = {};
+}
+
+// ── Radio busy heatmap (P5.1b) ────────────────────────────────────────
+// Reuses computeAirtimeStats(); visualizes the same TX+RX busy metric as
+// the bars but as a diffuse heat blob. The two toggles are independent —
+// enable either, both, or neither. Palette is intentionally different
+// from the collision heatmap (blue→purple instead of amber→red) so when
+// both are enabled the visual layers don't collapse into the same color.
+//
+// Scale tuning: 50% busy maps to full gradient intensity. LoRa networks
+// hitting sustained 50%+ radio occupation are genuinely saturated, so
+// that's a reasonable "alarm" threshold. Linear amplification, clamped.
+function updateAirtimeHeat() {
+  if (!overlays.airtimeHeat || !leafletMap) return;
+  const stats = computeAirtimeStats();
+  const points = [];
+  for (const name of Object.keys(nodeMeta)) {
+    const util = stats[name] || 0;
+    if (util <= 0) continue;
+    const meta = nodeMeta[name];
+    // Amplify: 50% util = full heat. Values above 50% still render at
+    // max intensity but that's the intended "saturated" signal.
+    const intensity = Math.min(1, util / 0.5);
+    points.push([meta.lat, meta.lon, intensity]);
+  }
+  if (airtimeHeatLayer) {
+    airtimeHeatLayer.setLatLngs(points);
+  } else {
+    airtimeHeatLayer = L.heatLayer(points, {
+      radius: 28,
+      blur: 16,
+      minOpacity: 0.35,
+      gradient: {
+        0.0:  'rgba(103, 232, 249, 0)',   // transparent cyan
+        0.20: '#67e8f9',                  // cyan — any activity
+        0.50: '#3b82f6',                  // blue — typical relay
+        0.80: '#a855f7',                  // purple — busy
+        1.0:  '#6b21a8',                  // deep purple — saturated
+      },
+    });
+    airtimeHeatLayer.addTo(leafletMap);
+  }
+}
+
+function setAirtimeHeatOverlay(on) {
+  overlays.airtimeHeat = on;
+  if (on) {
+    updateAirtimeHeat();
+    if (!overlayRefreshTimer) {
+      overlayRefreshTimer = setInterval(refreshOverlays, 1000);
+    }
+  } else {
+    if (airtimeHeatLayer) {
+      leafletMap.removeLayer(airtimeHeatLayer);
+      airtimeHeatLayer = null;
+    }
+    if (overlayRefreshTimer && !anyOverlayOn()) {
+      clearInterval(overlayRefreshTimer);
+      overlayRefreshTimer = null;
+    }
+  }
+}
+
+// ── TX effectiveness: per-node success rate ────────────────────────────
+// For each TX in window, check whether ANY matching per-receiver event
+// was type 'rx' (decoded). Yes -> effective; no -> wasted. Node rate =
+// effective / total. The packet-hash correlation (same `pkt` field on
+// tx and per-receiver outcomes) lets us group events cheaply.
+function computeTxEffectiveness() {
+  const endMs = windowEnd();
+  const startMs = Math.max(0, endMs - OVERLAY_WINDOW_MS);
+  if (endMs <= startMs) return { _perNode: {} };
+
+  // Pass 1: find TXes in window and their senders. Key by pkt hash.
+  const txBySender = new Map();     // pkt -> sender_name
+  for (const ev of eventHistory) {
+    if (ev.type !== 'tx') continue;
+    if (typeof ev.time_ms !== 'number') continue;
+    if (ev.time_ms < startMs || ev.time_ms > endMs) continue;
+    if (!ev.pkt || !ev.node || !nodeMeta[ev.node]) continue;
+    txBySender.set(ev.pkt, ev.node);
+  }
+
+  // Pass 2: mark which pkt hashes got at least one rx
+  const hadRx = new Set();
+  for (const ev of eventHistory) {
+    if (ev.type !== 'rx') continue;
+    if (!ev.pkt) continue;
+    if (txBySender.has(ev.pkt)) hadRx.add(ev.pkt);
+  }
+
+  // Aggregate per sender
+  const totals = {};     // sender -> total TX count
+  const effective = {};  // sender -> TX count that reached at least one neighbor
+  for (const [pkt, sender] of txBySender) {
+    totals[sender] = (totals[sender] || 0) + 1;
+    if (hadRx.has(pkt)) effective[sender] = (effective[sender] || 0) + 1;
+  }
+
+  const perNode = {};
+  for (const name of Object.keys(nodeMeta)) {
+    const t = totals[name] || 0;
+    const e = effective[name] || 0;
+    perNode[name] = { total: t, effective: e, rate: t > 0 ? e / t : null };
+  }
+  return { _perNode: perNode };
+}
+
+function txEffColor(rate) {
+  // rate is 0..1 or null (no TXes in window)
+  if (rate === null) return '#9ca3af';
+  if (rate >= 0.90) return '#22c55e';   // green — healthy
+  if (rate >= 0.60) return '#a3e635';   // lime
+  if (rate >= 0.30) return '#f59e0b';   // amber
+  return '#dc2626';                      // red — most TX wasted
+}
+
+function ensureTxEffMarkers() {
+  if (!leafletMap) return;
+  for (const name of Object.keys(nodeMeta)) {
+    if (txEffMarkers[name]) continue;
+    const meta = nodeMeta[name];
+    const m = L.marker([meta.lat, meta.lon], {
+      icon: L.divIcon({
+        className: 'mlv-eff-bar',
+        html: '<div class="bar-bg"><div class="bar-fill"></div></div><div class="bar-label">—</div>',
+        iconSize: [48, 34],
+        // Mirror of airtime: positive X anchor shifts to the LEFT of latlng
+        iconAnchor: [48 + 12, 17],
+      }),
+      interactive: false,
+      keyboard: false,
+      zIndexOffset: -100,
+    });
+    txEffMarkers[name] = m;
+  }
+}
+
+function updateTxEffBars() {
+  if (!overlays.txEff) return;
+  const stats = computeTxEffectiveness();
+  const perNode = stats._perNode;
+  for (const name of Object.keys(txEffMarkers)) {
+    const m = txEffMarkers[name];
+    const el = m.getElement();
+    if (!el) continue;
+    const info = perNode[name] || { total: 0, effective: 0, rate: null };
+    const fill = el.querySelector('.bar-fill');
+    const label = el.querySelector('.bar-label');
+    if (info.rate === null) {
+      // No TXes in window: neutral/dim
+      if (fill) { fill.style.height = '0%'; fill.style.background = '#9ca3af'; }
+      if (label) {
+        label.textContent = '—';
+        label.className = 'bar-label dim';
+      }
+      el.title = name + ': no TX in last ' + Math.round(OVERLAY_WINDOW_MS / 1000) + 's';
+    } else {
+      const pct = Math.round(info.rate * 100);
+      if (fill) {
+        fill.style.height = (info.rate * 100) + '%';
+        fill.style.background = txEffColor(info.rate);
+      }
+      if (label) {
+        label.textContent = pct + '%';
+        label.className = 'bar-label';
+        label.style.color = info.rate < 0.30 ? '#dc2626'
+                          : info.rate < 0.60 ? '#b45309'
+                          : 'var(--text)';
+      }
+      el.title = name + ': ' + pct + '% effective ('
+               + info.effective + ' of ' + info.total + ' TX reached ≥1 neighbor)';
+    }
+  }
+}
+
+function setTxEffOverlay(on) {
+  overlays.txEff = on;
+  if (on) {
+    ensureTxEffMarkers();
+    for (const m of Object.values(txEffMarkers)) m.addTo(leafletMap);
+    updateTxEffBars();
+    if (!overlayRefreshTimer) {
+      overlayRefreshTimer = setInterval(refreshOverlays, 1000);
+    }
+  } else {
+    for (const m of Object.values(txEffMarkers)) {
+      if (leafletMap.hasLayer(m)) leafletMap.removeLayer(m);
+    }
+    if (overlayRefreshTimer && !anyOverlayOn()) {
+      clearInterval(overlayRefreshTimer);
+      overlayRefreshTimer = null;
+    }
+  }
+}
+
+function setCollisionHeatOverlay(on) {
+  overlays.collisionHeat = on;
+  if (on) {
+    updateCollisionHeat();
+    if (!overlayRefreshTimer) {
+      overlayRefreshTimer = setInterval(refreshOverlays, 1000);
+    }
+  } else {
+    if (collisionHeatLayer) {
+      leafletMap.removeLayer(collisionHeatLayer);
+      collisionHeatLayer = null;
+    }
+    removeAllCollisionBadges();
+    if (overlayRefreshTimer && !anyOverlayOn()) {
+      clearInterval(overlayRefreshTimer);
+      overlayRefreshTimer = null;
+    }
+  }
+}
+
+// Checkbox in the legend. The legend is created by addLegendControl() inside
+// initLeaflet(), so we have to wait for it to be in the DOM before wiring.
+// Use a polling attach with a small delay, or do it on first render.
+function wireOverlayToggles() {
+  const cbAir  = document.querySelector('#toggle-airtime');
+  const cbAirH = document.querySelector('#toggle-airtime-heat');
+  const cbColl = document.querySelector('#toggle-collision-heat');
+  const cbEff  = document.querySelector('#toggle-tx-eff');
+  if (!cbAir || !cbAirH || !cbColl || !cbEff) { setTimeout(wireOverlayToggles, 80); return; }
+  cbAir .addEventListener('change', () => setAirtimeOverlay(cbAir.checked));
+  cbAirH.addEventListener('change', () => setAirtimeHeatOverlay(cbAirH.checked));
+  cbColl.addEventListener('change', () => setCollisionHeatOverlay(cbColl.checked));
+  cbEff .addEventListener('change', () => setTxEffOverlay(cbEff.checked));
+}
+wireOverlayToggles();
+
+// Recompute overlays on scrub changes so they reflect the frozen window.
+// Hook into enterScrubbedMode / exitScrubbedMode by wrapping the existing
+// replayAt — cheapest attachment point that fires for drag updates too.
+const _origReplayAt = replayAt;
+replayAt = function(T) {
+  _origReplayAt(T);
+  refreshOverlays();
+};
+const _origExitScrubbed = exitScrubbedMode;
+exitScrubbedMode = function() {
+  _origExitScrubbed();
+  refreshOverlays();
+};
+
+// ── WebSocket ──────────────────────────────────────────────────────────
+function openWebSocket() {
+  connectWS('/api/interactive/' + sid + '/ws', {
+    onOpen: () => setConn('connecting'),  // not "connected" until we see 'ready'
+    onMessage: handleMessage,
+    onClose: () => setConn('disconnected'),
+    onError: () => setConn('disconnected'),
+  }, { reconnect: true, reconnectDelay: 2000 });
+}
+
+function handleMessage(msg) {
+  if (!msg || !msg.type) return;
+  switch (msg.type) {
+    case 'ready':
+      setConn('connected');
+      if (typeof msg.time_ms === 'number') timeMsEl.textContent = 't=' + msg.time_ms + ' ms';
+      break;
+    case 'starting':
+      setConn('connecting');
+      break;
+    case 'closed':
+      setConn('disconnected');
+      break;
+    case 'event':
+      handleSimEvent(msg.data);
+      break;
+    case 'response':
+      // Step responses arrive milliseconds after their events, so we do NOT
+      // use them to reset states — doing so hides the flashes entirely.
+      // States decay via their own fallback timer (FALLBACK_HOLD_MS) and
+      // can be overridden by newer higher-priority events on the same node.
+      // We still pick up the step-ms for the status bar.
+      if (msg.data && typeof msg.data === 'object' && typeof msg.data.stepped_to_ms === 'number') {
+        timeMsEl.textContent = 't=' + msg.data.stepped_to_ms + ' ms';
+      }
+      break;
+  }
+}
+
+function handleSimEvent(ev) {
+  if (!ev || !ev.type) return;
+  pushToHistory(ev);                // history records EVERY live event
+  eventCount++;
+  if (eventCount % 10 === 0) eventCountEl.textContent = eventCount + ' events';
+  // While scrubbed, don't mutate the map — replayAt() controls what's shown.
+  // (Counters still tick so users know events are arriving in the background.)
+  if (scrubbed) { updateTimelineDensity(); return; }
+  if (typeof ev.time_ms === 'number') timeMsEl.textContent = 't=' + ev.time_ms + ' ms';
+
+  switch (ev.type) {
+    case 'node_ready':
+      // If a node appears mid-run that wasn't in the config (shouldn't happen
+      // but safe), add it.
+      if (!markersByName[ev.node] && Number.isFinite(ev.lat) && Number.isFinite(ev.lon)) {
+        drawNodes([{ name: ev.node, role: ev.role, lat: ev.lat, lon: ev.lon }]);
+        nodeCountEl.textContent = Object.keys(markersByName).length + ' nodes';
+      }
+      break;
+    case 'tx': {
+      // Hold TX at least for the full airtime so overlapping TXes are
+      // visually concurrent. Also capped by FALLBACK_HOLD_MS via applyState's
+      // default if airtime is absurd. Reset on step boundary either way.
+      const hold = Math.max(FALLBACK_HOLD_MS, (ev.airtime_ms || 0) + 500);
+      applyState(ev.node, 'tx', hold);
+      onTxStart(ev);
+      break;
+    }
+    case 'rx':
+      applyState(ev.to, 'rx');
+      addTxOverlay(ev.pkt, ev.to, 'rx', { snr: ev.snr });
+      break;
+    case 'collision':
+      applyState(ev.to, 'collision');
+      addTxOverlay(ev.pkt, ev.to, 'collision',
+                   { interferer: ev.interferer, snr_margin: ev.snr_margin, snr: ev.snr });
+      break;
+    case 'drop_weak':
+      applyState(ev.to, 'weak');
+      addTxOverlay(ev.pkt, ev.to, 'drop_weak', { snr: ev.snr });
+      break;
+    case 'drop_loss':
+      applyState(ev.to, 'dropped');
+      addTxOverlay(ev.pkt, ev.to, 'drop_loss');
+      break;
+    case 'drop_halfduplex':
+      applyState(ev.to, 'halfdup');
+      addTxOverlay(ev.pkt, ev.to, 'drop_halfduplex');
+      break;
+    case 'sim_end':
+      // freeze — reset all node styles and tear down any lingering
+      // TX overlays after a short grace period.
+      setTimeout(() => {
+        for (const name of Object.keys(markersByName)) resetNodeStyle(name);
+        removeAllActiveTx();
+      }, 500);
+      break;
+  }
+}
+</script>
+
+</body>
+</html>
