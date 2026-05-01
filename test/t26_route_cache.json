@@ -1,0 +1,29 @@
+{
+  "_name": "t26_route_cache",
+  "_desc": "Phase 1: repeater RouteCache populates from observed flood adverts. A floods an advert that propagates A->B->C; C's RouteCache should contain an entry with hop_count=1 (B as forwarder).",
+  "_requires_plugins": ["fw_routing"],
+  "simulation": {
+    "firmware": { "default": "fw_routing" },
+    "duration_ms": 60000,
+    "step_ms": 5,
+    "warmup_ms": 5000
+  },
+  "nodes": [
+    { "name": "A", "role": "repeater" },
+    { "name": "B", "role": "repeater" },
+    { "name": "C", "role": "repeater" }
+  ],
+  "topology": {
+    "links": [
+      { "from": "A", "to": "B", "snr": 8.0, "rssi": -80.0, "bidir": true },
+      { "from": "B", "to": "C", "snr": 8.0, "rssi": -80.0, "bidir": true }
+    ]
+  },
+  "commands": [
+    { "at_ms": 6000,  "node": "A", "command": "advert" },
+    { "at_ms": 30000, "node": "C", "command": "routes" }
+  ],
+  "expect": [
+    { "type": "cmd_reply_contains", "node": "C", "command": "routes", "value": "h=1" }
+  ]
+}

@@ -143,6 +143,15 @@ function(add_firmware_plugin PLUGIN_NAME MESHCORE_PATH)
     target_compile_definitions(${PLUGIN_NAME}_comp PRIVATE ${FW_DEFS} ORCHESTRATOR_BUILD ${_COMP_EXTRA_DEFS})
     set_target_properties(${PLUGIN_NAME}_comp PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
+    # Optional helper sources — only added when the file exists in this MESHCORE_PATH.
+    # Lets a plugin tree add new helpers (e.g. routing-design's RouteCache) without
+    # breaking plugins built from upstream trees that don't have them.
+    set(_PLUGIN_OPTIONAL_HELPERS "")
+    if(EXISTS "${MESHCORE_PATH}/src/helpers/RouteCache.cpp")
+        list(APPEND _PLUGIN_OPTIONAL_HELPERS "${MESHCORE_PATH}/src/helpers/RouteCache.cpp")
+        message(STATUS "  ${PLUGIN_NAME}: RouteCache helper detected")
+    endif()
+
     # Shared library — contains MeshCore + ed25519 + node factories + plugin exports
     add_library(${PLUGIN_NAME} SHARED
         firmware/plugin_exports.cpp
@@ -157,6 +166,7 @@ function(add_firmware_plugin PLUGIN_NAME MESHCORE_PATH)
         ${MESHCORE_PATH}/src/helpers/AdvertDataHelpers.cpp
         ${MESHCORE_PATH}/src/helpers/IdentityStore.cpp
         ${MESHCORE_PATH}/src/helpers/TransportKeyStore.cpp
+        ${_PLUGIN_OPTIONAL_HELPERS}
         # ed25519
         ${MESHCORE_PATH}/lib/ed25519/add_scalar.c
         ${MESHCORE_PATH}/lib/ed25519/keypair.c
