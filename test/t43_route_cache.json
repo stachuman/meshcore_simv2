@@ -1,5 +1,5 @@
 {
-  "_name": "t26_route_cache",
+  "_name": "t43_route_cache",
   "_desc": "Phase 1: repeater RouteCache populates from observed flood adverts. A floods an advert that propagates A->B->C; C's RouteCache should contain an entry with hop_count=1 (B as forwarder).",
   "_requires_plugins": ["fw_routing"],
   "simulation": {
