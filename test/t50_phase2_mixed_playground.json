@@ -1,0 +1,59 @@
+{
+  "_name": "t50_phase2_mixed_playground",
+  "_desc": "Interactive playground for Phase 2 in a heterogeneous network. 6 repeaters in a 2x3 grid: Rs1/Rs2/Rs3 run fw_default (no PATH_REQ handler, no RouteCache); Rn1/Rn2/Rn3 run fw_stachuman (Phase 1+2). 4 companions on fw_stachuman at the corners. alice and charlie are connected to a fw_stachuman neighbor — their Phase 2 queries can resolve. bob and dave are connected to a fw_default neighbor — their queries get no PATH_OFFER and fall through to flood. Use this test interactively (orchestrator -i) or extend the commands[] block. expect[] is intentionally minimal to keep the test pliable while you explore.",
+  "_requires_plugins": ["fw_stachuman"],
+  "simulation": {
+    "firmware": { "default": "fw_stachuman" },
+    "duration_ms": 300000,
+    "step_ms": 5,
+    "warmup_ms": 5000,
+    "hot_start": true
+  },
+  "nodes": [
+    { "name": "alice",   "role": "companion", "firmware": "fw_stachuman" },
+    { "name": "bob",     "role": "companion", "firmware": "fw_stachuman" },
+    { "name": "charlie", "role": "companion", "firmware": "fw_stachuman" },
+    { "name": "dave",    "role": "companion", "firmware": "fw_stachuman" },
+
+    { "name": "Rn1",     "role": "repeater",  "firmware": "fw_stachuman" },
+    { "name": "Rs1",     "role": "repeater",  "firmware": "fw_default" },
+
+    { "name": "Rn2",     "role": "repeater",  "firmware": "fw_stachuman" },
+    { "name": "Rs2",     "role": "repeater",  "firmware": "fw_default" },
+
+    { "name": "Rn3",     "role": "repeater",  "firmware": "fw_stachuman" },
+    { "name": "Rs3",     "role": "repeater",  "firmware": "fw_default" }
+  ],
+  "topology": {
+    "links": [
+      { "from": "alice",   "to": "Rn1", "snr": 8.0, "rssi": -80.0, "bidir": true },
+      { "from": "bob",     "to": "Rs1", "snr": 8.0, "rssi": -80.0, "bidir": true },
+      { "from": "charlie", "to": "Rn3", "snr": 8.0, "rssi": -80.0, "bidir": true },
+      { "from": "dave",    "to": "Rs3", "snr": 8.0, "rssi": -80.0, "bidir": true },
+
+      { "from": "Rn1", "to": "Rs1", "snr": 7.0, "rssi": -82.0, "bidir": true },
+      { "from": "Rn2", "to": "Rs2", "snr": 7.0, "rssi": -82.0, "bidir": true },
+      { "from": "Rn3", "to": "Rs3", "snr": 7.0, "rssi": -82.0, "bidir": true },
+
+      { "from": "Rn1", "to": "Rn2", "snr": 6.0, "rssi": -85.0, "bidir": true },
+      { "from": "Rn2", "to": "Rn3", "snr": 6.0, "rssi": -85.0, "bidir": true },
+
+      { "from": "Rs1", "to": "Rs2", "snr": 6.0, "rssi": -85.0, "bidir": true },
+      { "from": "Rs2", "to": "Rs3", "snr": 6.0, "rssi": -85.0, "bidir": true }
+    ]
+  },
+  "commands": [
+    { "at_ms": 30000,  "node": "alice", "command": "msga bob hello-from-alice"   },
+    { "at_ms": 60000,  "node": "bob",   "command": "msga alice hello-from-bob"   },
+    { "at_ms": 90000,  "node": "charlie", "command": "msga dave hello-from-charlie" },
+    { "at_ms": 120000, "node": "dave",  "command": "msga charlie hello-from-dave" },
+    { "at_ms": 200000, "node": "alice", "command": "stats" },
+    { "at_ms": 200200, "node": "bob",   "command": "stats" }
+  ],
+  "expect": [
+    { "type": "cmd_reply_contains", "node": "alice", "command": "msga bob",     "value": "ack tracked" },
+    { "type": "cmd_reply_contains", "node": "bob",   "command": "msga alice",   "value": "ack tracked" },
+    { "type": "cmd_reply_contains", "node": "charlie", "command": "msga dave",  "value": "ack tracked" },
+    { "type": "cmd_reply_contains", "node": "dave",  "command": "msga charlie", "value": "ack tracked" }
+  ]
+}
