@@ -1,0 +1,39 @@
+{
+  "_name": "t46_phase2_query_disabled",
+  "_desc": "Phase 2 disabled: with path.query=off, alice sends DM via flood (today's pre-Phase-2 behavior). Verifies the feature gate works and no regression.",
+  "_requires_plugins": ["fw_routing"],
+  "simulation": {
+    "firmware": { "default": "fw_routing" },
+    "duration_ms": 60000,
+    "step_ms": 5,
+    "warmup_ms": 5000,
+    "hot_start": true
+  },
+  "nodes": [
+    { "name": "alice", "role": "companion" },
+    { "name": "R1",    "role": "repeater"  },
+    { "name": "R2",    "role": "repeater"  },
+    { "name": "bob",   "role": "companion" }
+  ],
+  "topology": {
+    "links": [
+      { "from": "alice", "to": "R1",  "snr": 8.0, "rssi": -80.0, "bidir": true },
+      { "from": "R1",    "to": "R2",  "snr": 6.0, "rssi": -85.0, "bidir": true },
+      { "from": "R2",    "to": "bob", "snr": 8.0, "rssi": -80.0, "bidir": true }
+    ]
+  },
+  "commands": [
+    { "at_ms": 10000, "node": "alice", "command": "set path.query off" },
+    { "at_ms": 11000, "node": "alice", "command": "get path.query" },
+    { "at_ms": 30000, "node": "alice", "command": "msga bob hello-disabled" },
+    { "at_ms": 50000, "node": "alice", "command": "stats" },
+    { "at_ms": 50500, "node": "bob",   "command": "stats" }
+  ],
+  "expect": [
+    { "type": "cmd_reply_contains", "node": "alice", "command": "set path.query off", "value": "OK - path.query = off" },
+    { "type": "cmd_reply_contains", "node": "alice", "command": "get path.query", "value": "off" },
+    { "type": "cmd_reply_contains", "node": "alice", "command": "msga bob",  "value": "ack tracked" },
+    { "type": "cmd_reply_contains", "node": "alice", "command": "stats", "value": "flood_acks: 1/1" },
+    { "type": "cmd_reply_contains", "node": "bob",   "command": "stats", "value": "alice:1" }
+  ]
+}
