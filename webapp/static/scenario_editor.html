@@ -394,6 +394,11 @@
       <h3>Insert Template</h3>
       <button class="btn btn-sm" data-tpl="msg">msg command</button>
       <button class="btn btn-sm" data-tpl="msga">msga command</button>
+      <button class="btn btn-sm" data-tpl="cmd">cmd (admin frame)</button>
+      <button class="btn btn-sm" data-tpl="login">login</button>
+      <button class="btn btn-sm" data-tpl="anonreq">anonreq</button>
+      <button class="btn btn-sm" data-tpl="req">req (typed)</button>
+      <button class="btn btn-sm" data-tpl="set_path_query">set path.query</button>
       <button class="btn btn-sm" data-tpl="neighbors">neighbors cmd</button>
       <button class="btn btn-sm" data-tpl="stats">stats cmd</button>
       <button class="btn btn-sm" data-tpl="rxdelay">set rxdelay</button>
@@ -448,6 +453,11 @@
   const TEMPLATES = {
     msg:           '{ "at_ms": 10000, "node": "NODE", "command": "msg DEST hello" }',
     msga:          '{ "at_ms": 10000, "node": "NODE", "command": "msga DEST hello" }',
+    cmd:           '{ "at_ms": 10000, "node": "NODE", "command": "cmd DEST ver" }',
+    login:         '{ "at_ms": 10000, "node": "NODE", "command": "login DEST password" }',
+    anonreq:       '{ "at_ms": 10000, "node": "NODE", "command": "anonreq DEST" }',
+    req:           '{ "at_ms": 10000, "node": "NODE", "command": "req DEST keepalive" }',
+    set_path_query: '{ "at_ms": 5000, "node": "NODE", "command": "set path.query off" }',
     neighbors:     '{ "at_ms": 15000, "node": "NODE", "command": "neighbors" }',
     stats:         '{ "at_ms": 20000, "node": "NODE", "command": "stats" }',
     rxdelay:       '{ "at_ms": 1000, "node": "NODE", "command": "set rxdelay 2.0" }',
@@ -472,7 +482,11 @@
 
   // Command types per node role
   const COMPANION_CMD_TYPES = [
-    'msg', 'msga', 'msgc', 'neighbors', 'stats', 'reset_path', 'advert', 'advert.zerohop', 'custom'
+    'msg', 'msga', 'msgc',
+    'cmd', 'login', 'anonreq', 'req',
+    'neighbors', 'stats', 'reset_path', 'advert', 'advert.zerohop',
+    'set path.query', 'set path.query.timeout',
+    'custom'
   ];
   const REPEATER_CMD_TYPES = [
     'neighbors', 'advert', 'advert.zerohop', 'discover.neighbors',
@@ -1354,10 +1368,20 @@
       return cmd;
     }
 
-    if (verb === 'msg' || verb === 'msga') {
+    if (verb === 'msg' || verb === 'msga' || verb === 'cmd' || verb === 'login') {
+      // shape: <verb> <name> <text-or-password>
       cmd.type = verb;
       cmd.dest = parts[1] || '';
       cmd.message = parts.slice(2).join(' ');
+    } else if (verb === 'req') {
+      // shape: req <name> <type-token>
+      cmd.type = 'req';
+      cmd.dest = parts[1] || '';
+      cmd.message = parts.slice(2).join(' ');   // type token (status|keepalive|N)
+    } else if (verb === 'anonreq') {
+      // shape: anonreq <name>
+      cmd.type = 'anonreq';
+      cmd.dest = parts[1] || '';
     } else if (verb === 'msgc') {
       cmd.type = 'msgc';
       cmd.message = parts.slice(1).join(' ');
@@ -1400,6 +1424,20 @@
         return cmd.type + ' ' + (cmd.dest || 'NODE') + (cmd.message ? ' ' + cmd.message : '');
       case 'msgc':
         return 'msgc' + (cmd.message ? ' ' + cmd.message : '');
+      // Phase 2-aware send paths
+      case 'cmd':
+        return 'cmd ' + (cmd.dest || 'NODE') + (cmd.message ? ' ' + cmd.message : ' ver');
+      case 'login':
+        return 'login ' + (cmd.dest || 'NODE') + ' ' + (cmd.message || 'password');
+      case 'anonreq':
+        return 'anonreq ' + (cmd.dest || 'NODE');
+      case 'req':
+        return 'req ' + (cmd.dest || 'NODE') + ' ' + (cmd.message || 'keepalive');
+      // Phase 2 toggles
+      case 'set path.query':
+        return 'set path.query ' + (cmd.param_value || 'on');
+      case 'set path.query.timeout':
+        return 'set path.query.timeout ' + (cmd.param_value || '2000');
       case 'reset_path':
         return 'reset_path ' + (cmd.dest || 'NODE');
       // Set commands with numeric/float value
