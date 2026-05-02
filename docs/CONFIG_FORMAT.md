@@ -237,19 +237,27 @@ This is equivalent to writing one command per repeater node. Useful for applying
 
 | Command | Role | Description |
 |---|---|---|
-| `msg <name> <text>` | companion | Send direct/flood message to named contact. Uses direct routing if a path is known, flood otherwise. |
-| `msga <name> <text>` | companion | Same as `msg` but tracks ack receipt |
+| `msg <name> <text>` | companion | Send direct/flood message to named contact (`sendMessage`). Uses direct routing if a path is known, flood otherwise. |
+| `msga <name> <text>` | companion | Same as `msg` but tracks ack receipt. |
 | `msgc <text>` | companion | Send message on public channel (channel 0, flood). No ack support. |
-| `advert` | companion | Broadcast self-advert (flood) |
-| `advert.zerohop` | companion | Broadcast self-advert (zero-hop only) |
-| `reset_path <name>` | companion | Clear learned direct route to named contact. Forces next `msg` to use flood routing (re-discovers path). |
+| `cmd <name> <text>` | companion | Send admin command-data frame to a contact (`sendCommandData`). Receiver's `handleCommand` parses the text and may reply. Reply (if any) arrives as a regular message. |
+| `login <name> <password>` | companion | Send a login request to a contact (`sendLogin`). Useful for opening an admin session on a remote node; password is up to 15 chars (rooms) or 16 (other types). |
+| `anonreq <name>` | companion | Send an anonymous request frame (`sendAnonReq`) with a synthetic 4-byte payload `{0xAA, 0xBB, 0xCC, 0xDD}`. Used for testing the anonymous-request send path; the receiver typically does not reply. |
+| `req <name> <status\|keepalive\|N>` | companion | Send a typed request (`sendRequest` req_type variant). Accepts `status` (REQ_TYPE_GET_STATUS=0x01), `keepalive` (REQ_TYPE_KEEP_ALIVE=0x02), or a numeric 1–255. |
+| `disc_path <name>` | companion | Force path discovery to a contact (`sendRequest` req_data variant). Internally clears the contact's path before sending so the request goes via flood (or via Phase 2 query if `path.query=on`). |
+| `advert` | companion | Broadcast self-advert (flood). |
+| `advert.zerohop` | companion | Broadcast self-advert (zero-hop only). |
+| `reset_path <name>` / `reset path <name>` | companion | Clear learned direct route to named contact. Forces next send to use flood (or Phase 2 query) again. |
 | `path <name>` | companion | Show routing path to a contact (flood, direct 0-hop, or direct N-hop with relay hashes). |
-| `disc_path <name>` | companion | Force path discovery to a contact by sending a telemetry request as flood. |
 | `scope <name>` | companion | Set default scope for outgoing floods (fw_scope only). Use `scope none` to clear. |
+| `set path.query <on\|off>` | companion | Phase 2 routing: enable/disable cold-start PATH_REQ before flood (fw_stachuman only). Default: on. In-memory only — does not persist across sim runs. |
+| `get path.query` | companion | Phase 2 routing: report current `path_query_enabled` state (`> on` / `> off`). |
+| `set path.query.timeout <ms>` | companion | Phase 2 routing: PATH_OFFER collection window in milliseconds, clamped to [100, 5000]. Default 2000 ms (covers worst-case multi-responder jitter ~1.6s). |
+| `get path.query.timeout` | companion | Phase 2 routing: report current `path_query_timeout_ms` value. |
 | `list [N]` | companion | List recent contacts with last-seen timestamps. Optional N limits to N most recent. |
-| `neighbors` | companion | List known contacts |
-| `stats` | companion | Print message send/receive counters |
-| `import <hex>` | companion | Import a contact from hex-encoded advert |
+| `neighbors` | companion | List known contacts. |
+| `stats` | companion | Print message send/receive counters. Includes `flood_acks: r/p` and `path_acks: r/p` (received/pending) for ack-tracked messages — useful to verify Phase 2 actually resolved to direct delivery (`path_acks` ticks) versus flood fallback (`flood_acks` ticks). |
+| `import <hex>` | companion | Import a contact from hex-encoded advert. |
 | `clock` | companion | Show simulated RTC time (UTC) and epoch value. |
 | `ver` | both | Show firmware version. Includes plugin name, e.g. `sim-v1.0 [fw_scope]`. |
 | `get rxdelay` | repeater | Query RX delay base (float, default 0.0) |
