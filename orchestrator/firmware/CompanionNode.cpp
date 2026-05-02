@@ -195,6 +195,31 @@ public:
             return "default scope set to " + std::string(name);
         }
 #endif
+#ifdef HAS_PATH_QUERY_SUPPORT
+        // Phase 2 routing: feature gate + offer-collection window.
+        // Order: longer prefixes first so the shorter doesn't swallow the longer.
+        if (strncmp(cmd, "set path.query.timeout ", 23) == 0) {
+            int ms = atoi(cmd + 23);
+            if (ms < 100) ms = 100;
+            if (ms > 5000) ms = 5000;
+            _mesh.getNodePrefs()->path_query_timeout_ms = (uint16_t)ms;
+            return "OK - path.query.timeout = " + std::to_string(ms);
+        }
+        if (strncmp(cmd, "get path.query.timeout", 22) == 0) {
+            return "> " + std::to_string(_mesh.getNodePrefs()->path_query_timeout_ms);
+        }
+        if (strncmp(cmd, "set path.query on", 17) == 0) {
+            _mesh.getNodePrefs()->path_query_enabled = 1;
+            return "OK - path.query = on";
+        }
+        if (strncmp(cmd, "set path.query off", 18) == 0) {
+            _mesh.getNodePrefs()->path_query_enabled = 0;
+            return "OK - path.query = off";
+        }
+        if (strncmp(cmd, "get path.query", 14) == 0) {
+            return _mesh.getNodePrefs()->path_query_enabled ? "> on" : "> off";
+        }
+#endif
         if (strncmp(cmd, "advert.zerohop", 14) == 0) {
             mesh::Packet* pkt = _mesh.createSelfAdvert(_mesh.getNodeName());
             if (pkt) {

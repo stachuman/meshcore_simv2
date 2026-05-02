@@ -132,6 +132,13 @@ function(add_firmware_plugin PLUGIN_NAME MESHCORE_PATH)
         message(STATUS "  ${PLUGIN_NAME}: scope support detected")
     endif()
 
+    # Detect Phase 2 path-query support: check if NodePrefs has path_query_enabled
+    file(STRINGS "${MESHCORE_PATH}/examples/companion_radio/NodePrefs.h" _pathq_check REGEX "path_query_enabled")
+    if(_pathq_check)
+        list(APPEND _COMP_EXTRA_DEFS "HAS_PATH_QUERY_SUPPORT")
+        message(STATUS "  ${PLUGIN_NAME}: path-query support detected")
+    endif()
+
     # Companion OBJECT lib (TU isolation for MyMesh renaming)
     add_library(${PLUGIN_NAME}_comp OBJECT
         firmware/CompanionMyMesh.cpp
