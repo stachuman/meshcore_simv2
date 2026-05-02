@@ -1,9 +1,9 @@
 {
   "_name": "t44_phase2_query_happy",
   "_desc": "Phase 2: cold-start DM emits a PATH_REQ to alice's neighborhood; R1 (with bob in its hot-started RouteCache) replies with a PATH_OFFER; the deferred packet ships via sendDirect once the offer window resolves. A second msga (sent after the path is installed) is tracked as a direct-ack send and the ack returns via path — visible as path_acks: 1/1. Stronger than asserting PATH_REQ traffic only: this proves Phase 2 actually resolved to direct delivery, not just that PATH_REQ appeared on the wire.",
-  "_requires_plugins": ["fw_routing"],
+  "_requires_plugins": ["fw_stachuman"],
   "simulation": {
-    "firmware": { "default": "fw_routing" },
+    "firmware": { "default": "fw_stachuman" },
     "duration_ms": 60000,
     "step_ms": 5,
     "warmup_ms": 5000,

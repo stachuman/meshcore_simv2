@@ -1,9 +1,9 @@
 {
   "_name": "t46_phase2_query_disabled",
   "_desc": "Phase 2 disabled: with path.query=off, alice sends DM via flood (today's pre-Phase-2 behavior). Verifies the feature gate works and no regression.",
-  "_requires_plugins": ["fw_routing"],
+  "_requires_plugins": ["fw_stachuman"],
   "simulation": {
-    "firmware": { "default": "fw_routing" },
+    "firmware": { "default": "fw_stachuman" },
     "duration_ms": 60000,
     "step_ms": 5,
     "warmup_ms": 5000,
