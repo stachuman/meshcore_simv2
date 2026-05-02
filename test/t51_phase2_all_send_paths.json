@@ -1,0 +1,49 @@
+{
+  "_name": "t51_phase2_all_send_paths",
+  "_desc": "Phase 2 cold-start fix exercises ALL 6 personal-send entry points in BaseChatMesh: sendMessage (msga), sendCommandData (cmd), sendLogin (login), sendAnonReq (anonreq), sendRequest req_type variant (req), sendRequest req_data variant (disc_path). alice's neighbor relay1 is fw_stachuman so PATH_REQ resolves; targets are bob (companion, via relay1->relay2 chain) and boss (repeater, direct neighbor of relay1). Between sends targeting boss we 'reset path boss' so each one is a true cold-start. Expectations are deliberately loose: each send must succeed (reply contains 'sent to') and alice's TX count must show Phase 2 traffic on top of the 6 payload sends.",
+  "_requires_plugins": ["fw_stachuman"],
+  "simulation": {
+    "firmware": { "default": "fw_stachuman" },
+    "duration_ms": 60000,
+    "step_ms": 5,
+    "warmup_ms": 5000,
+    "hot_start": true
+  },
+  "nodes": [
+    { "name": "alice",  "role": "companion", "firmware": "fw_stachuman" },
+    { "name": "bob",    "role": "companion", "firmware": "fw_stachuman" },
+    { "name": "relay1", "role": "repeater",  "firmware": "fw_stachuman" },
+    { "name": "relay2", "role": "repeater",  "firmware": "fw_stachuman" },
+    { "name": "boss",   "role": "repeater",  "firmware": "fw_stachuman" }
+  ],
+  "topology": {
+    "links": [
+      { "from": "alice",  "to": "relay1", "snr": 8.0, "rssi": -80.0, "bidir": true },
+      { "from": "relay1", "to": "relay2", "snr": 7.0, "rssi": -82.0, "bidir": true },
+      { "from": "relay2", "to": "bob",    "snr": 8.0, "rssi": -80.0, "bidir": true },
+      { "from": "relay1", "to": "boss",   "snr": 7.0, "rssi": -82.0, "bidir": true }
+    ]
+  },
+  "commands": [
+    { "at_ms": 10000, "node": "alice", "command": "msga bob hello-msga"     },
+    { "at_ms": 14000, "node": "alice", "command": "cmd boss ver"            },
+    { "at_ms": 18000, "node": "alice", "command": "reset path boss"         },
+    { "at_ms": 19000, "node": "alice", "command": "login boss admin"        },
+    { "at_ms": 23000, "node": "alice", "command": "reset path boss"         },
+    { "at_ms": 24000, "node": "alice", "command": "anonreq boss"            },
+    { "at_ms": 28000, "node": "alice", "command": "reset path boss"         },
+    { "at_ms": 29000, "node": "alice", "command": "req boss keepalive"      },
+    { "at_ms": 33000, "node": "alice", "command": "reset path boss"         },
+    { "at_ms": 34000, "node": "alice", "command": "disc_path boss"          },
+    { "at_ms": 50000, "node": "alice", "command": "stats"                   }
+  ],
+  "expect": [
+    { "type": "cmd_reply_contains", "node": "alice", "command": "msga bob",       "value": "sent to bob"  },
+    { "type": "cmd_reply_contains", "node": "alice", "command": "cmd boss",       "value": "sent to boss" },
+    { "type": "cmd_reply_contains", "node": "alice", "command": "login boss",     "value": "sent to boss" },
+    { "type": "cmd_reply_contains", "node": "alice", "command": "anonreq boss",   "value": "sent to boss" },
+    { "type": "cmd_reply_contains", "node": "alice", "command": "req boss",       "value": "sent to boss" },
+    { "type": "cmd_reply_contains", "node": "alice", "command": "disc_path boss", "value": "sent to boss" },
+    { "type": "event_count", "event_type": "tx", "node": "alice", "min": 10 }
+  ]
+}

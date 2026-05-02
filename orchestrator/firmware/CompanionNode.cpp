@@ -306,6 +306,71 @@ public:
             }
             return "ERROR: sendMessage failed (rc=" + std::to_string(rc) + ")";
         }
+        if (strncmp(cmd, "cmd ", 4) == 0) {
+            // Parse: cmd <name_prefix> <text>  — admin command frame to remote (sendCommandData)
+            const char* rest = cmd + 4;
+            const char* space = strchr(rest, ' ');
+            if (!space) return "ERROR: usage: cmd <name> <text>";
+            std::string prefix(rest, space - rest);
+            const char* text = space + 1;
+            ContactInfo* contact = _mesh.searchContactsByPrefix(prefix.c_str());
+            if (!contact) return "ERROR: contact not found: " + prefix;
+            uint32_t est_timeout = 0;
+            int rc = _mesh.sendCommandData(*contact, timestamp, 0, text, est_timeout);
+            if (rc == MSG_SEND_SENT_FLOOD)  return "cmd sent to " + std::string(contact->name) + " (flood)";
+            if (rc == MSG_SEND_SENT_DIRECT) return "cmd sent to " + std::string(contact->name) + " (direct)";
+            return "ERROR: sendCommandData failed (rc=" + std::to_string(rc) + ")";
+        }
+        if (strncmp(cmd, "login ", 6) == 0) {
+            // Parse: login <name_prefix> <password>  — sendLogin
+            const char* rest = cmd + 6;
+            const char* space = strchr(rest, ' ');
+            if (!space) return "ERROR: usage: login <name> <password>";
+            std::string prefix(rest, space - rest);
+            const char* password = space + 1;
+            ContactInfo* contact = _mesh.searchContactsByPrefix(prefix.c_str());
+            if (!contact) return "ERROR: contact not found: " + prefix;
+            uint32_t est_timeout = 0;
+            int rc = _mesh.sendLogin(*contact, password, est_timeout);
+            if (rc == MSG_SEND_SENT_FLOOD)  return "login sent to " + std::string(contact->name) + " (flood)";
+            if (rc == MSG_SEND_SENT_DIRECT) return "login sent to " + std::string(contact->name) + " (direct)";
+            return "ERROR: sendLogin failed (rc=" + std::to_string(rc) + ")";
+        }
+        if (strncmp(cmd, "anonreq ", 8) == 0) {
+            // Parse: anonreq <name_prefix>  — sendAnonReq with synthetic 4-byte payload
+            const char* prefix = cmd + 8;
+            ContactInfo* contact = _mesh.searchContactsByPrefix(prefix);
+            if (!contact) return "ERROR: contact not found: " + std::string(prefix);
+            uint8_t test_data[4] = { 0xAA, 0xBB, 0xCC, 0xDD };
+            uint32_t tag = 0, est_timeout = 0;
+            int rc = _mesh.sendAnonReq(*contact, test_data, sizeof(test_data), tag, est_timeout);
+            if (rc == MSG_SEND_SENT_FLOOD)  return "anonreq sent to " + std::string(contact->name) + " (flood)";
+            if (rc == MSG_SEND_SENT_DIRECT) return "anonreq sent to " + std::string(contact->name) + " (direct)";
+            return "ERROR: sendAnonReq failed (rc=" + std::to_string(rc) + ")";
+        }
+        if (strncmp(cmd, "req ", 4) == 0) {
+            // Parse: req <name_prefix> <status|keepalive|N>  — sendRequest(req_type) variant
+            const char* rest = cmd + 4;
+            const char* space = strchr(rest, ' ');
+            if (!space) return "ERROR: usage: req <name> <status|keepalive|N>";
+            std::string prefix(rest, space - rest);
+            const char* type_str = space + 1;
+            uint8_t req_type;
+            if (strcmp(type_str, "status") == 0)         req_type = REQ_TYPE_GET_STATUS;
+            else if (strcmp(type_str, "keepalive") == 0) req_type = REQ_TYPE_KEEP_ALIVE;
+            else {
+                int n = atoi(type_str);
+                if (n <= 0 || n > 255) return "ERROR: unknown req type: " + std::string(type_str);
+                req_type = (uint8_t)n;
+            }
+            ContactInfo* contact = _mesh.searchContactsByPrefix(prefix.c_str());
+            if (!contact) return "ERROR: contact not found: " + prefix;
+            uint32_t tag = 0, est_timeout = 0;
+            int rc = _mesh.sendRequest(*contact, req_type, tag, est_timeout);
+            if (rc == MSG_SEND_SENT_FLOOD)  return "req sent to " + std::string(contact->name) + " (flood)";
+            if (rc == MSG_SEND_SENT_DIRECT) return "req sent to " + std::string(contact->name) + " (direct)";
+            return "ERROR: sendRequest failed (rc=" + std::to_string(rc) + ")";
+        }
         if (strncmp(cmd, "import ", 7) == 0) {
             const char* hex = cmd + 7;
             size_t hex_len = strlen(hex);
