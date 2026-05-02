@@ -1,0 +1,37 @@
+{
+  "_name": "t44_phase2_query_happy",
+  "_desc": "Phase 2: cold-start DM emits a PATH_REQ to alice's neighborhood; R1 (with bob in its hot-started RouteCache) replies with a PATH_OFFER; the message is delivered to bob and the ack is tracked. Asserts cold-start delivery + Phase 2 query traffic appears on the wire.",
+  "_requires_plugins": ["fw_routing"],
+  "simulation": {
+    "firmware": { "default": "fw_routing" },
+    "duration_ms": 60000,
+    "step_ms": 5,
+    "warmup_ms": 5000,
+    "hot_start": true
+  },
+  "nodes": [
+    { "name": "alice", "role": "companion" },
+    { "name": "R1",    "role": "repeater"  },
+    { "name": "R2",    "role": "repeater"  },
+    { "name": "bob",   "role": "companion" }
+  ],
+  "topology": {
+    "links": [
+      { "from": "alice", "to": "R1",  "snr": 8.0, "rssi": -80.0, "bidir": true },
+      { "from": "R1",    "to": "R2",  "snr": 6.0, "rssi": -85.0, "bidir": true },
+      { "from": "R2",    "to": "bob", "snr": 8.0, "rssi": -80.0, "bidir": true }
+    ]
+  },
+  "commands": [
+    { "at_ms": 30000, "node": "alice", "command": "msga bob hello-phase2" },
+    { "at_ms": 50000, "node": "alice", "command": "stats" },
+    { "at_ms": 50500, "node": "bob",   "command": "stats" }
+  ],
+  "expect": [
+    { "type": "cmd_reply_contains", "node": "alice", "command": "msga bob", "value": "ack tracked" },
+    { "type": "cmd_reply_contains", "node": "alice", "command": "stats",    "value": "flood_acks: 1/1" },
+    { "type": "cmd_reply_contains", "node": "bob",   "command": "stats",    "value": "alice:1" },
+    { "type": "event_count", "event_type": "tx", "node": "alice", "min": 2 },
+    { "type": "event_count", "event_type": "tx", "node": "R1",    "min": 2 }
+  ]
+}
