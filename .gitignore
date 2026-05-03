@@ -1,9 +1,9 @@
 build/
 build-*/
 
-# MeshCore firmware trees (local clones, not tracked)
+# MeshCore firmware trees (local clones or symlinks, not tracked)
 MeshCore/
-MeshCore-*/
+MeshCore-*
 
 # Python + build artifacts
 __pycache__/
