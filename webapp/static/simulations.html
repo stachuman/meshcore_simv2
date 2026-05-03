@@ -120,7 +120,7 @@
             <th>DM Delivery</th>
             <th>Channel</th>
             <th>Acks</th>
-            <th>Created</th>
+            <th>Run</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -177,7 +177,7 @@
       tableW.classList.remove('hidden');
 
       // Sort by created desc
-      allSims.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+      allSims.sort((a, b) => new Date(b.completed_at || b.created_at || 0) - new Date(a.completed_at || a.created_at || 0));
 
       renderTable();
       loadStatsForCompleted();
@@ -249,10 +249,10 @@
       tdAcks.innerHTML = sim.status === 'completed' ? '<span class="stat-dim">...</span>' : '';
       tr.appendChild(tdAcks);
 
-      // Created
-      const tdCreated = document.createElement('td');
-      tdCreated.textContent = formatTime(sim.created_at);
-      tr.appendChild(tdCreated);
+      // Run (completion time, falls back to creation time for pending/running)
+      const tdRun = document.createElement('td');
+      tdRun.textContent = formatTime(sim.completed_at || sim.created_at);
+      tr.appendChild(tdRun);
 
       // Actions
       const tdAct = document.createElement('td');

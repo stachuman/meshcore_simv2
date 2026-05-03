@@ -188,14 +188,66 @@
     border-bottom: 1px solid rgba(0,0,0,0.15);
   }
 
-  /* Events panel (below resize handle) */
+  /* Events panel (below resize handle) — split into events (left) + scheduled commands (right) */
   .ia-events-panel {
     height: 200px;
     min-height: 60px;
     display: flex;
+    flex-direction: row;
+    overflow: hidden;
+  }
+  .ia-events-left {
+    flex: 1;
+    min-width: 0;
+    display: flex;
     flex-direction: column;
     overflow: hidden;
   }
+  .ia-cmds-right {
+    width: 340px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid var(--border);
+    background: var(--bg-primary);
+    overflow: hidden;
+  }
+  .ia-cmds-header {
+    padding: 6px 14px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-light);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+  }
+  .ia-cmds {
+    flex: 1;
+    overflow-y: auto;
+    font-size: 11px;
+  }
+  .ia-cmds table { width: 100%; border-collapse: collapse; }
+  .ia-cmds thead { position: sticky; top: 0; z-index: 2; }
+  .ia-cmds th {
+    text-align: left;
+    padding: 4px 8px;
+    background: var(--bg-secondary);
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+    font-size: 10px;
+  }
+  .ia-cmds td {
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--border-light);
+    vertical-align: top;
+    font-family: var(--font-mono);
+  }
+  .ia-cmds tr.passed td { opacity: 0.4; }
+  .ia-cmds tr.passed { background: rgba(0,0,0,0.02); }
+  .ia-cmds .cmd-empty { padding: 12px 14px; color: var(--text-dim); font-size: 11px; }
 
   /* Event log */
   .ia-events {
@@ -441,40 +493,49 @@
     <!-- Resize handle -->
     <div class="ia-resize-handle" id="resize-handle"></div>
 
-    <!-- Event log panel -->
+    <!-- Event log panel (left) + scheduled commands (right) -->
     <div class="ia-events-panel" id="events-panel">
-      <!-- Filter bar -->
-      <div class="ia-filter">
-        <label>Filter:</label>
-        <select id="event-filter">
-          <option value="all">All Events</option>
-          <option value="tx">TX</option>
-          <option value="rx">RX</option>
-          <option value="collision">Collision</option>
-          <option value="drop">Drops</option>
-          <option value="cmd_reply">Cmd Reply</option>
-        </select>
-        <span class="event-count" id="event-count">0 events</span>
-        <span class="spacer"></span>
-        <label><input type="checkbox" id="auto-scroll" checked> Auto-scroll</label>
-        <button class="btn btn-sm" id="btn-clear-events">Clear</button>
+      <div class="ia-events-left">
+        <!-- Filter bar -->
+        <div class="ia-filter">
+          <label>Filter:</label>
+          <select id="event-filter">
+            <option value="all">All Events</option>
+            <option value="tx">TX</option>
+            <option value="rx">RX</option>
+            <option value="collision">Collision</option>
+            <option value="drop">Drops</option>
+            <option value="cmd_reply">Cmd Reply</option>
+          </select>
+          <span class="event-count" id="event-count">0 events</span>
+          <span class="spacer"></span>
+          <label><input type="checkbox" id="auto-scroll" checked> Auto-scroll</label>
+          <button class="btn btn-sm" id="btn-clear-events">Clear</button>
+        </div>
+
+        <!-- Event log table -->
+        <div class="ia-events" id="events-container">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:80px">Time</th>
+                <th style="width:70px">Type</th>
+                <th style="width:80px">From</th>
+                <th style="width:80px">To</th>
+                <th style="width:70px">Pkt</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody id="events-tbody"></tbody>
+          </table>
+        </div>
       </div>
 
-      <!-- Event log table -->
-      <div class="ia-events" id="events-container">
-        <table>
-          <thead>
-            <tr>
-              <th style="width:80px">Time</th>
-              <th style="width:70px">Type</th>
-              <th style="width:80px">From</th>
-              <th style="width:80px">To</th>
-              <th style="width:70px">Pkt</th>
-              <th>Details</th>
-            </tr>
-          </thead>
-          <tbody id="events-tbody"></tbody>
-        </table>
+      <div class="ia-cmds-right">
+        <div class="ia-cmds-header">Scheduled commands (<span id="cmds-count">0</span>)</div>
+        <div class="ia-cmds" id="cmds-container">
+          <div class="cmd-empty">Loading...</div>
+        </div>
       </div>
     </div>
 
@@ -636,6 +697,8 @@
         if (msg.step_ms) document.getElementById('step-ms').value = msg.step_ms;
         // Load visualization iframe
         initVizIframe();
+        // Fetch the source config so we can show the scheduled command list
+        loadScheduledCommands();
         break;
       case 'event':
         addEvent(msg.data);
@@ -708,7 +771,9 @@
   }
 
   // ── Time display ────────────────────────────────────
+  let _currentSimMs = 0;
   function updateTime(ms) {
+    _currentSimMs = ms;
     const s = (ms / 1000).toFixed(3);
     document.getElementById('sim-time').textContent = s + 's';
     // Notify iframe to update viewport immediately (no polling delay)
@@ -718,6 +783,74 @@
         iframe.contentWindow.postMessage({ type: 'timeUpdate', time_ms: ms }, '*');
       } catch (_) {}
     }
+    updateScheduledCommandsState(ms);
+  }
+
+  // ── Scheduled commands panel ────────────────────────
+  let _scheduledCommands = [];
+
+  async function loadScheduledCommands() {
+    try {
+      const cfg = await fetchJSON('/api/interactive/' + sessionId + '/config');
+      const cmds = Array.isArray(cfg && cfg.commands) ? cfg.commands.slice() : [];
+      cmds.sort((a, b) => (a.at_ms || 0) - (b.at_ms || 0));
+      _scheduledCommands = cmds;
+      renderScheduledCommands();
+      updateScheduledCommandsState(_currentSimMs);
+    } catch (e) {
+      const cont = document.getElementById('cmds-container');
+      if (cont) cont.innerHTML = '<div class="cmd-empty">Failed to load: ' + escapeHtml(e.message || String(e)) + '</div>';
+    }
+  }
+
+  function _formatAtMs(ms) {
+    if (ms == null) return '--';
+    const total = Math.round(ms / 1000);
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = total % 60;
+    if (h > 0) return h + 'h' + String(m).padStart(2, '0') + 'm' + String(s).padStart(2, '0') + 's';
+    if (m > 0) return m + 'm' + String(s).padStart(2, '0') + 's';
+    return s + 's';
+  }
+
+  function renderScheduledCommands() {
+    const cont = document.getElementById('cmds-container');
+    const countEl = document.getElementById('cmds-count');
+    if (countEl) countEl.textContent = _scheduledCommands.length;
+    if (!cont) return;
+    if (!_scheduledCommands.length) {
+      cont.innerHTML = '<div class="cmd-empty">No scheduled commands in this config.</div>';
+      return;
+    }
+    let html = '<table><thead><tr>'
+      + '<th style="width:60px">At</th>'
+      + '<th style="width:70px">Node</th>'
+      + '<th>Command</th>'
+      + '</tr></thead><tbody>';
+    _scheduledCommands.forEach((c, i) => {
+      const at = c.at_ms || 0;
+      const node = c.node || '';
+      const cmdText = c.command || c.cmd || (c.lua ? 'lua: ' + c.lua : '') || '';
+      html += '<tr data-idx="' + i + '" data-at="' + at + '">'
+        + '<td>' + escapeHtml(_formatAtMs(at)) + '</td>'
+        + '<td>' + escapeHtml(node) + '</td>'
+        + '<td>' + escapeHtml(cmdText) + '</td>'
+        + '</tr>';
+    });
+    html += '</tbody></table>';
+    cont.innerHTML = html;
+  }
+
+  function updateScheduledCommandsState(simMs) {
+    const cont = document.getElementById('cmds-container');
+    if (!cont) return;
+    const rows = cont.querySelectorAll('tr[data-at]');
+    rows.forEach(tr => {
+      const at = parseFloat(tr.dataset.at);
+      if (at <= simMs) tr.classList.add('passed');
+      else tr.classList.remove('passed');
+    });
   }
 
   // ── Nodes ───────────────────────────────────────────

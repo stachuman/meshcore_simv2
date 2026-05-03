@@ -14,6 +14,11 @@
       "repo": "https://github.com/meshcore-dev/MeshCore.git",
       "tag": "room-server-v1.13.0",
       "path": "MeshCore-1.13"
+    },
+    "stachuman": {
+      "repo": "https://github.com/stachuman/MeshCore.git",
+      "path": "MeshCore-stachuman",
+      "branch": "main"
     }
   }
 }

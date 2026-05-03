@@ -1383,6 +1383,7 @@
       if (n.contact) clean.contact = n.contact;
       if (n.lat != null) clean.lat = n.lat;
       if (n.lon != null) clean.lon = n.lon;
+      if (n.firmware) clean.firmware = n.firmware;
       return clean;
     });
     const cleanLinks = links.map(l => {

@@ -10,7 +10,7 @@ import os
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel
 
 from server.config import validate_safe_id
@@ -102,8 +102,7 @@ def _cached_json_response(request: Request, sim_id: str, data) -> JSONResponse:
     if events_path:
         etag = _events_etag(events_path)
         if _check_not_modified(request, etag):
-            return JSONResponse(status_code=304, content=None,
-                                headers={"ETag": etag})
+            return Response(status_code=304, headers={"ETag": etag})
         return JSONResponse(content=data,
                             headers={"ETag": etag, "Cache-Control": "private, max-age=3600"})
     return JSONResponse(content=data)

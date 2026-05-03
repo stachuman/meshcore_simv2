@@ -106,6 +106,7 @@ function formatDuration(ms) {
  */
 function formatTime(ts) {
   if (!ts) return '--';
+  if (typeof ts === 'number' && ts < 1e12) ts = ts * 1000;
   const d = new Date(ts);
   if (isNaN(d.getTime())) return '--';
   return d.toLocaleString(undefined, {

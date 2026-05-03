@@ -15,9 +15,14 @@ body { font-family: 'SF Mono', 'Consolas', 'Menlo', monospace; font-size: 12px; 
 #toolbar button:hover { background: #d1d5db; }
 #toolbar button.active { background: #3b82f6; border-color: #2563eb; color: #fff; }
 #main { display: flex; flex: 1; overflow: hidden; }
+#sidebar-resizer { width: 0; cursor: col-resize; background: #d1d5db; flex-shrink: 0; transition: width 0.2s, background 0.15s; position: relative; }
+#sidebar-resizer.shown { width: 6px; }
+#sidebar-resizer:hover, #sidebar-resizer.dragging { background: #2563eb; }
+#sidebar-resizer::after { content: ''; position: absolute; top: 50%; left: 1px; transform: translateY(-50%); height: 32px; width: 4px; border-left: 1px solid rgba(0,0,0,0.15); border-right: 1px solid rgba(0,0,0,0.15); pointer-events: none; }
 #sidebar { width: 0; background: #ffffff; border-left: 1px solid #d1d5db; overflow-y: auto; transition: width 0.2s; flex-shrink: 0; }
 #sidebar.open { width: 480px; }
-#sidebar-content { padding: 10px; width: 480px; }
+#sidebar.dragging { transition: none; }
+#sidebar-content { padding: 10px; min-width: 0; }
 #sidebar h3 { color: #2563eb; margin: 8px 0 4px; font-size: 12px; }
 #sidebar .field { margin: 2px 0; }
 #sidebar .field .key { color: #6b7280; }
@@ -78,6 +83,7 @@ canvas { display: block; }
         <div id="time-display"></div>
         <div id="loading">Loading...</div>
     </div>
+    <div id="sidebar-resizer" title="Drag to resize trace panel"></div>
     <div id="sidebar">
         <div id="sidebar-content"></div>
     </div>
@@ -1559,15 +1565,78 @@ async function jumpToEvent(nodeName, timeMs) {
 }
 
 // ── Sidebar detail views ───────────────────────────────────────
+const SIDEBAR_MIN_W = 200;
+const SIDEBAR_DEFAULT_W = 480;
+
+function _restoreSidebarWidth() {
+    try {
+        const saved = parseFloat(localStorage.getItem('viz-sidebar-width'));
+        if (saved && saved >= SIDEBAR_MIN_W) return saved;
+    } catch (_) {}
+    return SIDEBAR_DEFAULT_W;
+}
+
 function openSidebar() {
+    sidebar.style.width = _restoreSidebarWidth() + 'px';
     sidebar.classList.add('open');
+    const resizer = document.getElementById('sidebar-resizer');
+    if (resizer) resizer.classList.add('shown');
     setTimeout(() => { resize(); render(); }, 220);
 }
 
 function closeSidebar() {
     sidebar.classList.remove('open');
+    sidebar.style.width = '';
+    const resizer = document.getElementById('sidebar-resizer');
+    if (resizer) resizer.classList.remove('shown');
     setTimeout(() => { resize(); render(); }, 220);
 }
+
+// Drag-to-resize the sidebar (trace panel)
+(function setupSidebarResize() {
+    const resizer = document.getElementById('sidebar-resizer');
+    if (!resizer) return;
+    let dragging = false;
+    let startX = 0;
+    let startW = 0;
+
+    resizer.addEventListener('mousedown', e => {
+        if (!sidebar.classList.contains('open')) return;
+        dragging = true;
+        startX = e.clientX;
+        startW = sidebar.offsetWidth;
+        sidebar.classList.add('dragging');
+        resizer.classList.add('dragging');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', e => {
+        if (!dragging) return;
+        const dx = e.clientX - startX;
+        // Resizer is on the LEFT edge of sidebar — moving cursor left = wider sidebar
+        let newW = startW - dx;
+        const maxW = Math.floor(window.innerWidth * 0.8);
+        if (newW < SIDEBAR_MIN_W) newW = SIDEBAR_MIN_W;
+        if (newW > maxW) newW = maxW;
+        sidebar.style.width = newW + 'px';
+        resize();
+        render();
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (!dragging) return;
+        dragging = false;
+        sidebar.classList.remove('dragging');
+        resizer.classList.remove('dragging');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        try {
+            localStorage.setItem('viz-sidebar-width', String(sidebar.offsetWidth));
+        } catch (_) {}
+    });
+})();
 
 function showEventDetail(ev) {
     openSidebar();

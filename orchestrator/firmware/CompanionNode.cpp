@@ -219,6 +219,17 @@ public:
         if (strncmp(cmd, "get path.query", 14) == 0) {
             return _mesh.getNodePrefs()->path_query_enabled ? "> on" : "> off";
         }
+        if (strncmp(cmd, "routing.stats", 13) == 0) {
+            // Single-line key=value snapshot of the companion's Phase 2 routing counters
+            // (PATH_REQ sent / PATH_OFFER recv-matched-resolved bookkeeping).
+            char buf[160];
+            _mesh.formatRoutingStatsReplyBase(buf, sizeof(buf));
+            return std::string(buf);
+        }
+        if (strncmp(cmd, "clear routing.stats", 19) == 0) {
+            _mesh.resetRoutingStats();
+            return "OK - routing stats cleared";
+        }
 #endif
         if (strncmp(cmd, "advert.zerohop", 14) == 0) {
             mesh::Packet* pkt = _mesh.createSelfAdvert(_mesh.getNodeName());

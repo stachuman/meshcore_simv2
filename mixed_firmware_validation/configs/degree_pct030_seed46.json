@@ -1,0 +1,5014 @@
+{
+  "_source": "ITM topology generator, region=47.60,-122.42,47.70,-122.27",
+  "simulation": {
+    "duration_ms": 900000,
+    "step_ms": 1,
+    "warmup_ms": 5000,
+    "hot_start": true,
+    "radio": {
+      "sf": 10,
+      "bw": 250000,
+      "cr": 1
+    },
+    "seed": 46
+  },
+  "nodes": [
+    {
+      "name": "Phinney_Solar_Repeat",
+      "role": "repeater",
+      "lat": 47.6811,
+      "lon": -122.352,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "Fremont01_KF7EGZ_Sol",
+      "role": "repeater",
+      "lat": 47.6563,
+      "lon": -122.356,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "dmatestbednode0",
+      "role": "repeater",
+      "lat": 47.6613,
+      "lon": -122.313,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Broadway_Hill_Park",
+      "role": "repeater",
+      "lat": 47.6231,
+      "lon": -122.319,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "The_Winchester_Repea",
+      "role": "repeater",
+      "lat": 47.6106,
+      "lon": -122.313,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "Steve_",
+      "role": "repeater",
+      "lat": 47.615,
+      "lon": -122.293,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "FrelardFrelay",
+      "role": "repeater",
+      "lat": 47.6599,
+      "lon": -122.357,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "Upper_Queen_Anne",
+      "role": "repeater",
+      "lat": 47.6384,
+      "lon": -122.357,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "LetsMesh_Test_Node",
+      "role": "repeater",
+      "lat": 47.6067,
+      "lon": -122.326,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "DuckDuckGoose",
+      "role": "repeater",
+      "lat": 47.6794,
+      "lon": -122.341,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "CH_RPTR",
+      "role": "repeater",
+      "lat": 47.6907,
+      "lon": -122.379,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Ballard_W7PEA",
+      "role": "repeater",
+      "lat": 47.6745,
+      "lon": -122.374,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Dogpeater",
+      "role": "repeater",
+      "lat": 47.6709,
+      "lon": -122.328,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "NE_Queen_Anne_Rptr",
+      "role": "repeater",
+      "lat": 47.6366,
+      "lon": -122.348,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "W7PEA_Repeater",
+      "role": "repeater",
+      "lat": 47.6745,
+      "lon": -122.374,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "pxi_nest",
+      "role": "repeater",
+      "lat": 47.6759,
+      "lon": -122.393,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "First_Hill",
+      "role": "repeater",
+      "lat": 47.61,
+      "lon": -122.325,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "First_Hill_Skyline",
+      "role": "repeater",
+      "lat": 47.6064,
+      "lon": -122.326,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Central_District",
+      "role": "repeater",
+      "lat": 47.6129,
+      "lon": -122.303,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Summit__Harrison",
+      "role": "repeater",
+      "lat": 47.622,
+      "lon": -122.325,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "N7TOERPTR",
+      "role": "repeater",
+      "lat": 47.6831,
+      "lon": -122.398,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "GhostSat_Westlake",
+      "role": "repeater",
+      "lat": 47.6359,
+      "lon": -122.339,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "KG6GXY_Greenwood",
+      "role": "repeater",
+      "lat": 47.692,
+      "lon": -122.366,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "N_Capitol_Hill_20",
+      "role": "repeater",
+      "lat": 47.6233,
+      "lon": -122.314,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "Magnolia_Hill",
+      "role": "repeater",
+      "lat": 47.6458,
+      "lon": -122.408,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "House_of_Brimstone",
+      "role": "repeater",
+      "lat": 47.6102,
+      "lon": -122.369,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Hankest_Extendus",
+      "role": "repeater",
+      "lat": 47.6905,
+      "lon": -122.28,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Waterfront",
+      "role": "repeater",
+      "lat": 47.6103,
+      "lon": -122.341,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "University_District",
+      "role": "repeater",
+      "lat": 47.6687,
+      "lon": -122.291,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "1st_Hill_South_Repea",
+      "role": "repeater",
+      "lat": 47.6094,
+      "lon": -122.326,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "2CBA_Repeater_v4",
+      "role": "repeater",
+      "lat": 47.6663,
+      "lon": -122.301,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Forest_Glade",
+      "role": "repeater",
+      "lat": 47.6361,
+      "lon": -122.327,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Eastlake_Colonnade",
+      "role": "repeater",
+      "lat": 47.6355,
+      "lon": -122.324,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Belltown_DuneCat",
+      "role": "repeater",
+      "lat": 47.6166,
+      "lon": -122.349,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Magnolia_W7UUL",
+      "role": "repeater",
+      "lat": 47.6513,
+      "lon": -122.388,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "18th__Union",
+      "role": "repeater",
+      "lat": 47.6134,
+      "lon": -122.307,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Ravenna_Valley",
+      "role": "repeater",
+      "lat": 47.6817,
+      "lon": -122.302,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "searep001",
+      "role": "repeater",
+      "lat": 47.6495,
+      "lon": -122.37,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "MarketMadhouse",
+      "role": "repeater",
+      "lat": 47.6684,
+      "lon": -122.382,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "Wedgwood_Solar",
+      "role": "repeater",
+      "lat": 47.6879,
+      "lon": -122.284,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "80th_Street_Repeater",
+      "role": "repeater",
+      "lat": 47.6869,
+      "lon": -122.366,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "usa_narrow_bridge",
+      "role": "repeater",
+      "lat": 47.6617,
+      "lon": -122.312,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Union_Art_Coop__YA",
+      "role": "repeater",
+      "lat": 47.6132,
+      "lon": -122.318,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Yesler_Terrace",
+      "role": "repeater",
+      "lat": 47.6014,
+      "lon": -122.323,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Seattle_Center",
+      "role": "repeater",
+      "lat": 47.6225,
+      "lon": -122.352,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "LetsMesh_Test",
+      "role": "repeater",
+      "lat": 47.6027,
+      "lon": -122.331,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "3rdAveS__MainPioSqSE",
+      "role": "repeater",
+      "lat": 47.6003,
+      "lon": -122.33,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Capitol_Hill_Prime",
+      "role": "repeater",
+      "lat": 47.6161,
+      "lon": -122.31,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "minitrue",
+      "role": "repeater",
+      "lat": 47.6843,
+      "lon": -122.341,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Lower_Queen_Anne",
+      "role": "repeater",
+      "lat": 47.6242,
+      "lon": -122.354,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Sycamorons_Repeater_",
+      "role": "repeater",
+      "lat": 47.6798,
+      "lon": -122.358,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Portage_Bay",
+      "role": "repeater",
+      "lat": 47.6481,
+      "lon": -122.313,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Portage_Bay_G2",
+      "role": "repeater",
+      "lat": 47.6559,
+      "lon": -122.321,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "RooseveltRepeater",
+      "role": "repeater",
+      "lat": 47.6774,
+      "lon": -122.313,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "TangleTown_Repeater",
+      "role": "repeater",
+      "lat": 47.6727,
+      "lon": -122.329,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Magnolia_Valley",
+      "role": "repeater",
+      "lat": 47.6501,
+      "lon": -122.398,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Roosevelt_Tree_Top",
+      "role": "repeater",
+      "lat": 47.6807,
+      "lon": -122.315,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "K7WFB_MC_4631",
+      "role": "repeater",
+      "lat": 47.6407,
+      "lon": -122.351,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "Downtown_Repeater",
+      "role": "repeater",
+      "lat": 47.6138,
+      "lon": -122.335,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "RavennaPark",
+      "role": "repeater",
+      "lat": 47.6737,
+      "lon": -122.308,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Roosevelt_Public",
+      "role": "repeater",
+      "lat": 47.676,
+      "lon": -122.32,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Ballard_Balcony",
+      "role": "repeater",
+      "lat": 47.6709,
+      "lon": -122.39,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Ballard",
+      "role": "repeater",
+      "lat": 47.671,
+      "lon": -122.393,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "irlqt",
+      "role": "repeater",
+      "lat": 47.6178,
+      "lon": -122.323,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "K7FSX_Greenwood",
+      "role": "repeater",
+      "lat": 47.6906,
+      "lon": -122.347,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "K7FSX_Greenwood_Room",
+      "role": "repeater",
+      "lat": 47.6906,
+      "lon": -122.347,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "Black_Base",
+      "role": "repeater",
+      "lat": 47.6053,
+      "lon": -122.298,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "WA7DASR1",
+      "role": "repeater",
+      "lat": 47.6509,
+      "lon": -122.386,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "McDonalds_Free_WiFi",
+      "role": "repeater",
+      "lat": 47.6952,
+      "lon": -122.374,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "Licton_Springs_Chat",
+      "role": "repeater",
+      "lat": 47.6986,
+      "lon": -122.34,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Squire_Park",
+      "role": "repeater",
+      "lat": 47.6024,
+      "lon": -122.312,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "LQA_RPTR__Hive_0",
+      "role": "repeater",
+      "lat": 47.623,
+      "lon": -122.369,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "CrossNet_Room",
+      "role": "repeater",
+      "lat": 47.6622,
+      "lon": -122.271,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Crow_Repeater",
+      "role": "repeater",
+      "lat": 47.6566,
+      "lon": -122.362,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "Portage_Bay_G2_2",
+      "role": "repeater",
+      "lat": 47.6559,
+      "lon": -122.321,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Chucks",
+      "role": "repeater",
+      "lat": 47.6909,
+      "lon": -122.366,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Magnolia_Hill_2",
+      "role": "repeater",
+      "lat": 47.6411,
+      "lon": -122.393,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Packet_town",
+      "role": "repeater",
+      "lat": 47.6694,
+      "lon": -122.326,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "devhackchat",
+      "role": "repeater",
+      "lat": 47.6613,
+      "lon": -122.313,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "Maple_Leaf_Manor",
+      "role": "repeater",
+      "lat": 47.6924,
+      "lon": -122.313,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "SEAMESH_CORE_R1",
+      "role": "repeater",
+      "lat": 47.6186,
+      "lon": -122.338,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Interlake",
+      "role": "repeater",
+      "lat": 47.6587,
+      "lon": -122.338,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "SEAMESH_CORE_R2",
+      "role": "repeater",
+      "lat": 47.6187,
+      "lon": -122.338,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "First_Hill_Skyline_2",
+      "role": "repeater",
+      "lat": 47.6101,
+      "lon": -122.325,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "Lassiter_Repeater",
+      "role": "repeater",
+      "lat": 47.6874,
+      "lon": -122.35,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "DMASpaceMesh",
+      "role": "repeater",
+      "lat": 47.6146,
+      "lon": -122.317,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "WedgBreadMesh",
+      "role": "repeater",
+      "lat": 47.6797,
+      "lon": -122.291,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "CH_RPTR_Room",
+      "role": "repeater",
+      "lat": 47.6907,
+      "lon": -122.379,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "QA_Repeater__Hive_0",
+      "role": "repeater",
+      "lat": 47.623,
+      "lon": -122.369,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "N7GRN5_Portage_Bay_r",
+      "role": "repeater",
+      "lat": 47.6465,
+      "lon": -122.319,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Washington_Park",
+      "role": "repeater",
+      "lat": 47.6282,
+      "lon": -122.296,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Stevens",
+      "role": "repeater",
+      "lat": 47.6286,
+      "lon": -122.302,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "node",
+      "role": "repeater",
+      "lat": 47.6687,
+      "lon": -122.388,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Roosevelt_Pocket_Mes",
+      "role": "repeater",
+      "lat": 47.6792,
+      "lon": -122.318,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "Volunteer_Park_SW",
+      "role": "repeater",
+      "lat": 47.6297,
+      "lon": -122.32,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Good_Coffee_Great_La",
+      "role": "repeater",
+      "lat": 47.6796,
+      "lon": -122.341,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Cap_Hill_Broadway",
+      "role": "repeater",
+      "lat": 47.6238,
+      "lon": -122.321,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "Naked_in_Capitol_Hil",
+      "role": "repeater",
+      "lat": 47.6215,
+      "lon": -122.316,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Ballard_Locks_1W_Rep",
+      "role": "repeater",
+      "lat": 47.6688,
+      "lon": -122.396,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Martin_Room",
+      "role": "repeater",
+      "lat": 47.6957,
+      "lon": -122.293,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Taco_Tuesday",
+      "role": "repeater",
+      "lat": 47.6271,
+      "lon": -122.326,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "N7GRN4_Portage_Bay_r",
+      "role": "repeater",
+      "lat": 47.6465,
+      "lon": -122.319,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "DMASpaceMeshRoom",
+      "role": "repeater",
+      "lat": 47.6144,
+      "lon": -122.319,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "W7ZOORPTR1W",
+      "role": "repeater",
+      "lat": 47.6725,
+      "lon": -122.342,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Mosswood_Loft",
+      "role": "repeater",
+      "lat": 47.6114,
+      "lon": -122.316,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Cafe",
+      "role": "repeater",
+      "lat": 47.6893,
+      "lon": -122.366,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "W7ZOORPTRGREENLAKE",
+      "role": "repeater",
+      "lat": 47.6758,
+      "lon": -122.346,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Entropy_Temple",
+      "role": "repeater",
+      "lat": 47.6014,
+      "lon": -122.366,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Crown_Hill",
+      "role": "repeater",
+      "lat": 47.6962,
+      "lon": -122.373,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Kremwerk",
+      "role": "repeater",
+      "lat": 47.6169,
+      "lon": -122.331,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "RAWTCE",
+      "role": "repeater",
+      "lat": 47.6117,
+      "lon": -122.347,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "1",
+      "role": "repeater",
+      "lat": 47.6235,
+      "lon": -122.365,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "MOST_Mesh_Room",
+      "role": "repeater",
+      "lat": 47.6294,
+      "lon": -122.317,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "SEA_Bryant_KM7ECH",
+      "role": "repeater",
+      "lat": 47.6649,
+      "lon": -122.285,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "RAVSHrpt1",
+      "role": "repeater",
+      "lat": 47.6129,
+      "lon": -122.352,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "searep001_2",
+      "role": "repeater",
+      "lat": 47.6495,
+      "lon": -122.37,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Hot_Ratpeater_Summer",
+      "role": "repeater",
+      "lat": 47.617,
+      "lon": -122.32,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "repeather",
+      "role": "repeater",
+      "lat": 47.6629,
+      "lon": -122.315,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "W7ZOORPTR2__CQCRorg",
+      "role": "repeater",
+      "lat": 47.6758,
+      "lon": -122.341,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "node_2",
+      "role": "repeater",
+      "lat": 47.6364,
+      "lon": -122.316,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "bushwhacker_repeater",
+      "role": "repeater",
+      "lat": 47.6533,
+      "lon": -122.35,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Melvins_Repeater",
+      "role": "repeater",
+      "lat": 47.6604,
+      "lon": -122.333,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "EnduroDriver_Phinney",
+      "role": "repeater",
+      "lat": 47.6805,
+      "lon": -122.357,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "Fremont01_Greenwood3",
+      "role": "repeater",
+      "lat": 47.6542,
+      "lon": -122.356,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "Magnolia_Central_30t",
+      "role": "repeater",
+      "lat": 47.6446,
+      "lon": -122.396,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "House_of_Yeaves",
+      "role": "repeater",
+      "lat": 47.6104,
+      "lon": -122.315,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Eastlake",
+      "role": "repeater",
+      "lat": 47.6417,
+      "lon": -122.326,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Cowen_West",
+      "role": "repeater",
+      "lat": 47.6733,
+      "lon": -122.314,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "searep002",
+      "role": "repeater",
+      "lat": 47.6495,
+      "lon": -122.37,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "RavennaEckstein_CC",
+      "role": "repeater",
+      "lat": 47.6765,
+      "lon": -122.304,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "CrossNet_RPT1",
+      "role": "repeater",
+      "lat": 47.6619,
+      "lon": -122.271,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "W7ZOORPTRPHINNEY",
+      "role": "repeater",
+      "lat": 47.6777,
+      "lon": -122.354,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "SteelPhinney",
+      "role": "repeater",
+      "lat": 47.6855,
+      "lon": -122.366,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "South_Cap_Hill_G2",
+      "role": "repeater",
+      "lat": 47.6123,
+      "lon": -122.321,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Latona_Hub",
+      "role": "repeater",
+      "lat": 47.6759,
+      "lon": -122.325,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Ballard_East_Rebleat",
+      "role": "repeater",
+      "lat": 47.6685,
+      "lon": -122.366,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Owl_Nest",
+      "role": "repeater",
+      "lat": 47.6622,
+      "lon": -122.357,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "The_Hideout",
+      "role": "repeater",
+      "lat": 47.6094,
+      "lon": -122.326,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "WallyCore_Repeater",
+      "role": "repeater",
+      "lat": 47.6649,
+      "lon": -122.334,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "facade00",
+      "role": "repeater",
+      "lat": 47.6963,
+      "lon": -122.341,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Take_His_Face_Off",
+      "role": "repeater",
+      "lat": 47.6957,
+      "lon": -122.295,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "N1TJT_Repeater",
+      "role": "repeater",
+      "lat": 47.6238,
+      "lon": -122.316,
+      "firmware": "fw_default"
+    },
+    {
+      "name": "Breadheads",
+      "role": "repeater",
+      "lat": 47.6872,
+      "lon": -122.376,
+      "firmware": "fw_stachuman"
+    },
+    {
+      "name": "alice",
+      "role": "companion",
+      "firmware": "fw_default"
+    },
+    {
+      "name": "bob",
+      "role": "companion",
+      "firmware": "fw_default"
+    },
+    {
+      "name": "carol",
+      "role": "companion",
+      "firmware": "fw_default"
+    },
+    {
+      "name": "dave",
+      "role": "companion",
+      "firmware": "fw_default"
+    }
+  ],
+  "topology": {
+    "links": [
+      {
+        "from": "First_Hill",
+        "to": "First_Hill_Skyline_2",
+        "snr": 75.43,
+        "rssi": -38.59,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "SEAMESH_CORE_R1",
+        "to": "SEAMESH_CORE_R2",
+        "snr": 75.43,
+        "rssi": -38.59,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "DuckDuckGoose",
+        "to": "Good_Coffee_Great_La",
+        "snr": 69.41,
+        "rssi": -44.61,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "LetsMesh_Test_Node",
+        "to": "First_Hill_Skyline",
+        "snr": 65.89,
+        "rssi": -48.13,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "CrossNet_Room",
+        "to": "CrossNet_RPT1",
+        "snr": 65.89,
+        "rssi": -48.13,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "dmatestbednode0",
+        "to": "usa_narrow_bridge",
+        "snr": 57.55,
+        "rssi": -56.47,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "First_Hill",
+        "to": "1st_Hill_South_Repea",
+        "snr": 56.32,
+        "rssi": -57.7,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "First_Hill",
+        "to": "The_Hideout",
+        "snr": 56.32,
+        "rssi": -57.7,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "1st_Hill_South_Repea",
+        "to": "First_Hill_Skyline_2",
+        "snr": 55.68,
+        "rssi": -58.34,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Sycamorons_Repeater_",
+        "to": "EnduroDriver_Phinney",
+        "snr": 55.68,
+        "rssi": -58.34,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "KG6GXY_Greenwood",
+        "to": "Chucks",
+        "snr": 54.6,
+        "rssi": -59.42,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Mosswood_Loft",
+        "to": "House_of_Yeaves",
+        "snr": 53.8,
+        "rssi": -60.22,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Martin_Room",
+        "to": "Take_His_Face_Off",
+        "snr": 52.85,
+        "rssi": -61.17,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "The_Winchester_Repea",
+        "to": "House_of_Yeaves",
+        "snr": 52.74,
+        "rssi": -61.28,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "DMASpaceMesh",
+        "to": "DMASpaceMeshRoom",
+        "snr": 52.74,
+        "rssi": -61.28,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Magnolia_W7UUL",
+        "to": "WA7DASR1",
+        "snr": 52.47,
+        "rssi": -61.55,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "80th_Street_Repeater",
+        "to": "SteelPhinney",
+        "snr": 52.51,
+        "rssi": -61.51,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "N_Capitol_Hill_20",
+        "to": "N1TJT_Repeater",
+        "snr": 52.28,
+        "rssi": -61.74,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Broadway_Hill_Park",
+        "to": "Cap_Hill_Broadway",
+        "snr": 51.8,
+        "rssi": -62.22,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Union_Art_Coop__YA",
+        "to": "DMASpaceMesh",
+        "snr": 51.6,
+        "rssi": -62.42,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Chucks",
+        "to": "Cafe",
+        "snr": 51.35,
+        "rssi": -62.67,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Dogpeater",
+        "to": "TangleTown_Repeater",
+        "snr": 49.76,
+        "rssi": -64.26,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Dogpeater",
+        "to": "Packet_town",
+        "snr": 49.34,
+        "rssi": -64.68,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Ballard_Balcony",
+        "to": "Ballard",
+        "snr": 49.31,
+        "rssi": -64.71,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Volunteer_Park_SW",
+        "to": "MOST_Mesh_Room",
+        "snr": 49.22,
+        "rssi": -64.8,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "dmatestbednode0",
+        "to": "repeather",
+        "snr": 49.02,
+        "rssi": -65.0,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "devhackchat",
+        "to": "repeather",
+        "snr": 49.02,
+        "rssi": -65.0,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Fremont01_KF7EGZ_Sol",
+        "to": "Fremont01_Greenwood3",
+        "snr": 48.99,
+        "rssi": -65.03,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Forest_Glade",
+        "to": "Eastlake_Colonnade",
+        "snr": 48.95,
+        "rssi": -65.07,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Broadway_Hill_Park",
+        "to": "N1TJT_Repeater",
+        "snr": 48.82,
+        "rssi": -65.2,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "irlqt",
+        "to": "Hot_Ratpeater_Summer",
+        "snr": 48.68,
+        "rssi": -65.34,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "N_Capitol_Hill_20",
+        "to": "Naked_in_Capitol_Hil",
+        "snr": 48.39,
+        "rssi": -65.63,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Union_Art_Coop__YA",
+        "to": "Mosswood_Loft",
+        "snr": 48.39,
+        "rssi": -65.63,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "FrelardFrelay",
+        "to": "Owl_Nest",
+        "snr": 48.2,
+        "rssi": -65.82,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Naked_in_Capitol_Hil",
+        "to": "N1TJT_Repeater",
+        "snr": 48.2,
+        "rssi": -65.82,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "usa_narrow_bridge",
+        "to": "repeather",
+        "snr": 48.01,
+        "rssi": -66.01,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "80th_Street_Repeater",
+        "to": "Cafe",
+        "snr": 47.83,
+        "rssi": -66.19,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "LetsMesh_Test",
+        "to": "3rdAveS__MainPioSqSE",
+        "snr": 47.5,
+        "rssi": -66.52,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "DMASpaceMeshRoom",
+        "to": "South_Cap_Hill_G2",
+        "snr": 47.49,
+        "rssi": -66.53,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "DMASpaceMeshRoom",
+        "to": "Hot_Ratpeater_Summer",
+        "snr": 46.85,
+        "rssi": -67.17,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "LetsMesh_Test_Node",
+        "to": "1st_Hill_South_Repea",
+        "snr": 46.8,
+        "rssi": -67.22,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "LetsMesh_Test_Node",
+        "to": "The_Hideout",
+        "snr": 46.8,
+        "rssi": -67.22,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "KG6GXY_Greenwood",
+        "to": "Cafe",
+        "snr": 46.8,
+        "rssi": -67.22,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Central_District",
+        "to": "18th__Union",
+        "snr": 46.67,
+        "rssi": -67.35,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "LQA_RPTR__Hive_0",
+        "to": "1",
+        "snr": 46.67,
+        "rssi": -67.35,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "QA_Repeater__Hive_0",
+        "to": "1",
+        "snr": 46.67,
+        "rssi": -67.35,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "First_Hill_Skyline",
+        "to": "The_Hideout",
+        "snr": 45.89,
+        "rssi": -68.13,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "DMASpaceMesh",
+        "to": "Hot_Ratpeater_Summer",
+        "snr": 45.5,
+        "rssi": -68.52,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Summit__Harrison",
+        "to": "Cap_Hill_Broadway",
+        "snr": 45.22,
+        "rssi": -68.81,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "DMASpaceMesh",
+        "to": "Mosswood_Loft",
+        "snr": 45.14,
+        "rssi": -68.88,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "W7ZOORPTRGREENLAKE",
+        "to": "W7ZOORPTR2__CQCRorg",
+        "snr": 44.89,
+        "rssi": -69.13,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Broadway_Hill_Park",
+        "to": "N_Capitol_Hill_20",
+        "snr": 44.86,
+        "rssi": -69.16,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "18th__Union",
+        "to": "Capitol_Hill_Prime",
+        "snr": 44.87,
+        "rssi": -69.15,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "W7ZOORPTR1W",
+        "to": "W7ZOORPTR2__CQCRorg",
+        "snr": 44.88,
+        "rssi": -69.14,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Sycamorons_Repeater_",
+        "to": "W7ZOORPTRPHINNEY",
+        "snr": 44.76,
+        "rssi": -69.26,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Union_Art_Coop__YA",
+        "to": "House_of_Yeaves",
+        "snr": 44.66,
+        "rssi": -69.36,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "EnduroDriver_Phinney",
+        "to": "W7ZOORPTRPHINNEY",
+        "snr": 44.67,
+        "rssi": -69.35,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "LetsMesh_Test_Node",
+        "to": "First_Hill_Skyline_2",
+        "snr": 44.63,
+        "rssi": -69.39,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Roosevelt_Public",
+        "to": "Roosevelt_Pocket_Mes",
+        "snr": 44.62,
+        "rssi": -69.4,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "First_Hill_Skyline_2",
+        "to": "South_Cap_Hill_G2",
+        "snr": 44.6,
+        "rssi": -69.42,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "RooseveltRepeater",
+        "to": "Roosevelt_Tree_Top",
+        "snr": 44.39,
+        "rssi": -69.63,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "RAWTCE",
+        "to": "RAVSHrpt1",
+        "snr": 44.36,
+        "rssi": -69.66,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "DuckDuckGoose",
+        "to": "W7ZOORPTR2__CQCRorg",
+        "snr": 44.3,
+        "rssi": -69.72,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "DMASpaceMeshRoom",
+        "to": "Mosswood_Loft",
+        "snr": 44.26,
+        "rssi": -69.76,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Phinney_Solar_Repeat",
+        "to": "W7ZOORPTRPHINNEY",
+        "snr": 44.17,
+        "rssi": -69.85,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Fremont01_KF7EGZ_Sol",
+        "to": "FrelardFrelay",
+        "snr": 44.16,
+        "rssi": -69.87,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "First_Hill",
+        "to": "First_Hill_Skyline",
+        "snr": 44.15,
+        "rssi": -69.87,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Hankest_Extendus",
+        "to": "Wedgwood_Solar",
+        "snr": 43.97,
+        "rssi": -70.05,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "K7FSX_Greenwood",
+        "to": "Lassiter_Repeater",
+        "snr": 43.87,
+        "rssi": -70.15,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "K7FSX_Greenwood_Room",
+        "to": "Lassiter_Repeater",
+        "snr": 43.87,
+        "rssi": -70.15,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Good_Coffee_Great_La",
+        "to": "W7ZOORPTR2__CQCRorg",
+        "snr": 43.83,
+        "rssi": -70.19,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Cafe",
+        "to": "SteelPhinney",
+        "snr": 43.83,
+        "rssi": -70.19,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "RooseveltRepeater",
+        "to": "Roosevelt_Pocket_Mes",
+        "snr": 43.79,
+        "rssi": -70.23,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "TangleTown_Repeater",
+        "to": "Packet_town",
+        "snr": 43.68,
+        "rssi": -70.34,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "RavennaPark",
+        "to": "RavennaEckstein_CC",
+        "snr": 43.64,
+        "rssi": -70.38,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "80th_Street_Repeater",
+        "to": "Chucks",
+        "snr": 43.39,
+        "rssi": -70.63,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "CH_RPTR",
+        "to": "Breadheads",
+        "snr": 43.3,
+        "rssi": -70.72,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Magnolia_Hill_2",
+        "to": "Magnolia_Central_30t",
+        "snr": 43.3,
+        "rssi": -70.72,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "CH_RPTR_Room",
+        "to": "Breadheads",
+        "snr": 43.3,
+        "rssi": -70.72,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Fremont01_KF7EGZ_Sol",
+        "to": "Crow_Repeater",
+        "snr": 43.28,
+        "rssi": -70.74,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "MarketMadhouse",
+        "to": "node",
+        "snr": 43.28,
+        "rssi": -70.74,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "RavennaPark",
+        "to": "Cowen_West",
+        "snr": 43.26,
+        "rssi": -70.76,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Washington_Park",
+        "to": "Stevens",
+        "snr": 43.25,
+        "rssi": -70.77,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Cap_Hill_Broadway",
+        "to": "Naked_in_Capitol_Hil",
+        "snr": 43.22,
+        "rssi": -70.8,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Downtown_Repeater",
+        "to": "Kremwerk",
+        "snr": 43.16,
+        "rssi": -70.86,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "bushwhacker_repeater",
+        "to": "Fremont01_Greenwood3",
+        "snr": 43.09,
+        "rssi": -70.93,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "RooseveltRepeater",
+        "to": "Cowen_West",
+        "snr": 43.06,
+        "rssi": -70.96,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Broadway_Hill_Park",
+        "to": "Summit__Harrison",
+        "snr": 42.98,
+        "rssi": -71.04,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Belltown_DuneCat",
+        "to": "RAVSHrpt1",
+        "snr": 42.93,
+        "rssi": -71.09,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Phinney_Solar_Repeat",
+        "to": "Sycamorons_Repeater_",
+        "snr": 42.88,
+        "rssi": -71.14,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "The_Winchester_Repea",
+        "to": "Union_Art_Coop__YA",
+        "snr": 42.85,
+        "rssi": -71.17,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "W7ZOORPTR1W",
+        "to": "W7ZOORPTRGREENLAKE",
+        "snr": 42.84,
+        "rssi": -71.18,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Portage_Bay",
+        "to": "N7GRN5_Portage_Bay_r",
+        "snr": 42.67,
+        "rssi": -71.35,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "irlqt",
+        "to": "DMASpaceMeshRoom",
+        "snr": 42.68,
+        "rssi": -71.34,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Summit__Harrison",
+        "to": "irlqt",
+        "snr": 42.54,
+        "rssi": -71.48,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "DMASpaceMesh",
+        "to": "House_of_Yeaves",
+        "snr": 42.54,
+        "rssi": -71.48,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "1st_Hill_South_Repea",
+        "to": "South_Cap_Hill_G2",
+        "snr": 42.47,
+        "rssi": -71.55,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "South_Cap_Hill_G2",
+        "to": "The_Hideout",
+        "snr": 42.47,
+        "rssi": -71.55,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "House_of_Yeaves",
+        "to": "South_Cap_Hill_G2",
+        "snr": 42.43,
+        "rssi": -71.59,
+        "snr_std_dev": 1.0,
+        "bidir": true
+      },
+      {
+        "from": "Ballard_Balcony",
+        "to": "Ballard_Locks_1W_Rep",
+        "snr": 37.5,
+        "rssi": -76.52,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Melvins_Repeater",
+        "to": "WallyCore_Repeater",
+        "snr": 14.01,
+        "rssi": -100.01,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Crow_Repeater",
+        "to": "Fremont01_Greenwood3",
+        "snr": 12.12,
+        "rssi": -101.9,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "FrelardFrelay",
+        "to": "Crow_Repeater",
+        "snr": 32.62,
+        "rssi": -81.4,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "N_Capitol_Hill_20",
+        "to": "Cap_Hill_Broadway",
+        "snr": 18.85,
+        "rssi": -95.17,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Yesler_Terrace",
+        "to": "3rdAveS__MainPioSqSE",
+        "snr": 28.29,
+        "rssi": -85.73,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "pxi_nest",
+        "to": "Ballard",
+        "snr": 34.66,
+        "rssi": -79.36,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "RooseveltRepeater",
+        "to": "Roosevelt_Public",
+        "snr": 40.05,
+        "rssi": -73.97,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "First_Hill_Skyline",
+        "to": "LetsMesh_Test",
+        "snr": 19.78,
+        "rssi": -94.24,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "SEAMESH_CORE_R1",
+        "to": "Kremwerk",
+        "snr": 22.78,
+        "rssi": -91.24,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Fremont01_KF7EGZ_Sol",
+        "to": "bushwhacker_repeater",
+        "snr": 22.47,
+        "rssi": -91.55,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "SEAMESH_CORE_R2",
+        "to": "Kremwerk",
+        "snr": 13.85,
+        "rssi": -100.17,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Good_Coffee_Great_La",
+        "to": "W7ZOORPTRGREENLAKE",
+        "snr": 41.32,
+        "rssi": -72.7,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "KG6GXY_Greenwood",
+        "to": "80th_Street_Repeater",
+        "snr": 38.88,
+        "rssi": -75.14,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Summit__Harrison",
+        "to": "Taco_Tuesday",
+        "snr": 17.45,
+        "rssi": -96.57,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "irlqt",
+        "to": "DMASpaceMesh",
+        "snr": 13.99,
+        "rssi": -100.04,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "LetsMesh_Test_Node",
+        "to": "LetsMesh_Test",
+        "snr": 15.05,
+        "rssi": -98.97,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Naked_in_Capitol_Hil",
+        "to": "Hot_Ratpeater_Summer",
+        "snr": 39.24,
+        "rssi": -74.79,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Ravenna_Valley",
+        "to": "RavennaEckstein_CC",
+        "snr": 34.38,
+        "rssi": -79.64,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "node",
+        "to": "Ballard_Locks_1W_Rep",
+        "snr": 40.4,
+        "rssi": -73.63,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "pxi_nest",
+        "to": "Ballard_Balcony",
+        "snr": 37.69,
+        "rssi": -76.33,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Chucks",
+        "to": "SteelPhinney",
+        "snr": 28.98,
+        "rssi": -85.04,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "irlqt",
+        "to": "Kremwerk",
+        "snr": 26.42,
+        "rssi": -87.6,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "The_Winchester_Repea",
+        "to": "DMASpaceMeshRoom",
+        "snr": 36.84,
+        "rssi": -77.18,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "University_District",
+        "to": "SEA_Bryant_KM7ECH",
+        "snr": 25.2,
+        "rssi": -88.82,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "CH_RPTR",
+        "to": "McDonalds_Free_WiFi",
+        "snr": 30.91,
+        "rssi": -83.11,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "McDonalds_Free_WiFi",
+        "to": "CH_RPTR_Room",
+        "snr": 30.91,
+        "rssi": -83.11,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "MOST_Mesh_Room",
+        "to": "N1TJT_Repeater",
+        "snr": 36.49,
+        "rssi": -77.53,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "The_Winchester_Repea",
+        "to": "South_Cap_Hill_G2",
+        "snr": 37.71,
+        "rssi": -76.31,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Magnolia_Valley",
+        "to": "Magnolia_Central_30t",
+        "snr": 33.57,
+        "rssi": -80.45,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Central_District",
+        "to": "Capitol_Hill_Prime",
+        "snr": 17.78,
+        "rssi": -96.24,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "W7ZOORPTRGREENLAKE",
+        "to": "W7ZOORPTRPHINNEY",
+        "snr": 37.01,
+        "rssi": -77.01,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Roosevelt_Pocket_Mes",
+        "to": "Latona_Hub",
+        "snr": 36.26,
+        "rssi": -77.76,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "MarketMadhouse",
+        "to": "Ballard_Balcony",
+        "snr": 33.63,
+        "rssi": -80.39,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Volunteer_Park_SW",
+        "to": "Cap_Hill_Broadway",
+        "snr": 31.96,
+        "rssi": -82.06,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "irlqt",
+        "to": "Naked_in_Capitol_Hil",
+        "snr": 36.37,
+        "rssi": -77.65,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NE_Queen_Anne_Rptr",
+        "to": "GhostSat_Westlake",
+        "snr": 18.64,
+        "rssi": -95.38,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Broadway_Hill_Park",
+        "to": "Hot_Ratpeater_Summer",
+        "snr": 32.08,
+        "rssi": -81.94,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "First_Hill_Skyline_2",
+        "to": "Mosswood_Loft",
+        "snr": 15.84,
+        "rssi": -98.18,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Belltown_DuneCat",
+        "to": "Seattle_Center",
+        "snr": 6.87,
+        "rssi": -107.15,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Capitol_Hill_Prime",
+        "to": "DMASpaceMeshRoom",
+        "snr": 32.84,
+        "rssi": -81.18,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "KG6GXY_Greenwood",
+        "to": "Crown_Hill",
+        "snr": 25.08,
+        "rssi": -88.94,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Upper_Queen_Anne",
+        "to": "NE_Queen_Anne_Rptr",
+        "snr": 28.48,
+        "rssi": -85.55,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Summit__Harrison",
+        "to": "N1TJT_Repeater",
+        "snr": 25.03,
+        "rssi": -88.99,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Phinney_Solar_Repeat",
+        "to": "Lassiter_Repeater",
+        "snr": 39.03,
+        "rssi": -74.99,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Roosevelt_Pocket_Mes",
+        "to": "Cowen_West",
+        "snr": 31.77,
+        "rssi": -82.25,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Crow_Repeater",
+        "to": "Owl_Nest",
+        "snr": 35.63,
+        "rssi": -78.39,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Packet_town",
+        "to": "Latona_Hub",
+        "snr": 18.82,
+        "rssi": -95.2,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "N7GRN5_Portage_Bay_r",
+        "to": "Eastlake",
+        "snr": 5.63,
+        "rssi": -108.39,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Interlake",
+        "to": "WallyCore_Repeater",
+        "snr": 24.24,
+        "rssi": -89.78,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "TangleTown_Repeater",
+        "to": "Roosevelt_Public",
+        "snr": 17.33,
+        "rssi": -96.69,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "DuckDuckGoose",
+        "to": "W7ZOORPTR1W",
+        "snr": 38.61,
+        "rssi": -75.41,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "SteelPhinney",
+        "to": "Breadheads",
+        "snr": 17.32,
+        "rssi": -96.7,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Steve_",
+        "to": "Central_District",
+        "snr": 36.47,
+        "rssi": -77.55,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Chucks",
+        "to": "Crown_Hill",
+        "snr": 21.18,
+        "rssi": -92.84,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "University_District",
+        "to": "2CBA_Repeater_v4",
+        "snr": 25.46,
+        "rssi": -88.56,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Dogpeater",
+        "to": "WallyCore_Repeater",
+        "snr": 20.02,
+        "rssi": -94.0,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Hot_Ratpeater_Summer",
+        "to": "N1TJT_Repeater",
+        "snr": 35.03,
+        "rssi": -78.99,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "pxi_nest",
+        "to": "Ballard_Locks_1W_Rep",
+        "snr": 16.05,
+        "rssi": -97.97,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Dogpeater",
+        "to": "Roosevelt_Public",
+        "snr": 21.93,
+        "rssi": -92.09,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "N_Capitol_Hill_20",
+        "to": "Hot_Ratpeater_Summer",
+        "snr": 33.03,
+        "rssi": -80.99,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "minitrue",
+        "to": "K7FSX_Greenwood",
+        "snr": 35.55,
+        "rssi": -78.47,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "minitrue",
+        "to": "K7FSX_Greenwood_Room",
+        "snr": 35.55,
+        "rssi": -78.47,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Downtown_Repeater",
+        "to": "The_Hideout",
+        "snr": 5.61,
+        "rssi": -108.41,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "N_Capitol_Hill_20",
+        "to": "Volunteer_Park_SW",
+        "snr": 17.9,
+        "rssi": -96.12,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "dmatestbednode0",
+        "to": "Portage_Bay_G2_2",
+        "snr": 16.85,
+        "rssi": -97.17,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Portage_Bay_G2_2",
+        "to": "devhackchat",
+        "snr": 16.85,
+        "rssi": -97.17,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Sycamorons_Repeater_",
+        "to": "SteelPhinney",
+        "snr": 34.14,
+        "rssi": -79.88,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "MarketMadhouse",
+        "to": "Ballard",
+        "snr": 28.86,
+        "rssi": -85.16,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Cowen_West",
+        "to": "Latona_Hub",
+        "snr": 33.11,
+        "rssi": -80.92,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Naked_in_Capitol_Hil",
+        "to": "MOST_Mesh_Room",
+        "snr": 28.21,
+        "rssi": -85.81,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "pxi_nest",
+        "to": "N7TOERPTR",
+        "snr": 29.53,
+        "rssi": -84.49,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "pxi_nest",
+        "to": "node",
+        "snr": 31.87,
+        "rssi": -82.15,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "McDonalds_Free_WiFi",
+        "to": "Cafe",
+        "snr": 20.22,
+        "rssi": -93.81,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Phinney_Solar_Repeat",
+        "to": "minitrue",
+        "snr": 32.78,
+        "rssi": -81.25,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "W7PEA_Repeater",
+        "to": "Ballard_East_Rebleat",
+        "snr": 33.35,
+        "rssi": -80.67,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "GhostSat_Westlake",
+        "to": "Forest_Glade",
+        "snr": 37.27,
+        "rssi": -76.75,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Portage_Bay_G2_2",
+        "to": "repeather",
+        "snr": 17.36,
+        "rssi": -96.66,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "McDonalds_Free_WiFi",
+        "to": "Breadheads",
+        "snr": 29.56,
+        "rssi": -84.46,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Ballard_W7PEA",
+        "to": "MarketMadhouse",
+        "snr": 30.84,
+        "rssi": -83.18,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Magnolia_Hill",
+        "to": "Magnolia_Central_30t",
+        "snr": 37.18,
+        "rssi": -76.84,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Kremwerk",
+        "to": "The_Hideout",
+        "snr": 11.51,
+        "rssi": -102.51,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "The_Winchester_Repea",
+        "to": "Squire_Park",
+        "snr": 27.2,
+        "rssi": -86.82,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "KG6GXY_Greenwood",
+        "to": "Breadheads",
+        "snr": 14.33,
+        "rssi": -99.69,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Roosevelt_Tree_Top",
+        "to": "Latona_Hub",
+        "snr": 34.26,
+        "rssi": -79.76,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "usa_narrow_bridge",
+        "to": "Portage_Bay_G2",
+        "snr": 29.36,
+        "rssi": -84.66,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "usa_narrow_bridge",
+        "to": "Portage_Bay_G2_2",
+        "snr": 29.36,
+        "rssi": -84.66,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "RavennaPark",
+        "to": "Roosevelt_Public",
+        "snr": 20.66,
+        "rssi": -93.36,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Roosevelt_Tree_Top",
+        "to": "RavennaPark",
+        "snr": 34.74,
+        "rssi": -79.28,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Eastlake_Colonnade",
+        "to": "Taco_Tuesday",
+        "snr": 14.38,
+        "rssi": -99.64,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Waterfront",
+        "to": "SEAMESH_CORE_R1",
+        "snr": 10.12,
+        "rssi": -103.9,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "node_2",
+        "to": "Eastlake",
+        "snr": 22.74,
+        "rssi": -91.28,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "TangleTown_Repeater",
+        "to": "W7ZOORPTR2__CQCRorg",
+        "snr": 33.2,
+        "rssi": -80.82,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Ballard_East_Rebleat",
+        "to": "Owl_Nest",
+        "snr": 33.48,
+        "rssi": -80.54,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "TangleTown_Repeater",
+        "to": "W7ZOORPTR1W",
+        "snr": 34.54,
+        "rssi": -79.48,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "80th_Street_Repeater",
+        "to": "EnduroDriver_Phinney",
+        "snr": 36.53,
+        "rssi": -77.49,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Crow_Repeater",
+        "to": "searep001_2",
+        "snr": 35.77,
+        "rssi": -78.25,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Crow_Repeater",
+        "to": "searep002",
+        "snr": 35.77,
+        "rssi": -78.25,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Good_Coffee_Great_La",
+        "to": "W7ZOORPTRPHINNEY",
+        "snr": 36.39,
+        "rssi": -77.63,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "W7ZOORPTR2__CQCRorg",
+        "to": "W7ZOORPTRPHINNEY",
+        "snr": 36.39,
+        "rssi": -77.63,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Ravenna_Valley",
+        "to": "RavennaPark",
+        "snr": 28.17,
+        "rssi": -85.85,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Forest_Glade",
+        "to": "Taco_Tuesday",
+        "snr": 35.25,
+        "rssi": -78.77,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "irlqt",
+        "to": "House_of_Yeaves",
+        "snr": 10.23,
+        "rssi": -103.79,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "K7FSX_Greenwood",
+        "to": "Licton_Springs_Chat",
+        "snr": 30.71,
+        "rssi": -83.31,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "K7FSX_Greenwood_Room",
+        "to": "Licton_Springs_Chat",
+        "snr": 30.71,
+        "rssi": -83.31,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Wedgwood_Solar",
+        "to": "WedgBreadMesh",
+        "snr": 31.76,
+        "rssi": -82.26,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Portage_Bay",
+        "to": "Portage_Bay_G2",
+        "snr": 35.89,
+        "rssi": -78.13,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "18th__Union",
+        "to": "South_Cap_Hill_G2",
+        "snr": 0.76,
+        "rssi": -113.26,
+        "snr_std_dev": 0.5,
+        "loss": 0.0045,
+        "bidir": true
+      },
+      {
+        "from": "Steve_",
+        "to": "18th__Union",
+        "snr": 32.6,
+        "rssi": -81.42,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Interlake",
+        "to": "bushwhacker_repeater",
+        "snr": 15.19,
+        "rssi": -98.83,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Packet_town",
+        "to": "repeather",
+        "snr": 30.37,
+        "rssi": -83.65,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Wedgwood_Solar",
+        "to": "Martin_Room",
+        "snr": 30.08,
+        "rssi": -83.94,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "DuckDuckGoose",
+        "to": "Lassiter_Repeater",
+        "snr": 16.34,
+        "rssi": -97.68,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "GhostSat_Westlake",
+        "to": "Eastlake_Colonnade",
+        "snr": 35.08,
+        "rssi": -78.94,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "18th__Union",
+        "to": "Black_Base",
+        "snr": 31.13,
+        "rssi": -82.89,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Seattle_Center",
+        "to": "SEAMESH_CORE_R2",
+        "snr": 10.59,
+        "rssi": -103.43,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Hankest_Extendus",
+        "to": "Martin_Room",
+        "snr": 22.6,
+        "rssi": -91.42,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Lower_Queen_Anne",
+        "to": "QA_Repeater__Hive_0",
+        "snr": 8.34,
+        "rssi": -105.68,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Seattle_Center",
+        "to": "SEAMESH_CORE_R1",
+        "snr": 11.27,
+        "rssi": -102.75,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "N7GRN5_Portage_Bay_r",
+        "to": "node_2",
+        "snr": 35.17,
+        "rssi": -78.85,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "N7GRN4_Portage_Bay_r",
+        "to": "node_2",
+        "snr": 35.17,
+        "rssi": -78.85,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "GhostSat_Westlake",
+        "to": "Eastlake",
+        "snr": 35.0,
+        "rssi": -79.02,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "FrelardFrelay",
+        "to": "Ballard_East_Rebleat",
+        "snr": 2.41,
+        "rssi": -111.61,
+        "snr_std_dev": 0.5,
+        "loss": 0.0012,
+        "bidir": true
+      },
+      {
+        "from": "searep001",
+        "to": "Fremont01_Greenwood3",
+        "snr": 34.98,
+        "rssi": -79.04,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Cafe",
+        "to": "EnduroDriver_Phinney",
+        "snr": 33.97,
+        "rssi": -80.05,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Lassiter_Repeater",
+        "to": "facade00",
+        "snr": 20.42,
+        "rssi": -93.6,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "minitrue",
+        "to": "W7ZOORPTRPHINNEY",
+        "snr": 33.29,
+        "rssi": -80.74,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "University_District",
+        "to": "WedgBreadMesh",
+        "snr": 12.63,
+        "rssi": -101.39,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "W7PEA_Repeater",
+        "to": "node",
+        "snr": 17.77,
+        "rssi": -96.25,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "McDonalds_Free_WiFi",
+        "to": "SteelPhinney",
+        "snr": 15.23,
+        "rssi": -98.79,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Magnolia_Hill",
+        "to": "Magnolia_Hill_2",
+        "snr": 34.49,
+        "rssi": -79.53,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Packet_town",
+        "to": "Roosevelt_Pocket_Mes",
+        "snr": 31.81,
+        "rssi": -82.22,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Ballard_W7PEA",
+        "to": "Ballard_Balcony",
+        "snr": 23.19,
+        "rssi": -90.83,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Seattle_Center",
+        "to": "QA_Repeater__Hive_0",
+        "snr": 10.84,
+        "rssi": -103.18,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Fremont01_KF7EGZ_Sol",
+        "to": "searep001",
+        "snr": 34.12,
+        "rssi": -79.9,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Fremont01_KF7EGZ_Sol",
+        "to": "searep002",
+        "snr": 34.12,
+        "rssi": -79.9,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "SEAMESH_CORE_R2",
+        "to": "Taco_Tuesday",
+        "snr": 16.8,
+        "rssi": -97.22,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "University_District",
+        "to": "RavennaEckstein_CC",
+        "snr": 13.93,
+        "rssi": -100.09,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Capitol_Hill_Prime",
+        "to": "First_Hill_Skyline_2",
+        "snr": 30.68,
+        "rssi": -83.34,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Roosevelt_Tree_Top",
+        "to": "Maple_Leaf_Manor",
+        "snr": 30.13,
+        "rssi": -83.89,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "W7ZOORPTR2__CQCRorg",
+        "to": "WallyCore_Repeater",
+        "snr": 26.35,
+        "rssi": -87.67,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "DuckDuckGoose",
+        "to": "K7FSX_Greenwood_Room",
+        "snr": 23.46,
+        "rssi": -90.56,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Packet_town",
+        "to": "devhackchat",
+        "snr": 29.78,
+        "rssi": -84.24,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "W7PEA_Repeater",
+        "to": "Sycamorons_Repeater_",
+        "snr": 32.48,
+        "rssi": -81.54,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Dogpeater",
+        "to": "RooseveltRepeater",
+        "snr": 31.71,
+        "rssi": -82.31,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "DuckDuckGoose",
+        "to": "Dogpeater",
+        "snr": 27.87,
+        "rssi": -86.15,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "University_District",
+        "to": "RavennaPark",
+        "snr": 32.78,
+        "rssi": -81.25,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Maple_Leaf_Manor",
+        "to": "Take_His_Face_Off",
+        "snr": 31.69,
+        "rssi": -82.33,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "K7WFB_MC_4631",
+        "to": "bushwhacker_repeater",
+        "snr": 33.41,
+        "rssi": -80.61,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "1st_Hill_South_Repea",
+        "to": "Capitol_Hill_Prime",
+        "snr": 27.18,
+        "rssi": -86.84,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "House_of_Brimstone",
+        "to": "LQA_RPTR__Hive_0",
+        "snr": 29.66,
+        "rssi": -84.36,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "House_of_Brimstone",
+        "to": "QA_Repeater__Hive_0",
+        "snr": 29.66,
+        "rssi": -84.36,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "K7FSX_Greenwood_Room",
+        "to": "Cafe",
+        "snr": 13.33,
+        "rssi": -100.69,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "KG6GXY_Greenwood",
+        "to": "K7FSX_Greenwood",
+        "snr": 10.8,
+        "rssi": -103.22,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Ballard_W7PEA",
+        "to": "EnduroDriver_Phinney",
+        "snr": 30.62,
+        "rssi": -83.41,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Ravenna_Valley",
+        "to": "Maple_Leaf_Manor",
+        "snr": 29.36,
+        "rssi": -84.66,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Dogpeater",
+        "to": "Roosevelt_Tree_Top",
+        "snr": 32.02,
+        "rssi": -82.0,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Portage_Bay",
+        "to": "devhackchat",
+        "snr": 5.54,
+        "rssi": -108.48,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Steve_",
+        "to": "Washington_Park",
+        "snr": 27.99,
+        "rssi": -86.03,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "dmatestbednode0",
+        "to": "Melvins_Repeater",
+        "snr": 28.02,
+        "rssi": -86.0,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "devhackchat",
+        "to": "Melvins_Repeater",
+        "snr": 28.02,
+        "rssi": -86.0,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "FrelardFrelay",
+        "to": "searep001",
+        "snr": 32.76,
+        "rssi": -81.26,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "FrelardFrelay",
+        "to": "searep001_2",
+        "snr": 32.76,
+        "rssi": -81.26,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "minitrue",
+        "to": "Latona_Hub",
+        "snr": 27.02,
+        "rssi": -87.0,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "1",
+        "to": "RAVSHrpt1",
+        "snr": 11.5,
+        "rssi": -102.52,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Capitol_Hill_Prime",
+        "to": "MOST_Mesh_Room",
+        "snr": 11.83,
+        "rssi": -102.19,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Upper_Queen_Anne",
+        "to": "searep001",
+        "snr": 9.16,
+        "rssi": -104.86,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NE_Queen_Anne_Rptr",
+        "to": "Forest_Glade",
+        "snr": 32.41,
+        "rssi": -81.61,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "usa_narrow_bridge",
+        "to": "Melvins_Repeater",
+        "snr": 28.85,
+        "rssi": -85.17,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "The_Winchester_Repea",
+        "to": "Cap_Hill_Broadway",
+        "snr": 22.5,
+        "rssi": -91.52,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "minitrue",
+        "to": "Licton_Springs_Chat",
+        "snr": 16.62,
+        "rssi": -97.4,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "N7TOERPTR",
+        "to": "Ballard_Locks_1W_Rep",
+        "snr": 16.93,
+        "rssi": -97.09,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "RooseveltRepeater",
+        "to": "repeather",
+        "snr": 26.72,
+        "rssi": -87.3,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Portage_Bay_G2",
+        "to": "Eastlake",
+        "snr": 26.98,
+        "rssi": -87.04,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Portage_Bay_G2_2",
+        "to": "Eastlake",
+        "snr": 26.98,
+        "rssi": -87.04,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "devhackchat",
+        "to": "WallyCore_Repeater",
+        "snr": -2.16,
+        "rssi": -116.18,
+        "snr_std_dev": 0.5,
+        "loss": 0.0443,
+        "bidir": true
+      },
+      {
+        "from": "Downtown_Repeater",
+        "to": "Taco_Tuesday",
+        "snr": 18.36,
+        "rssi": -95.66,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Ravenna_Valley",
+        "to": "Take_His_Face_Off",
+        "snr": -4.92,
+        "rssi": -118.94,
+        "snr_std_dev": 0.5,
+        "loss": 0.2963,
+        "bidir": true
+      },
+      {
+        "from": "Steve_",
+        "to": "Stevens",
+        "snr": 31.97,
+        "rssi": -82.05,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "House_of_Brimstone",
+        "to": "RAWTCE",
+        "snr": 31.96,
+        "rssi": -82.06,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "House_of_Brimstone",
+        "to": "Belltown_DuneCat",
+        "snr": 15.39,
+        "rssi": -98.63,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "LQA_RPTR__Hive_0",
+        "to": "RAVSHrpt1",
+        "snr": 20.54,
+        "rssi": -93.48,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "dmatestbednode0",
+        "to": "N7GRN5_Portage_Bay_r",
+        "snr": 31.71,
+        "rssi": -82.31,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "devhackchat",
+        "to": "N7GRN4_Portage_Bay_r",
+        "snr": 31.71,
+        "rssi": -82.31,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "WedgBreadMesh",
+        "to": "SEA_Bryant_KM7ECH",
+        "snr": 16.01,
+        "rssi": -98.01,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "searep001",
+        "to": "Owl_Nest",
+        "snr": 31.67,
+        "rssi": -82.36,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Good_Coffee_Great_La",
+        "to": "WallyCore_Repeater",
+        "snr": 23.3,
+        "rssi": -90.72,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "GhostSat_Westlake",
+        "to": "node_2",
+        "snr": 29.88,
+        "rssi": -84.14,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "K7WFB_MC_4631",
+        "to": "searep001_2",
+        "snr": 29.92,
+        "rssi": -84.1,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "K7WFB_MC_4631",
+        "to": "searep002",
+        "snr": 29.92,
+        "rssi": -84.1,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "usa_narrow_bridge",
+        "to": "N7GRN5_Portage_Bay_r",
+        "snr": 31.39,
+        "rssi": -82.63,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "WedgBreadMesh",
+        "to": "Martin_Room",
+        "snr": 6.66,
+        "rssi": -107.36,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "N_Capitol_Hill_20",
+        "to": "The_Hideout",
+        "snr": 28.2,
+        "rssi": -85.82,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "dmatestbednode0",
+        "to": "RooseveltRepeater",
+        "snr": 25.93,
+        "rssi": -88.1,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NE_Queen_Anne_Rptr",
+        "to": "Eastlake_Colonnade",
+        "snr": 31.24,
+        "rssi": -82.79,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Union_Art_Coop__YA",
+        "to": "MOST_Mesh_Room",
+        "snr": 22.51,
+        "rssi": -91.51,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Entropy_Temple",
+        "to": "RAWTCE",
+        "snr": 31.11,
+        "rssi": -82.91,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Lower_Queen_Anne",
+        "to": "Downtown_Repeater",
+        "snr": 30.26,
+        "rssi": -83.76,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "N7GRN4_Portage_Bay_r",
+        "to": "repeather",
+        "snr": 29.77,
+        "rssi": -84.25,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NE_Queen_Anne_Rptr",
+        "to": "bushwhacker_repeater",
+        "snr": 11.59,
+        "rssi": -102.43,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Phinney_Solar_Repeat",
+        "to": "facade00",
+        "snr": 25.02,
+        "rssi": -89.0,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "RAWTCE",
+        "to": "1",
+        "snr": 17.33,
+        "rssi": -96.69,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "GhostSat_Westlake",
+        "to": "SEAMESH_CORE_R2",
+        "snr": 26.23,
+        "rssi": -87.79,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Magnolia_W7UUL",
+        "to": "MarketMadhouse",
+        "snr": 30.53,
+        "rssi": -83.49,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Sycamorons_Repeater_",
+        "to": "CH_RPTR_Room",
+        "snr": 5.22,
+        "rssi": -108.8,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "MarketMadhouse",
+        "to": "Owl_Nest",
+        "snr": 30.35,
+        "rssi": -83.67,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "McDonalds_Free_WiFi",
+        "to": "Lassiter_Repeater",
+        "snr": 16.94,
+        "rssi": -97.08,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "W7PEA_Repeater",
+        "to": "N7TOERPTR",
+        "snr": 20.66,
+        "rssi": -93.36,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Ballard",
+        "to": "Ballard_East_Rebleat",
+        "snr": 9.02,
+        "rssi": -105.01,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "80th_Street_Repeater",
+        "to": "Ballard_East_Rebleat",
+        "snr": 13.77,
+        "rssi": -100.25,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Forest_Glade",
+        "to": "SEAMESH_CORE_R2",
+        "snr": 25.12,
+        "rssi": -88.9,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Waterfront",
+        "to": "Entropy_Temple",
+        "snr": 29.83,
+        "rssi": -84.19,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Roosevelt_Pocket_Mes",
+        "to": "W7ZOORPTRGREENLAKE",
+        "snr": 29.04,
+        "rssi": -84.98,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Maple_Leaf_Manor",
+        "to": "facade00",
+        "snr": 9.66,
+        "rssi": -104.36,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Eastlake_Colonnade",
+        "to": "SEAMESH_CORE_R1",
+        "snr": 25.04,
+        "rssi": -88.98,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Downtown_Repeater",
+        "to": "MOST_Mesh_Room",
+        "snr": 23.03,
+        "rssi": -90.99,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Magnolia_W7UUL",
+        "to": "Ballard",
+        "snr": 29.42,
+        "rssi": -84.6,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "SteelPhinney",
+        "to": "facade00",
+        "snr": -0.59,
+        "rssi": -114.61,
+        "snr_std_dev": 0.5,
+        "loss": 0.013,
+        "bidir": true
+      },
+      {
+        "from": "K7WFB_MC_4631",
+        "to": "Interlake",
+        "snr": 29.4,
+        "rssi": -84.62,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NE_Queen_Anne_Rptr",
+        "to": "Volunteer_Park_SW",
+        "snr": 29.37,
+        "rssi": -84.65,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "TangleTown_Repeater",
+        "to": "Lassiter_Repeater",
+        "snr": 28.75,
+        "rssi": -85.27,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Broadway_Hill_Park",
+        "to": "Squire_Park",
+        "snr": 8.32,
+        "rssi": -105.7,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "N7TOERPTR",
+        "to": "Crown_Hill",
+        "snr": 12.88,
+        "rssi": -101.14,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "FrelardFrelay",
+        "to": "WA7DASR1",
+        "snr": 28.78,
+        "rssi": -85.24,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "LQA_RPTR__Hive_0",
+        "to": "Entropy_Temple",
+        "snr": 20.92,
+        "rssi": -93.1,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "K7WFB_MC_4631",
+        "to": "Owl_Nest",
+        "snr": 28.63,
+        "rssi": -85.39,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Phinney_Solar_Repeat",
+        "to": "Roosevelt_Public",
+        "snr": 21.8,
+        "rssi": -92.22,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "WA7DASR1",
+        "to": "Ballard_East_Rebleat",
+        "snr": 28.52,
+        "rssi": -85.5,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Dogpeater",
+        "to": "Lassiter_Repeater",
+        "snr": 27.63,
+        "rssi": -86.39,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Seattle_Center",
+        "to": "Volunteer_Park_SW",
+        "snr": 27.94,
+        "rssi": -86.08,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "GhostSat_Westlake",
+        "to": "Interlake",
+        "snr": 25.92,
+        "rssi": -88.1,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Sycamorons_Repeater_",
+        "to": "node",
+        "snr": 23.55,
+        "rssi": -90.47,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Upper_Queen_Anne",
+        "to": "WA7DASR1",
+        "snr": 2.27,
+        "rssi": -111.75,
+        "snr_std_dev": 0.5,
+        "loss": 0.0013,
+        "bidir": true
+      },
+      {
+        "from": "Roosevelt_Tree_Top",
+        "to": "K7FSX_Greenwood",
+        "snr": 27.93,
+        "rssi": -86.09,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "node",
+        "to": "EnduroDriver_Phinney",
+        "snr": 22.23,
+        "rssi": -91.79,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Upper_Queen_Anne",
+        "to": "Interlake",
+        "snr": 26.51,
+        "rssi": -87.51,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "3rdAveS__MainPioSqSE",
+        "to": "Entropy_Temple",
+        "snr": 21.58,
+        "rssi": -92.45,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NE_Queen_Anne_Rptr",
+        "to": "Downtown_Repeater",
+        "snr": 27.67,
+        "rssi": -86.35,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "W7PEA_Repeater",
+        "to": "WA7DASR1",
+        "snr": 27.49,
+        "rssi": -86.53,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Kremwerk",
+        "to": "Eastlake",
+        "snr": -3.52,
+        "rssi": -117.54,
+        "snr_std_dev": 0.5,
+        "loss": 0.1207,
+        "bidir": true
+      },
+      {
+        "from": "Ballard_W7PEA",
+        "to": "Magnolia_W7UUL",
+        "snr": 27.46,
+        "rssi": -86.56,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "NE_Queen_Anne_Rptr",
+        "to": "irlqt",
+        "snr": 27.39,
+        "rssi": -86.63,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "K7FSX_Greenwood_Room",
+        "to": "Packet_town",
+        "snr": 26.65,
+        "rssi": -87.37,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Magnolia_W7UUL",
+        "to": "bushwhacker_repeater",
+        "snr": 27.24,
+        "rssi": -86.78,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Ballard",
+        "to": "EnduroDriver_Phinney",
+        "snr": 21.9,
+        "rssi": -92.12,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Licton_Springs_Chat",
+        "to": "W7ZOORPTR1W",
+        "snr": 19.19,
+        "rssi": -94.83,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "node_2",
+        "to": "Melvins_Repeater",
+        "snr": 26.94,
+        "rssi": -87.09,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Forest_Glade",
+        "to": "Fremont01_Greenwood3",
+        "snr": 25.36,
+        "rssi": -88.66,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "House_of_Brimstone",
+        "to": "LetsMesh_Test",
+        "snr": 25.3,
+        "rssi": -88.72,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Wedgwood_Solar",
+        "to": "CrossNet_Room",
+        "snr": 0.18,
+        "rssi": -113.84,
+        "snr_std_dev": 0.5,
+        "loss": 0.0071,
+        "bidir": true
+      },
+      {
+        "from": "K7FSX_Greenwood_Room",
+        "to": "WallyCore_Repeater",
+        "snr": 26.76,
+        "rssi": -87.27,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Upper_Queen_Anne",
+        "to": "Melvins_Repeater",
+        "snr": 23.05,
+        "rssi": -90.97,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "K7FSX_Greenwood",
+        "to": "Cowen_West",
+        "snr": 25.65,
+        "rssi": -88.37,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Lower_Queen_Anne",
+        "to": "node_2",
+        "snr": 25.02,
+        "rssi": -89.0,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "pxi_nest",
+        "to": "Crow_Repeater",
+        "snr": 23.28,
+        "rssi": -90.74,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Fremont01_KF7EGZ_Sol",
+        "to": "Ballard",
+        "snr": 26.2,
+        "rssi": -87.82,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Seattle_Center",
+        "to": "Capitol_Hill_Prime",
+        "snr": 24.13,
+        "rssi": -89.9,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "LetsMesh_Test_Node",
+        "to": "House_of_Brimstone",
+        "snr": 24.57,
+        "rssi": -89.45,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "K7FSX_Greenwood",
+        "to": "Melvins_Repeater",
+        "snr": 24.3,
+        "rssi": -89.72,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Magnolia_Hill_2",
+        "to": "Owl_Nest",
+        "snr": 25.29,
+        "rssi": -88.73,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Upper_Queen_Anne",
+        "to": "N_Capitol_Hill_20",
+        "snr": -2.79,
+        "rssi": -116.81,
+        "snr_std_dev": 0.5,
+        "loss": 0.0712,
+        "bidir": true
+      },
+      {
+        "from": "K7WFB_MC_4631",
+        "to": "devhackchat",
+        "snr": 25.1,
+        "rssi": -88.92,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Portage_Bay_G2_2",
+        "to": "searep002",
+        "snr": -7.45,
+        "rssi": -121.48,
+        "snr_std_dev": 0.5,
+        "loss": 0.762,
+        "bidir": true
+      },
+      {
+        "from": "pxi_nest",
+        "to": "K7FSX_Greenwood",
+        "snr": -5.01,
+        "rssi": -119.03,
+        "snr_std_dev": 0.5,
+        "loss": 0.3121,
+        "bidir": true
+      },
+      {
+        "from": "Upper_Queen_Anne",
+        "to": "MarketMadhouse",
+        "snr": 24.7,
+        "rssi": -89.32,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Magnolia_W7UUL",
+        "to": "Interlake",
+        "snr": 21.89,
+        "rssi": -92.13,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Upper_Queen_Anne",
+        "to": "Magnolia_Hill",
+        "snr": 21.91,
+        "rssi": -92.11,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Magnolia_W7UUL",
+        "to": "EnduroDriver_Phinney",
+        "snr": 24.33,
+        "rssi": -89.69,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "MOST_Mesh_Room",
+        "to": "Fremont01_Greenwood3",
+        "snr": 24.27,
+        "rssi": -89.75,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Interlake",
+        "to": "Cap_Hill_Broadway",
+        "snr": 24.13,
+        "rssi": -89.89,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "2CBA_Repeater_v4",
+        "to": "Stevens",
+        "snr": 23.9,
+        "rssi": -90.12,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Stevens",
+        "to": "SEA_Bryant_KM7ECH",
+        "snr": 23.82,
+        "rssi": -90.2,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "2CBA_Repeater_v4",
+        "to": "Washington_Park",
+        "snr": 21.96,
+        "rssi": -92.06,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Broadway_Hill_Park",
+        "to": "Melvins_Repeater",
+        "snr": -0.81,
+        "rssi": -114.83,
+        "snr_std_dev": 0.5,
+        "loss": 0.0154,
+        "bidir": true
+      },
+      {
+        "from": "node_2",
+        "to": "searep002",
+        "snr": 23.68,
+        "rssi": -90.34,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Stevens",
+        "to": "CrossNet_RPT1",
+        "snr": 2.26,
+        "rssi": -111.76,
+        "snr_std_dev": 0.5,
+        "loss": 0.0013,
+        "bidir": true
+      },
+      {
+        "from": "Wedgwood_Solar",
+        "to": "W7ZOORPTR2__CQCRorg",
+        "snr": -12.81,
+        "rssi": -126.83,
+        "snr_std_dev": 0.5,
+        "loss": 0.9957,
+        "bidir": true
+      },
+      {
+        "from": "usa_narrow_bridge",
+        "to": "searep002",
+        "snr": 9.28,
+        "rssi": -104.74,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "McDonalds_Free_WiFi",
+        "to": "Roosevelt_Pocket_Mes",
+        "snr": 21.57,
+        "rssi": -92.45,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "N_Capitol_Hill_20",
+        "to": "Fremont01_Greenwood3",
+        "snr": 22.68,
+        "rssi": -91.34,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Maple_Leaf_Manor",
+        "to": "Breadheads",
+        "snr": 19.89,
+        "rssi": -94.13,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "K7FSX_Greenwood",
+        "to": "searep002",
+        "snr": -4.75,
+        "rssi": -118.77,
+        "snr_std_dev": 0.5,
+        "loss": 0.2682,
+        "bidir": true
+      },
+      {
+        "from": "First_Hill_Skyline_2",
+        "to": "bushwhacker_repeater",
+        "snr": 22.11,
+        "rssi": -91.91,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Wedgwood_Solar",
+        "to": "Interlake",
+        "snr": -5.83,
+        "rssi": -119.85,
+        "snr_std_dev": 0.5,
+        "loss": 0.4665,
+        "bidir": true
+      },
+      {
+        "from": "K7WFB_MC_4631",
+        "to": "RavennaEckstein_CC",
+        "snr": 10.79,
+        "rssi": -103.23,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Magnolia_Hill",
+        "to": "Belltown_DuneCat",
+        "snr": 21.57,
+        "rssi": -92.45,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Phinney_Solar_Repeat",
+        "to": "Eastlake_Colonnade",
+        "snr": -6.32,
+        "rssi": -120.34,
+        "snr_std_dev": 0.5,
+        "loss": 0.5627,
+        "bidir": true
+      },
+      {
+        "from": "Mosswood_Loft",
+        "to": "Melvins_Repeater",
+        "snr": -11.31,
+        "rssi": -125.33,
+        "snr_std_dev": 0.5,
+        "loss": 0.9859,
+        "bidir": true
+      },
+      {
+        "from": "WedgBreadMesh",
+        "to": "Stevens",
+        "snr": 21.17,
+        "rssi": -92.85,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Magnolia_W7UUL",
+        "to": "Entropy_Temple",
+        "snr": 20.78,
+        "rssi": -93.24,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Ravenna_Valley",
+        "to": "Stevens",
+        "snr": 20.93,
+        "rssi": -93.09,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Central_District",
+        "to": "CrossNet_RPT1",
+        "snr": 20.59,
+        "rssi": -93.43,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "University_District",
+        "to": "80th_Street_Repeater",
+        "snr": -10.58,
+        "rssi": -124.6,
+        "snr_std_dev": 0.5,
+        "loss": 0.975,
+        "bidir": true
+      },
+      {
+        "from": "The_Winchester_Repea",
+        "to": "Crow_Repeater",
+        "snr": -15.59,
+        "rssi": -129.61,
+        "snr_std_dev": 0.5,
+        "loss": 0.9995,
+        "bidir": true
+      },
+      {
+        "from": "First_Hill_Skyline",
+        "to": "Magnolia_Hill_2",
+        "snr": 20.32,
+        "rssi": -93.7,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Black_Base",
+        "to": "CrossNet_RPT1",
+        "snr": 19.04,
+        "rssi": -94.98,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Black_Base",
+        "to": "SEA_Bryant_KM7ECH",
+        "snr": 19.83,
+        "rssi": -94.19,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Steve_",
+        "to": "RavennaEckstein_CC",
+        "snr": 19.59,
+        "rssi": -94.43,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "W7PEA_Repeater",
+        "to": "Cap_Hill_Broadway",
+        "snr": 4.56,
+        "rssi": -109.46,
+        "snr_std_dev": 0.5,
+        "loss": 0.0002,
+        "bidir": true
+      },
+      {
+        "from": "Phinney_Solar_Repeat",
+        "to": "Broadway_Hill_Park",
+        "snr": -3.01,
+        "rssi": -117.03,
+        "snr_std_dev": 0.5,
+        "loss": 0.0838,
+        "bidir": true
+      },
+      {
+        "from": "Maple_Leaf_Manor",
+        "to": "Taco_Tuesday",
+        "snr": 19.06,
+        "rssi": -94.96,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Volunteer_Park_SW",
+        "to": "Cafe",
+        "snr": -0.44,
+        "rssi": -114.46,
+        "snr_std_dev": 0.5,
+        "loss": 0.0116,
+        "bidir": true
+      },
+      {
+        "from": "First_Hill",
+        "to": "RooseveltRepeater",
+        "snr": -2.33,
+        "rssi": -116.35,
+        "snr_std_dev": 0.5,
+        "loss": 0.0503,
+        "bidir": true
+      },
+      {
+        "from": "Cafe",
+        "to": "MOST_Mesh_Room",
+        "snr": -3.56,
+        "rssi": -117.58,
+        "snr_std_dev": 0.5,
+        "loss": 0.1243,
+        "bidir": true
+      },
+      {
+        "from": "Union_Art_Coop__YA",
+        "to": "EnduroDriver_Phinney",
+        "snr": -10.48,
+        "rssi": -124.5,
+        "snr_std_dev": 0.5,
+        "loss": 0.973,
+        "bidir": true
+      },
+      {
+        "from": "University_District",
+        "to": "Magnolia_Hill_2",
+        "snr": 2.87,
+        "rssi": -111.15,
+        "snr_std_dev": 0.5,
+        "loss": 0.0008,
+        "bidir": true
+      },
+      {
+        "from": "minitrue",
+        "to": "First_Hill_Skyline_2",
+        "snr": -2.98,
+        "rssi": -117.0,
+        "snr_std_dev": 0.5,
+        "loss": 0.0821,
+        "bidir": true
+      },
+      {
+        "from": "Volunteer_Park_SW",
+        "to": "Crown_Hill",
+        "snr": 5.04,
+        "rssi": -108.98,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "80th_Street_Repeater",
+        "to": "Downtown_Repeater",
+        "snr": -5.86,
+        "rssi": -119.88,
+        "snr_std_dev": 0.5,
+        "loss": 0.4717,
+        "bidir": true
+      },
+      {
+        "from": "Summit__Harrison",
+        "to": "Licton_Springs_Chat",
+        "snr": 14.15,
+        "rssi": -99.87,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Summit__Harrison",
+        "to": "CH_RPTR_Room",
+        "snr": 16.56,
+        "rssi": -97.46,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "Downtown_Repeater",
+        "to": "Maple_Leaf_Manor",
+        "snr": 17.37,
+        "rssi": -96.65,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "The_Winchester_Repea",
+        "to": "Breadheads",
+        "snr": 13.75,
+        "rssi": -100.27,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "CH_RPTR",
+        "to": "First_Hill_Skyline_2",
+        "snr": 16.5,
+        "rssi": -97.52,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "CH_RPTR",
+        "to": "First_Hill",
+        "snr": 16.49,
+        "rssi": -97.53,
+        "snr_std_dev": 0.5,
+        "bidir": true
+      },
+      {
+        "from": "The_Winchester_Repea",
+        "to": "KG6GXY_Greenwood",
+        "snr": -8.46,
+        "rssi": -122.48,
+        "snr_std_dev": 0.5,
+        "loss": 0.8776,
+        "bidir": true
+      },
+      {
+        "from": "alice",
+        "to": "University_District",
+        "snr": 10.0,
+        "rssi": -70.0,
+        "bidir": true
+      },
+      {
+        "from": "bob",
+        "to": "Entropy_Temple",
+        "snr": 10.0,
+        "rssi": -70.0,
+        "bidir": true
+      },
+      {
+        "from": "carol",
+        "to": "N7TOERPTR",
+        "snr": 10.0,
+        "rssi": -70.0,
+        "bidir": true
+      },
+      {
+        "from": "dave",
+        "to": "Steve_",
+        "snr": 10.0,
+        "rssi": -70.0,
+        "bidir": true
+      }
+    ]
+  },
+  "commands": [],
+  "message_schedule": [
+    {
+      "from": "alice",
+      "to": "bob",
+      "start_ms": 13278,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "1to1 alice->bob seq=1",
+      "ack": true
+    },
+    {
+      "from": "alice",
+      "to": "bob",
+      "start_ms": 107991,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "1to1 alice->bob seq=2",
+      "ack": true
+    },
+    {
+      "from": "alice",
+      "to": "bob",
+      "start_ms": 127654,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "1to1 alice->bob seq=3",
+      "ack": true
+    },
+    {
+      "from": "alice",
+      "to": "bob",
+      "start_ms": 141654,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "1to1 alice->bob seq=4",
+      "ack": true
+    },
+    {
+      "from": "alice",
+      "to": "bob",
+      "start_ms": 155654,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "1to1 alice->bob seq=5",
+      "ack": true
+    },
+    {
+      "from": "bob",
+      "to": "carol",
+      "start_ms": 21395,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "1to1 bob->carol seq=1",
+      "ack": true
+    },
+    {
+      "from": "bob",
+      "to": "carol",
+      "start_ms": 83891,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "1to1 bob->carol seq=2",
+      "ack": true
+    },
+    {
+      "from": "bob",
+      "to": "carol",
+      "start_ms": 97891,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "1to1 bob->carol seq=3",
+      "ack": true
+    },
+    {
+      "from": "bob",
+      "to": "carol",
+      "start_ms": 111891,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "1to1 bob->carol seq=4",
+      "ack": true
+    },
+    {
+      "from": "bob",
+      "to": "carol",
+      "start_ms": 130428,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "1to1 bob->carol seq=5",
+      "ack": true
+    },
+    {
+      "from": "carol",
+      "to": "dave",
+      "start_ms": 36062,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "1to1 carol->dave seq=1",
+      "ack": true
+    },
+    {
+      "from": "carol",
+      "to": "dave",
+      "start_ms": 124181,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "1to1 carol->dave seq=2",
+      "ack": true
+    },
+    {
+      "from": "carol",
+      "to": "dave",
+      "start_ms": 208769,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "1to1 carol->dave seq=3",
+      "ack": true
+    },
+    {
+      "from": "carol",
+      "to": "dave",
+      "start_ms": 246842,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "1to1 carol->dave seq=4",
+      "ack": true
+    },
+    {
+      "from": "carol",
+      "to": "dave",
+      "start_ms": 288590,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "1to1 carol->dave seq=5",
+      "ack": true
+    },
+    {
+      "from": "dave",
+      "to": "alice",
+      "start_ms": 10851,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "1to1 dave->alice seq=1",
+      "ack": true
+    },
+    {
+      "from": "dave",
+      "to": "alice",
+      "start_ms": 110402,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "1to1 dave->alice seq=2",
+      "ack": true
+    },
+    {
+      "from": "dave",
+      "to": "alice",
+      "start_ms": 124402,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "1to1 dave->alice seq=3",
+      "ack": true
+    },
+    {
+      "from": "dave",
+      "to": "alice",
+      "start_ms": 162849,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "1to1 dave->alice seq=4",
+      "ack": true
+    },
+    {
+      "from": "dave",
+      "to": "alice",
+      "start_ms": 185637,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "1to1 dave->alice seq=5",
+      "ack": true
+    },
+    {
+      "from": "alice",
+      "to": "bob",
+      "start_ms": 54118,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "1toN alice->bob seq=1",
+      "ack": true
+    },
+    {
+      "from": "alice",
+      "to": "bob",
+      "start_ms": 68118,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "1toN alice->bob seq=2",
+      "ack": true
+    },
+    {
+      "from": "alice",
+      "to": "bob",
+      "start_ms": 101572,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "1toN alice->bob seq=3",
+      "ack": true
+    },
+    {
+      "from": "alice",
+      "to": "bob",
+      "start_ms": 132700,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "1toN alice->bob seq=4",
+      "ack": true
+    },
+    {
+      "from": "alice",
+      "to": "bob",
+      "start_ms": 162207,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "1toN alice->bob seq=5",
+      "ack": true
+    },
+    {
+      "from": "alice",
+      "to": "carol",
+      "start_ms": 15695,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "1toN alice->carol seq=1",
+      "ack": true
+    },
+    {
+      "from": "alice",
+      "to": "carol",
+      "start_ms": 107278,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "1toN alice->carol seq=2",
+      "ack": true
+    },
+    {
+      "from": "alice",
+      "to": "carol",
+      "start_ms": 161064,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "1toN alice->carol seq=3",
+      "ack": true
+    },
+    {
+      "from": "alice",
+      "to": "carol",
+      "start_ms": 371064,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "1toN alice->carol seq=4",
+      "ack": true
+    },
+    {
+      "from": "alice",
+      "to": "carol",
+      "start_ms": 404361,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "1toN alice->carol seq=5",
+      "ack": true
+    },
+    {
+      "from": "alice",
+      "to": "dave",
+      "start_ms": 57400,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "1toN alice->dave seq=1",
+      "ack": true
+    },
+    {
+      "from": "alice",
+      "to": "dave",
+      "start_ms": 117685,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "1toN alice->dave seq=2",
+      "ack": true
+    },
+    {
+      "from": "alice",
+      "to": "dave",
+      "start_ms": 203038,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "1toN alice->dave seq=3",
+      "ack": true
+    },
+    {
+      "from": "alice",
+      "to": "dave",
+      "start_ms": 217038,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "1toN alice->dave seq=4",
+      "ack": true
+    },
+    {
+      "from": "alice",
+      "to": "dave",
+      "start_ms": 235142,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "1toN alice->dave seq=5",
+      "ack": true
+    },
+    {
+      "from": "alice",
+      "to": "dave",
+      "start_ms": 20458,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "Nto1 alice->dave seq=1",
+      "ack": true
+    },
+    {
+      "from": "alice",
+      "to": "dave",
+      "start_ms": 155783,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "Nto1 alice->dave seq=2",
+      "ack": true
+    },
+    {
+      "from": "alice",
+      "to": "dave",
+      "start_ms": 296730,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "Nto1 alice->dave seq=3",
+      "ack": true
+    },
+    {
+      "from": "alice",
+      "to": "dave",
+      "start_ms": 330207,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "Nto1 alice->dave seq=4",
+      "ack": true
+    },
+    {
+      "from": "alice",
+      "to": "dave",
+      "start_ms": 372490,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "Nto1 alice->dave seq=5",
+      "ack": true
+    },
+    {
+      "from": "bob",
+      "to": "dave",
+      "start_ms": 31319,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "Nto1 bob->dave seq=1",
+      "ack": true
+    },
+    {
+      "from": "bob",
+      "to": "dave",
+      "start_ms": 63681,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "Nto1 bob->dave seq=2",
+      "ack": true
+    },
+    {
+      "from": "bob",
+      "to": "dave",
+      "start_ms": 80138,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "Nto1 bob->dave seq=3",
+      "ack": true
+    },
+    {
+      "from": "bob",
+      "to": "dave",
+      "start_ms": 101879,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "Nto1 bob->dave seq=4",
+      "ack": true
+    },
+    {
+      "from": "bob",
+      "to": "dave",
+      "start_ms": 295019,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "Nto1 bob->dave seq=5",
+      "ack": true
+    },
+    {
+      "from": "carol",
+      "to": "dave",
+      "start_ms": 32431,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "Nto1 carol->dave seq=1",
+      "ack": true
+    },
+    {
+      "from": "carol",
+      "to": "dave",
+      "start_ms": 85901,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "Nto1 carol->dave seq=2",
+      "ack": true
+    },
+    {
+      "from": "carol",
+      "to": "dave",
+      "start_ms": 105556,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "Nto1 carol->dave seq=3",
+      "ack": true
+    },
+    {
+      "from": "carol",
+      "to": "dave",
+      "start_ms": 148983,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "Nto1 carol->dave seq=4",
+      "ack": true
+    },
+    {
+      "from": "carol",
+      "to": "dave",
+      "start_ms": 171008,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "Nto1 carol->dave seq=5",
+      "ack": true
+    }
+  ],
+  "channel_schedule": [
+    {
+      "from": "alice",
+      "channel": 0,
+      "start_ms": 83000,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "chan alice seq=1"
+    },
+    {
+      "from": "alice",
+      "channel": 0,
+      "start_ms": 102837,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "chan alice seq=2"
+    },
+    {
+      "from": "alice",
+      "channel": 0,
+      "start_ms": 134195,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "chan alice seq=3"
+    },
+    {
+      "from": "alice",
+      "channel": 0,
+      "start_ms": 251185,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "chan alice seq=4"
+    },
+    {
+      "from": "bob",
+      "channel": 0,
+      "start_ms": 14207,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "chan bob seq=1"
+    },
+    {
+      "from": "bob",
+      "channel": 0,
+      "start_ms": 145006,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "chan bob seq=2"
+    },
+    {
+      "from": "bob",
+      "channel": 0,
+      "start_ms": 186027,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "chan bob seq=3"
+    },
+    {
+      "from": "bob",
+      "channel": 0,
+      "start_ms": 202027,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "chan bob seq=4"
+    },
+    {
+      "from": "carol",
+      "channel": 0,
+      "start_ms": 84341,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "chan carol seq=1"
+    },
+    {
+      "from": "carol",
+      "channel": 0,
+      "start_ms": 251576,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "chan carol seq=2"
+    },
+    {
+      "from": "carol",
+      "channel": 0,
+      "start_ms": 281805,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "chan carol seq=3"
+    },
+    {
+      "from": "carol",
+      "channel": 0,
+      "start_ms": 367044,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "chan carol seq=4"
+    },
+    {
+      "from": "dave",
+      "channel": 0,
+      "start_ms": 70142,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "chan dave seq=1"
+    },
+    {
+      "from": "dave",
+      "channel": 0,
+      "start_ms": 86142,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "chan dave seq=2"
+    },
+    {
+      "from": "dave",
+      "channel": 0,
+      "start_ms": 102142,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "chan dave seq=3"
+    },
+    {
+      "from": "dave",
+      "channel": 0,
+      "start_ms": 211457,
+      "interval_ms": 1,
+      "count": 1,
+      "message": "chan dave seq=4"
+    }
+  ],
+  "_name": "mixed_fw_degree_pct30_seed46",
+  "_desc": "Mixed firmware: 30% repeaters on fw_stachuman (optimized delays), rest on fw_default. Strategy: degree.",
+  "_requires_plugins": [
+    "fw_stachuman"
+  ],
+  "_mixed_experiment": {
+    "strategy": "degree",
+    "pct_optimized": 30,
+    "seed": 46,
+    "n_optimized": 43
+  }
+}
